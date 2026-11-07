@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'screens/landing_screen.dart';
 import 'screens/professor_activities_screen.dart';
 import 'screens/profile_list_screen.dart';
 
@@ -24,7 +25,7 @@ class MyApp extends StatelessWidget {
         ),
         fontFamily: 'Segoe UI',
       ),
-      home: const MainNavigationShell(),
+      home: const LandingScreen(),
     );
   }
 }
@@ -213,6 +214,15 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
           PopupMenuButton<String>(
             tooltip: 'Account Menu',
             offset: const Offset(0, 48),
+            onSelected: (val) {
+              if (val == 'logout') {
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(builder: (_) => const LandingScreen()),
+                  (route) => false,
+                );
+              }
+            },
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               child: Row(

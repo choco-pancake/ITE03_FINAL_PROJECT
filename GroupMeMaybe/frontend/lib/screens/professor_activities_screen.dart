@@ -6,6 +6,7 @@ import '../services/activity_service.dart';
 import 'widgets/activity_card.dart';
 import 'widgets/activity_details_dialog.dart';
 import 'widgets/activity_form_dialog.dart';
+import 'widgets/scarcity_report_dialog.dart';
 import 'widgets/summary_cards_row.dart';
 
 class ProfessorActivitiesScreen extends StatefulWidget {
@@ -110,6 +111,16 @@ class _ProfessorActivitiesScreenState extends State<ProfessorActivitiesScreen> {
       builder: (ctx) => ActivityDetailsDialog(
         activity: activity,
         onEdit: () => _openEditDialog(activity),
+      ),
+    );
+  }
+
+  void _openScarcityDialog(GroupingActivity activity) {
+    showDialog(
+      context: context,
+      builder: (ctx) => ScarcityReportDialog(
+        activity: activity,
+        onUpdated: () => _loadData(),
       ),
     );
   }
@@ -410,6 +421,7 @@ class _ProfessorActivitiesScreenState extends State<ProfessorActivitiesScreen> {
               return ActivityCard(
                 activity: activity,
                 onViewDetails: () => _openDetailsDialog(activity),
+                onScarcityReport: () => _openScarcityDialog(activity),
                 onEdit: () => _openEditDialog(activity),
                 onDelete: () => _confirmDelete(activity),
               );
@@ -427,6 +439,7 @@ class _ProfessorActivitiesScreenState extends State<ProfessorActivitiesScreen> {
             return ActivityCard(
               activity: activity,
               onViewDetails: () => _openDetailsDialog(activity),
+              onScarcityReport: () => _openScarcityDialog(activity),
               onEdit: () => _openEditDialog(activity),
               onDelete: () => _confirmDelete(activity),
             );

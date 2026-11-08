@@ -7,6 +7,7 @@ class ActivityCard extends StatelessWidget {
   final VoidCallback onViewDetails;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
+  final VoidCallback? onScarcityReport;
 
   const ActivityCard({
     super.key,
@@ -14,6 +15,7 @@ class ActivityCard extends StatelessWidget {
     required this.onViewDetails,
     required this.onEdit,
     required this.onDelete,
+    this.onScarcityReport,
   });
 
   String _formatDate(DateTime dt) {
@@ -265,10 +267,21 @@ class ActivityCard extends StatelessWidget {
             const Divider(height: 1),
             const SizedBox(height: 10),
 
-            // Card Action Buttons (View Details, Edit, Delete)
+            // Card Action Buttons (View Details, Scarcity Report, Edit, Delete)
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
+                if (onScarcityReport != null) ...[
+                  TextButton.icon(
+                    onPressed: onScarcityReport,
+                    icon: const Icon(Icons.analytics_outlined, size: 16),
+                    label: const Text('Scarcity', style: TextStyle(fontSize: 12)),
+                    style: TextButton.styleFrom(
+                      foregroundColor: Colors.indigo.shade700,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                ],
                 TextButton.icon(
                   onPressed: onViewDetails,
                   icon: const Icon(Icons.visibility_outlined, size: 16),

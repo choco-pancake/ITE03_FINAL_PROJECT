@@ -7,6 +7,7 @@ use App\Models\GroupingActivity;
 use App\Models\Profile;
 use App\Models\User;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Schema;
 
 class DatabaseSeeder extends Seeder
 {
@@ -16,9 +17,11 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         // Clear previous records for clean seeding
-        Profile::truncate();
+        Schema::disableForeignKeyConstraints();
         GroupingActivity::truncate();
         AcademicClass::truncate();
+        Profile::truncate();
+        Schema::enableForeignKeyConstraints();
 
         // 1. Seed Academic Classes
         $class1 = AcademicClass::create([

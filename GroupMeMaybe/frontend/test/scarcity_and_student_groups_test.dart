@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:frontend/models/grouping_activity.dart';
 import 'package:frontend/models/scarcity_report.dart';
 import 'package:frontend/screens/student_groups_screen.dart';
 
@@ -84,6 +85,13 @@ void main() {
     });
 
     testWidgets('StudentGroupsScreen renders without crash', (tester) async {
+      tester.view.physicalSize = const Size(1280, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
       await tester.pumpWidget(
         const MaterialApp(
           home: StudentGroupsScreen(),
@@ -92,6 +100,65 @@ void main() {
 
       // Loading state or initial render
       expect(find.byType(StudentGroupsScreen), findsOneWidget);
+    });
+
+    test('GroupingActivity parses formed_teams JSON dynamically', () {
+      final json = {
+        'id': 5,
+        'title': 'Automated Integration Testing Activity',
+        'class_name': 'Web Development - BSIT 2A',
+        'grouping_method': 'auto',
+        'group_capacity': 5,
+        'number_of_groups': 6,
+        'required_skills': ['Software Testing and Quality Assurance', 'Backend Development'],
+        'preferred_skills': ['Technical Documentation'],
+        'min_proficiency_level': 'Intermediate',
+        'min_common_hours': 4,
+        'grouping_deadline': '2026-12-20T18:00:00.000000Z',
+        'status': 'completed',
+        'students_count': 30,
+        'formed_teams': [
+          {
+            'name': 'Team Alpha Synthetix',
+            'is_auto_assigned': true,
+            'leader_email': 'alex.santos@student.edu',
+            'members': [
+              {
+                'name': 'Alex Santos (You)',
+                'email': 'alex.santos@student.edu',
+                'role': 'Team Leader & Developer',
+                'block': 'BSIT 2A',
+                'avatar': 'A',
+                'is_leader': true,
+              },
+              {
+                'name': 'Dani Garcia',
+                'email': 'dani.garcia@student.edu',
+                'role': 'QA Specialist',
+                'block': 'BSIT 2A',
+                'avatar': 'D',
+                'is_leader': false,
+              },
+            ],
+          },
+        ],
+      };
+
+      final activity = GroupingActivity.fromJson(json);
+
+      expect(activity.id, 5);
+      expect(activity.status, 'completed');
+      expect(activity.formedTeams, isNotNull);
+      expect(activity.formedTeams!.length, 1);
+
+      final firstTeam = activity.formedTeams!.first as Map<String, dynamic>;
+      expect(firstTeam['name'], 'Team Alpha Synthetix');
+      expect(firstTeam['is_auto_assigned'], true);
+
+      final members = firstTeam['members'] as List;
+      expect(members.length, 2);
+      expect(members[0]['name'], 'Alex Santos (You)');
+      expect(members[0]['is_leader'], true);
     });
   });
 }

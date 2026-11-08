@@ -22,6 +22,9 @@ Route::apiResource('profiles', ProfileController::class);
 // Professor Activities / Projects Module (Aivhan) & Scarcity (Yvonne)
 Route::get('activities/summary', [GroupingActivityController::class, 'summary']);
 Route::get('activities/{id}/scarcity', [GroupingActivityController::class, 'scarcity']);
+Route::get('activities/{id}/teams', [GroupingActivityController::class, 'teams']);
+Route::post('activities/{id}/teams', [GroupingActivityController::class, 'createTeam']);
+Route::post('activities/{id}/teams/invite', [GroupingActivityController::class, 'inviteStudent']);
 Route::post('activities/{id}/auto-form', [GroupingActivityController::class, 'autoFormUnassigned']);
 Route::post('activities/{id}/add-skill', [GroupingActivityController::class, 'addSkill']);
 Route::apiResource('activities', GroupingActivityController::class);

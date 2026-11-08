@@ -15,6 +15,7 @@ class GroupingActivity {
   final DateTime? studentModificationDeadline;
   final String status; // draft, open, grouping in progress, completed
   final int studentsCount;
+  final List<dynamic>? formedTeams;
 
   GroupingActivity({
     this.id,
@@ -33,6 +34,7 @@ class GroupingActivity {
     this.studentModificationDeadline,
     this.status = 'open',
     this.studentsCount = 30,
+    this.formedTeams,
   });
 
   factory GroupingActivity.fromJson(Map<String, dynamic> json) {
@@ -75,6 +77,7 @@ class GroupingActivity {
       studentsCount: json['students_count'] is int
           ? json['students_count'] as int
           : int.tryParse(json['students_count']?.toString() ?? '30') ?? 30,
+      formedTeams: json['formed_teams'] as List?,
     );
   }
 
@@ -97,6 +100,7 @@ class GroupingActivity {
               studentModificationDeadline!.toIso8601String(),
         'status': status,
         'students_count': studentsCount,
+        if (formedTeams != null) 'formed_teams': formedTeams,
       };
 
   GroupingActivity copyWith({
@@ -116,6 +120,7 @@ class GroupingActivity {
     DateTime? studentModificationDeadline,
     String? status,
     int? studentsCount,
+    List<dynamic>? formedTeams,
   }) {
     return GroupingActivity(
       id: id ?? this.id,
@@ -135,6 +140,7 @@ class GroupingActivity {
           studentModificationDeadline ?? this.studentModificationDeadline,
       status: status ?? this.status,
       studentsCount: studentsCount ?? this.studentsCount,
+      formedTeams: formedTeams ?? this.formedTeams,
     );
   }
 }

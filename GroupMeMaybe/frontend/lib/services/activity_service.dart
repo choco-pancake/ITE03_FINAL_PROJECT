@@ -173,4 +173,68 @@ class ActivityService {
 
     throw Exception('Failed to add skill to activity (${response.statusCode})');
   }
+
+  /// Get formed teams for an activity
+  Future<List<dynamic>> getTeams(int activityId) async {
+    final uri = Uri.parse('${ApiService.baseUrl}/activities/$activityId/teams');
+    final response = await http.get(uri, headers: _headers);
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body) as List<dynamic>;
+    }
+
+    throw Exception('Failed to load teams (${response.statusCode})');
+  }
+
+  /// Create a new team for an activity
+  Future<Map<String, dynamic>> createTeam(
+    int activityId,
+    String name, {
+    String? role,
+    String? leaderName,
+    String? leaderEmail,
+  }) async {
+    final uri = Uri.parse('${ApiService.baseUrl}/activities/$activityId/teams');
+    final response = await http.post(
+      uri,
+      headers: _headers,
+      body: jsonEncode({
+        'name': name,
+        'role': role,
+        if (leaderName != null) ...{'leader_name': leaderName},
+        if (leaderEmail != null) ...{'leader_email': leaderEmail},
+      }),
+    );
+
+    if (response.statusCode == 201) {
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    }
+
+    throw Exception('Failed to create team (${response.statusCode}): ${response.body}');
+  }
+
+  /// Invite a student to join a team
+  Future<void> inviteStudent(
+    int activityId,
+    String teamName,
+    String studentName, {
+    String? studentEmail,
+    String? role,
+  }) async {
+    final uri = Uri.parse('${ApiService.baseUrl}/activities/$activityId/teams/invite');
+    final response = await http.post(
+      uri,
+      headers: _headers,
+      body: jsonEncode({
+        'team_name': teamName,
+        'student_name': studentName,
+        'student_email': studentEmail,
+        'role': role,
+      }),
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception('Failed to invite student (${response.statusCode}): ${response.body}');
+    }
+  }
 }

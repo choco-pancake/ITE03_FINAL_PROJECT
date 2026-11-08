@@ -75,10 +75,11 @@ class _ScarcityReportDialogState extends State<ScarcityReportDialog> {
         strategy: _autoFormStrategy,
       );
 
+      widget.onUpdated();
+      await _loadReport();
+
       if (mounted) {
         setState(() => _isAutoForming = false);
-        Navigator.of(context).pop();
-        widget.onUpdated();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(result['message'] as String? ??
@@ -239,21 +240,30 @@ class _ScarcityReportDialogState extends State<ScarcityReportDialog> {
                         child: const Text('Close'),
                       ),
                       const SizedBox(width: 12),
-                      ElevatedButton.icon(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF1E40AF),
-                          foregroundColor: Colors.white,
-                        ),
-                        onPressed: _isAutoForming ? null : _triggerAutoForm,
-                        icon: _isAutoForming
-                            ? const SizedBox(
-                                width: 16,
-                                height: 16,
-                                child: CircularProgressIndicator(
-                                    strokeWidth: 2, color: Colors.white),
-                              )
-                            : const Icon(Icons.auto_awesome, size: 18),
-                        label: const Text('Auto-Form Unassigned Students'),
+                      Builder(
+                        builder: (context) {
+                          final isAllAssigned = (_report?.unassignedStudentsCount ?? 1) == 0;
+                          return ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: isAllAssigned
+                                  ? const Color(0xFF059669)
+                                  : const Color(0xFF1E40AF),
+                              foregroundColor: Colors.white,
+                            ),
+                            onPressed: (_isAutoForming || isAllAssigned) ? null : _triggerAutoForm,
+                            icon: _isAutoForming
+                                ? const SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(
+                                        strokeWidth: 2, color: Colors.white),
+                                  )
+                                : Icon(isAllAssigned ? Icons.check_circle : Icons.auto_awesome, size: 18),
+                            label: Text(isAllAssigned
+                                ? 'Assignments Finalized (0 Unassigned)'
+                                : 'Auto-Form Unassigned Students'),
+                          );
+                        },
                       ),
                     ],
                   ),
@@ -291,14 +301,18 @@ class _ScarcityReportDialogState extends State<ScarcityReportDialog> {
               _buildMiniMetric(
                 label: 'Unassigned',
                 value: '${report.unassignedStudentsCount}',
-                icon: Icons.person_search,
-                color: Colors.amber.shade900,
+                icon: report.unassignedStudentsCount == 0
+                    ? Icons.check_circle_outline
+                    : Icons.person_search,
+                color: report.unassignedStudentsCount == 0
+                    ? Colors.green.shade700
+                    : Colors.amber.shade900,
               ),
             ],
           ),
           const SizedBox(height: 16),
 
-          // Scarce skills notification banner
+          // Scarce skills notification banner or Completed banner
           if (report.hasScarcity) ...[
             Container(
               padding: const EdgeInsets.all(14),
@@ -358,6 +372,46 @@ class _ScarcityReportDialogState extends State<ScarcityReportDialog> {
                       fontSize: 11,
                       fontStyle: FontStyle.italic,
                       color: Colors.brown.shade700,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 18),
+          ] else if (report.unassignedStudentsCount == 0) ...[
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: const Color(0xFFECFDF5),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: const Color(0xFFA7F3D0)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.check_circle_rounded,
+                      color: Color(0xFF059669), size: 24),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'All Teams Formed & Assignments Published',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF065F46),
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'All ${report.totalStudents} students are assigned into ${report.numberOfGroups} balanced teams. Roster is synchronized with the student portal.',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Color(0xFF047857),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],

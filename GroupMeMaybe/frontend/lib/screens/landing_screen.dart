@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'login_screen.dart';
 import 'professor_activities_screen.dart';
 import 'signup_screen.dart';
-import 'student_dashboard_screen.dart';
 
 class LandingScreen extends StatelessWidget {
   const LandingScreen({super.key});
@@ -331,7 +330,7 @@ class LandingScreen extends StatelessWidget {
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const StudentDashboardScreen()),
+                  MaterialPageRoute(builder: (_) => const SignupScreen(initialRole: 'student')),
                 );
               },
               style: ElevatedButton.styleFrom(

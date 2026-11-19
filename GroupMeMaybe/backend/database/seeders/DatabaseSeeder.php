@@ -21,7 +21,25 @@ class DatabaseSeeder extends Seeder
         GroupingActivity::truncate();
         AcademicClass::truncate();
         Profile::truncate();
+        User::truncate();
         Schema::enableForeignKeyConstraints();
+
+        // 0. Seed Demo Accounts
+        User::create([
+            'name' => 'Prof. Aivhan',
+            'email' => 'prof.aivhan@university.edu',
+            'password' => \Illuminate\Support\Facades\Hash::make('password123'),
+            'role' => 'professor',
+            'department_or_section' => 'College of Computer Studies',
+        ]);
+
+        User::create([
+            'name' => 'Carlos Mendoza',
+            'email' => 'carlos.mendoza@student.edu',
+            'password' => \Illuminate\Support\Facades\Hash::make('password123'),
+            'role' => 'student',
+            'department_or_section' => 'BSIT 2A',
+        ]);
 
         // 1. Seed Academic Classes
         $class1 = AcademicClass::create([

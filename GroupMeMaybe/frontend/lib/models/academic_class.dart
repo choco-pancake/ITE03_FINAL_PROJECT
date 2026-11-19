@@ -5,6 +5,7 @@ class AcademicClass {
   final String classCode;
   final String? description;
   final int studentCount;
+  final int activitiesCount;
 
   AcademicClass({
     required this.id,
@@ -13,6 +14,7 @@ class AcademicClass {
     required this.classCode,
     this.description,
     this.studentCount = 30,
+    this.activitiesCount = 0,
   });
 
   String get displayName =>
@@ -28,6 +30,9 @@ class AcademicClass {
       studentCount: json['student_count'] is int
           ? json['student_count'] as int
           : int.tryParse(json['student_count']?.toString() ?? '30') ?? 30,
+      activitiesCount: json['activities_count'] is int
+          ? json['activities_count'] as int
+          : int.tryParse(json['activities_count']?.toString() ?? '0') ?? 0,
     );
   }
 

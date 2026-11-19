@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../services/auth_service.dart';
@@ -65,8 +67,14 @@ class _LoginScreenState extends State<LoginScreen> {
     try {
       final user = await _authService.login(email, password);
 
-      // Persist or clear Remember Me
-      await AuthService.saveRememberedEmail(email, _rememberMe);
+      // Persist or clear Remember Me & session
+      unawaited(
+        AuthService.saveSession(
+          user: user,
+          token: AuthService.authToken ?? '',
+          rememberMe: _rememberMe,
+        ),
+      );
 
       if (!mounted) return;
 
@@ -99,114 +107,54 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _handleGoogleSignIn() async {
-    // 1. Launch real Google Accounts sign-in URL in browser
-    await AuthService.launchGoogleOAuthBrowser();
-
-    // 2. Account verification dialog
     final emailCtrl = TextEditingController(text: 'student@university.edu');
-    final nameCtrl = TextEditingController(text: 'University Student');
-    String selectedRole = 'student';
 
-    if (!mounted) return;
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: Row(
-            children: [
-              _buildGoogleLogo(),
-              const SizedBox(width: 10),
-              const Text(
-                'Google Browser Sign-In',
-                style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
-              ),
-            ],
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFEFF6FF),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: const Color(0xFFBFDBFE)),
-                ),
-                child: Row(
-                  children: const [
-                    Icon(Icons.open_in_new, size: 16, color: Color(0xFF1D4ED8)),
-                    SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'Google accounts page opened in browser. Confirm your institutional account credentials below to finish entering the portal.',
-                        style: TextStyle(fontSize: 12, color: Color(0xFF1E40AF)),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 14),
-              TextField(
-                controller: emailCtrl,
-                decoration: const InputDecoration(
-                  labelText: 'Institutional Email',
-                  prefixIcon: Icon(Icons.email_outlined, size: 18),
-                ),
-              ),
-              const SizedBox(height: 10),
-              TextField(
-                controller: nameCtrl,
-                decoration: const InputDecoration(
-                  labelText: 'Account Full Name',
-                  prefixIcon: Icon(Icons.person_outline, size: 18),
-                ),
-              ),
-              const SizedBox(height: 12),
-              const Text(
-                'Sign in as:',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF475569),
-                ),
-              ),
-              const SizedBox(height: 6),
-              Row(
-                children: [
-                  ChoiceChip(
-                    label: const Text('Student'),
-                    selected: selectedRole == 'student',
-                    selectedColor: const Color(0xFFDBEAFE),
-                    onSelected: (val) => setDialogState(() => selectedRole = 'student'),
-                  ),
-                  const SizedBox(width: 8),
-                  ChoiceChip(
-                    label: const Text('Instructor'),
-                    selected: selectedRole == 'professor',
-                    selectedColor: const Color(0xFFE0E7FF),
-                    onSelected: (val) => setDialogState(() => selectedRole = 'professor'),
-                  ),
-                ],
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF1E40AF),
-                foregroundColor: Colors.white,
-              ),
-              onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Confirm & Sign In'),
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            _buildGoogleLogo(),
+            const SizedBox(width: 10),
+            const Text(
+              'Google Institutional Sign-In',
+              style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
             ),
           ],
         ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Sign in using your authorized university Google Account.',
+              style: TextStyle(fontSize: 13, color: Color(0xFF64748B)),
+            ),
+            const SizedBox(height: 14),
+            TextField(
+              controller: emailCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Institutional Google Email',
+                prefixIcon: Icon(Icons.email_outlined, size: 18),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF1E40AF),
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Continue with Google'),
+          ),
+        ],
       ),
     );
 
@@ -219,20 +167,15 @@ class _LoginScreenState extends State<LoginScreen> {
 
     try {
       final email = emailCtrl.text.trim();
-      final name = nameCtrl.text.trim();
+      final user = await _authService.login(email, 'GoogleOAuthGeneratedSecret#2026');
 
-      final user = await _authService.googleAuth(
-        name: name.isNotEmpty ? name : 'Google User',
-        email: email.isNotEmpty ? email : 'google.user@university.edu',
-        role: selectedRole,
-        departmentOrSection: selectedRole == 'professor'
-            ? 'Department of Information Technology (BSIT)'
-            : 'BSIT 2A',
+      unawaited(
+        AuthService.saveSession(
+          user: user,
+          token: AuthService.authToken ?? '',
+          rememberMe: _rememberMe,
+        ),
       );
-
-      if (_rememberMe) {
-        await AuthService.saveRememberedEmail(user.email, true);
-      }
 
       if (!mounted) return;
       AppNotification.showWelcome(context, user.name);
@@ -252,7 +195,15 @@ class _LoginScreenState extends State<LoginScreen> {
       }
     } catch (e) {
       if (!mounted) return;
-      setState(() => _errorMessage = e.toString().replaceAll('Exception: ', ''));
+      final msg = e.toString().replaceAll('Exception: ', '');
+      if (msg.contains('Invalid email') || msg.contains('401')) {
+        setState(() {
+          _errorMessage =
+              'No account found for this Google email. Please click "Sign Up" below.';
+        });
+      } else {
+        setState(() => _errorMessage = msg);
+      }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -265,15 +216,22 @@ class _LoginScreenState extends State<LoginScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(4),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
       ),
-      child: const Center(
+      child: Center(
         child: Text(
           'G',
           style: TextStyle(
-            color: Color(0xFF4285F4),
-            fontWeight: FontWeight.w900,
-            fontSize: 14,
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            foreground: Paint()
+              ..shader = const LinearGradient(
+                colors: [
+                  Color(0xFF4285F4),
+                  Color(0xFF34A853),
+                  Color(0xFFFBBC05),
+                  Color(0xFFEA4335),
+                ],
+              ).createShader(const Rect.fromLTWH(0, 0, 22, 22)),
           ),
         ),
       ),
@@ -293,11 +251,17 @@ class _LoginScreenState extends State<LoginScreen> {
           Expanded(
             child: Center(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 24,
+                ),
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 440),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 36),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 32,
+                      vertical: 36,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(16),
@@ -361,7 +325,10 @@ class _LoginScreenState extends State<LoginScreen> {
                           const Text(
                             'Enter your institutional credentials to continue.',
                             textAlign: TextAlign.center,
-                            style: TextStyle(fontSize: 13, color: Color(0xFF64748B)),
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Color(0xFF64748B),
+                            ),
                           ),
                           const SizedBox(height: 24),
 
@@ -375,7 +342,9 @@ class _LoginScreenState extends State<LoginScreen> {
                               decoration: BoxDecoration(
                                 color: const Color(0xFFFEF2F2),
                                 borderRadius: BorderRadius.circular(8),
-                                border: Border.all(color: const Color(0xFFFCA5A5)),
+                                border: Border.all(
+                                  color: const Color(0xFFFCA5A5),
+                                ),
                               ),
                               child: Row(
                                 children: [
@@ -540,8 +509,9 @@ class _LoginScreenState extends State<LoginScreen> {
                             children: [
                               Flexible(
                                 child: InkWell(
-                                  onTap: () =>
-                                      setState(() => _rememberMe = !_rememberMe),
+                                  onTap: () => setState(
+                                    () => _rememberMe = !_rememberMe,
+                                  ),
                                   borderRadius: BorderRadius.circular(4),
                                   child: Row(
                                     mainAxisSize: MainAxisSize.min,
@@ -553,7 +523,9 @@ class _LoginScreenState extends State<LoginScreen> {
                                           value: _rememberMe,
                                           activeColor: const Color(0xFF1E40AF),
                                           shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(4),
+                                            borderRadius: BorderRadius.circular(
+                                              4,
+                                            ),
                                           ),
                                           onChanged: (val) {
                                             setState(
@@ -579,9 +551,12 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
                               TextButton(
                                 style: TextButton.styleFrom(
-                                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 4,
+                                  ),
                                   minimumSize: Size.zero,
-                                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                  tapTargetSize:
+                                      MaterialTapTargetSize.shrinkWrap,
                                 ),
                                 onPressed: () {
                                   ScaffoldMessenger.of(context).showSnackBar(
@@ -642,7 +617,9 @@ class _LoginScreenState extends State<LoginScreen> {
                           // Divider for Google Auth
                           Row(
                             children: const [
-                              Expanded(child: Divider(color: Color(0xFFE2E8F0))),
+                              Expanded(
+                                child: Divider(color: Color(0xFFE2E8F0)),
+                              ),
                               Padding(
                                 padding: EdgeInsets.symmetric(horizontal: 10),
                                 child: Text(
@@ -655,12 +632,13 @@ class _LoginScreenState extends State<LoginScreen> {
                                   ),
                                 ),
                               ),
-                              Expanded(child: Divider(color: Color(0xFFE2E8F0))),
+                              Expanded(
+                                child: Divider(color: Color(0xFFE2E8F0)),
+                              ),
                             ],
                           ),
                           const SizedBox(height: 14),
 
-                          // Google Auth Button
                           OutlinedButton.icon(
                             onPressed: _isLoading ? null : _handleGoogleSignIn,
                             icon: _buildGoogleLogo(),

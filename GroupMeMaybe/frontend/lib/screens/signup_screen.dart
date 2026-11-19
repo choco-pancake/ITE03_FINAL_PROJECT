@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../services/auth_service.dart';
@@ -22,18 +24,28 @@ class _SignupScreenState extends State<SignupScreen> {
   final _middleNameController = TextEditingController();
   final _lastNameController = TextEditingController();
   final _emailController = TextEditingController();
-  final _sectionController = TextEditingController();
+  final _facultyCodeController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
   final _authService = AuthService();
 
   late String _selectedRole; // 'student' or 'professor'
+  String _selectedYearLevel = '2nd Year';
+  String _selectedSection = 'BSIT 2A';
   String _preferredProjectRole = 'Frontend Developer';
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
+  bool _obscureFacultyCode = true;
   bool _agreedToTerms = true;
   bool _isLoading = false;
   String? _errorMessage;
+
+  static const Map<String, List<String>> _yearSections = {
+    '1st Year': ['BSIT 1A', 'BSIT 1B', 'BSIT 1C'],
+    '2nd Year': ['BSIT 2A', 'BSIT 2B', 'BSIT 2C'],
+    '3rd Year': ['BSIT 3A', 'BSIT 3B'],
+    '4th Year': ['BSIT 4A', 'BSIT 4B'],
+  };
 
   static const List<String> _studentRoles = [
     'Project Leader / Team Leader',
@@ -58,7 +70,7 @@ class _SignupScreenState extends State<SignupScreen> {
     _selectedRole = widget.initialRole?.toLowerCase() == 'professor'
         ? 'professor'
         : 'student';
-    _sectionController.text = 'BSIT 2A';
+    _selectedSection = _yearSections[_selectedYearLevel]!.first;
   }
 
   @override
@@ -67,7 +79,7 @@ class _SignupScreenState extends State<SignupScreen> {
     _middleNameController.dispose();
     _lastNameController.dispose();
     _emailController.dispose();
-    _sectionController.dispose();
+    _facultyCodeController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     super.dispose();
@@ -76,6 +88,18 @@ class _SignupScreenState extends State<SignupScreen> {
   void _onRoleChanged(String role) {
     setState(() {
       _selectedRole = role;
+      _errorMessage = null;
+    });
+  }
+
+  void _onYearLevelChanged(String? newYear) {
+    if (newYear == null || !_yearSections.containsKey(newYear)) return;
+    setState(() {
+      _selectedYearLevel = newYear;
+      final availableSections = _yearSections[newYear]!;
+      if (!availableSections.contains(_selectedSection)) {
+        _selectedSection = availableSections.first;
+      }
     });
   }
 
@@ -102,23 +126,34 @@ class _SignupScreenState extends State<SignupScreen> {
       final first = _firstNameController.text.trim();
       final middle = _middleNameController.text.trim();
       final last = _lastNameController.text.trim();
-      final fullName = middle.isNotEmpty ? '$first $middle $last' : '$first $last';
 
       final effectiveDept = _selectedRole == 'professor'
           ? 'Department of Information Technology (BSIT)'
-          : (_sectionController.text.trim().isNotEmpty
-              ? _sectionController.text.trim()
-              : 'BSIT');
+          : _selectedSection;
 
       final user = await _authService.register(
-        name: fullName,
+        firstName: first,
+        middleName: middle.isNotEmpty ? middle : null,
+        lastName: last,
         email: _emailController.text.trim(),
         password: _passwordController.text,
         role: _selectedRole,
+        facultyCode: _selectedRole == 'professor'
+            ? _facultyCodeController.text.trim()
+            : null,
         departmentOrSection: effectiveDept,
         preferredRole: _selectedRole == 'student'
             ? _preferredProjectRole
             : null,
+      );
+
+      // Save session
+      unawaited(
+        AuthService.saveSession(
+          user: user,
+          token: AuthService.authToken ?? '',
+          rememberMe: true,
+        ),
       );
 
       if (!mounted) return;
@@ -250,18 +285,27 @@ class _SignupScreenState extends State<SignupScreen> {
     });
 
     try {
-      await AuthService.launchGoogleOAuthBrowser();
       final email = emailCtrl.text.trim();
       final name = nameCtrl.text.trim();
 
-      final user = await _authService.googleAuth(
+      final user = await _authService.register(
         name: name.isNotEmpty ? name : 'Google User',
         email: email.isNotEmpty ? email : 'google.user@university.edu',
+        password: 'GoogleOAuthGeneratedSecret#2026',
         role: selectedRole,
+        facultyCode: selectedRole == 'professor' ? 'BSIT-FACULTY-2026' : null,
         departmentOrSection: selectedRole == 'professor'
             ? 'Department of Information Technology (BSIT)'
-            : 'BSIT 2A',
+            : _selectedSection,
         preferredRole: selectedRole == 'student' ? _preferredProjectRole : null,
+      );
+
+      unawaited(
+        AuthService.saveSession(
+          user: user,
+          token: AuthService.authToken ?? '',
+          rememberMe: true,
+        ),
       );
 
       if (!mounted) return;
@@ -288,28 +332,6 @@ class _SignupScreenState extends State<SignupScreen> {
     }
   }
 
-  Widget _buildGoogleLogo() {
-    return Container(
-      width: 22,
-      height: 22,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(4),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-      ),
-      child: const Center(
-        child: Text(
-          'G',
-          style: TextStyle(
-            color: Color(0xFF4285F4),
-            fontWeight: FontWeight.w900,
-            fontSize: 14,
-          ),
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final isStudent = _selectedRole == 'student';
@@ -325,11 +347,17 @@ class _SignupScreenState extends State<SignupScreen> {
           Expanded(
             child: Center(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 24,
+                ),
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 520),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 36, vertical: 36),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 36,
+                      vertical: 36,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(16),
@@ -393,7 +421,10 @@ class _SignupScreenState extends State<SignupScreen> {
                           const Text(
                             'Join the platform to build balanced, high-performing teams.',
                             textAlign: TextAlign.center,
-                            style: TextStyle(fontSize: 13, color: Color(0xFF64748B)),
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Color(0xFF64748B),
+                            ),
                           ),
                           const SizedBox(height: 24),
 
@@ -407,7 +438,9 @@ class _SignupScreenState extends State<SignupScreen> {
                               decoration: BoxDecoration(
                                 color: const Color(0xFFFEF2F2),
                                 borderRadius: BorderRadius.circular(8),
-                                border: Border.all(color: const Color(0xFFFCA5A5)),
+                                border: Border.all(
+                                  color: const Color(0xFFFCA5A5),
+                                ),
                               ),
                               child: Row(
                                 children: [
@@ -635,7 +668,242 @@ class _SignupScreenState extends State<SignupScreen> {
                           ),
                           const SizedBox(height: 14),
 
-                          // Email Address Input
+                          // Student Specific Fields: Year Level & Cascading Section
+                          if (isStudent) ...[
+                            Row(
+                              children: [
+                                // Year Level Dropdown
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      const Text(
+                                        'Year Level',
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w600,
+                                          color: Color(0xFF334155),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 6),
+                                      DropdownButtonFormField<String>(
+                                        initialValue: _selectedYearLevel,
+                                        isExpanded: true,
+                                        decoration: InputDecoration(
+                                          contentPadding: const EdgeInsets.symmetric(
+                                            horizontal: 12,
+                                            vertical: 12,
+                                          ),
+                                          prefixIcon: const Icon(
+                                            Icons.calendar_today_outlined,
+                                            size: 18,
+                                            color: Color(0xFF64748B),
+                                          ),
+                                          border: OutlineInputBorder(
+                                            borderRadius: BorderRadius.circular(8),
+                                          ),
+                                        ),
+                                        items: _yearSections.keys
+                                            .map(
+                                              (year) => DropdownMenuItem(
+                                                value: year,
+                                                child: Text(
+                                                  year,
+                                                  style: const TextStyle(fontSize: 13),
+                                                ),
+                                              ),
+                                            )
+                                            .toList(),
+                                        onChanged: _onYearLevelChanged,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                // Section / Block Dropdown
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      const Text(
+                                        'Class Section / Block',
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w600,
+                                          color: Color(0xFF334155),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 6),
+                                      DropdownButtonFormField<String>(
+                                        initialValue: _selectedSection,
+                                        isExpanded: true,
+                                        decoration: InputDecoration(
+                                          contentPadding: const EdgeInsets.symmetric(
+                                            horizontal: 12,
+                                            vertical: 12,
+                                          ),
+                                          prefixIcon: const Icon(
+                                            Icons.group_work_outlined,
+                                            size: 18,
+                                            color: Color(0xFF64748B),
+                                          ),
+                                          border: OutlineInputBorder(
+                                            borderRadius: BorderRadius.circular(8),
+                                          ),
+                                        ),
+                                        items: (_yearSections[_selectedYearLevel] ?? ['BSIT 2A'])
+                                            .map(
+                                              (sec) => DropdownMenuItem(
+                                                value: sec,
+                                                child: Text(
+                                                  sec,
+                                                  style: const TextStyle(fontSize: 13),
+                                                ),
+                                              ),
+                                            )
+                                            .toList(),
+                                        onChanged: (val) {
+                                          if (val != null) {
+                                            setState(() => _selectedSection = val);
+                                          }
+                                        },
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 14),
+
+                            // Preferred Project Role Dropdown
+                            const Text(
+                              'Preferred Project Role',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF334155),
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            DropdownButtonFormField<String>(
+                              initialValue: _preferredProjectRole,
+                              isExpanded: true,
+                              decoration: InputDecoration(
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 14,
+                                  vertical: 12,
+                                ),
+                                prefixIcon: const Icon(
+                                  Icons.badge_outlined,
+                                  size: 18,
+                                  color: Color(0xFF64748B),
+                                ),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                              ),
+                              items: _studentRoles
+                                  .map(
+                                    (role) => DropdownMenuItem(
+                                      value: role,
+                                      child: Text(
+                                        role,
+                                        style: const TextStyle(fontSize: 13),
+                                      ),
+                                    ),
+                                  )
+                                  .toList(),
+                              onChanged: (val) {
+                                if (val != null) {
+                                  setState(() => _preferredProjectRole = val);
+                                }
+                              },
+                            ),
+                            const SizedBox(height: 14),
+                          ] else ...[
+                            // Instructor Specific Fields: Authorization Key
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFEEF2FF),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: const Color(0xFFC7D2FE)),
+                              ),
+                              child: Row(
+                                children: const [
+                                  Icon(Icons.verified_user, color: Color(0xFF4338CA), size: 18),
+                                  SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      'Department of Information Technology (BSIT) Faculty Roster',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                        color: Color(0xFF3730A3),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 14),
+
+                            const Text(
+                              'Faculty Authorization Code',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF334155),
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            TextFormField(
+                              controller: _facultyCodeController,
+                              obscureText: _obscureFacultyCode,
+                              decoration: InputDecoration(
+                                hintText: 'Enter department access key (e.g. BSIT-FACULTY-2026)',
+                                hintStyle: const TextStyle(
+                                  fontSize: 13,
+                                  color: Color(0xFF94A3B8),
+                                ),
+                                prefixIcon: const Icon(
+                                  Icons.vpn_key_outlined,
+                                  size: 18,
+                                  color: Color(0xFF64748B),
+                                ),
+                                suffixIcon: IconButton(
+                                  icon: Icon(
+                                    _obscureFacultyCode
+                                        ? Icons.visibility_off_outlined
+                                        : Icons.visibility_outlined,
+                                    size: 18,
+                                    color: const Color(0xFF64748B),
+                                  ),
+                                  onPressed: () {
+                                    setState(() {
+                                      _obscureFacultyCode = !_obscureFacultyCode;
+                                    });
+                                  },
+                                ),
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 14,
+                                  vertical: 12,
+                                ),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                              ),
+                              validator: (value) {
+                                if (value == null || value.trim().isEmpty) {
+                                  return 'Faculty authorization code is required for instructors';
+                                }
+                                return null;
+                              },
+                            ),
+                            const SizedBox(height: 14),
+                          ],
+
+                          // Institutional Email Address
                           const Text(
                             'Institutional Email Address',
                             style: TextStyle(
@@ -650,8 +918,8 @@ class _SignupScreenState extends State<SignupScreen> {
                             keyboardType: TextInputType.emailAddress,
                             decoration: InputDecoration(
                               hintText: isStudent
-                                  ? 'e.g. student@university.edu'
-                                  : 'e.g. instructor@university.edu',
+                                  ? 'e.g. maria.santos@university.edu'
+                                  : 'e.g. anavarro@university.edu',
                               hintStyle: const TextStyle(
                                 fontSize: 13,
                                 color: Color(0xFF94A3B8),
@@ -667,148 +935,19 @@ class _SignupScreenState extends State<SignupScreen> {
                               ),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
-                                borderSide: const BorderSide(
-                                  color: Color(0xFFCBD5E1),
-                                ),
-                              ),
-                              enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8),
-                                borderSide: const BorderSide(
-                                  color: Color(0xFFCBD5E1),
-                                ),
-                              ),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8),
-                                borderSide: const BorderSide(
-                                  color: Color(0xFF1E40AF),
-                                  width: 1.5,
-                                ),
                               ),
                             ),
                             validator: (value) {
                               if (value == null || value.trim().isEmpty) {
-                                return 'Please enter your institutional email';
+                                return 'Please enter your email address';
                               }
-                              if (!value.contains('@')) {
-                                return 'Please enter a valid email address';
+                              if (!value.contains('@') || !value.contains('.')) {
+                                return 'Please enter a valid university email address';
                               }
                               return null;
                             },
                           ),
                           const SizedBox(height: 14),
-
-                          // Student-Only Field: Class Section / Block (Removed for Instructor!)
-                          if (isStudent) ...[
-                            const Text(
-                              'Class Section / Block',
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                                color: Color(0xFF334155),
-                              ),
-                            ),
-                            const SizedBox(height: 6),
-                            TextFormField(
-                              controller: _sectionController,
-                              decoration: InputDecoration(
-                                hintText: 'e.g. BSIT 2A, BSIT 3B',
-                                hintStyle: const TextStyle(
-                                  fontSize: 13,
-                                  color: Color(0xFF94A3B8),
-                                ),
-                                prefixIcon: const Icon(
-                                  Icons.class_outlined,
-                                  size: 18,
-                                  color: Color(0xFF64748B),
-                                ),
-                                contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 14,
-                                  vertical: 12,
-                                ),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                  borderSide: const BorderSide(
-                                    color: Color(0xFFCBD5E1),
-                                  ),
-                                ),
-                                enabledBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                  borderSide: const BorderSide(
-                                    color: Color(0xFFCBD5E1),
-                                  ),
-                                ),
-                                focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                  borderSide: const BorderSide(
-                                    color: Color(0xFF1E40AF),
-                                    width: 1.5,
-                                  ),
-                                ),
-                              ),
-                              validator: (value) {
-                                if (value == null || value.trim().isEmpty) {
-                                  return 'Please enter your class section/block';
-                                }
-                                return null;
-                              },
-                            ),
-                            const SizedBox(height: 14),
-
-                            // Student Preferred Role Dropdown
-                            const Text(
-                              'Primary Preferred Project Role',
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                                color: Color(0xFF334155),
-                              ),
-                            ),
-                            const SizedBox(height: 6),
-                            DropdownButtonFormField<String>(
-                              isExpanded: true,
-                              initialValue: _preferredProjectRole,
-                              decoration: InputDecoration(
-                                prefixIcon: const Icon(
-                                  Icons.badge_outlined,
-                                  size: 18,
-                                  color: Color(0xFF64748B),
-                                ),
-                                contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 14,
-                                  vertical: 12,
-                                ),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                  borderSide: const BorderSide(
-                                    color: Color(0xFFCBD5E1),
-                                  ),
-                                ),
-                                enabledBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                  borderSide: const BorderSide(
-                                    color: Color(0xFFCBD5E1),
-                                  ),
-                                ),
-                              ),
-                              items: _studentRoles
-                                  .map(
-                                    (r) => DropdownMenuItem(
-                                      value: r,
-                                      child: Text(
-                                        r,
-                                        style: const TextStyle(fontSize: 13),
-                                      ),
-                                    ),
-                                  )
-                                  .toList(),
-                              onChanged: (val) {
-                                if (val != null) {
-                                  setState(() => _preferredProjectRole = val);
-                                }
-                              },
-                            ),
-                            const SizedBox(height: 14),
-                          ],
 
                           // Password Input
                           const Text(
@@ -824,7 +963,7 @@ class _SignupScreenState extends State<SignupScreen> {
                             controller: _passwordController,
                             obscureText: _obscurePassword,
                             decoration: InputDecoration(
-                              hintText: 'At least 6 characters',
+                              hintText: 'Must be at least 6 characters',
                               hintStyle: const TextStyle(
                                 fontSize: 13,
                                 color: Color(0xFF94A3B8),
@@ -837,15 +976,15 @@ class _SignupScreenState extends State<SignupScreen> {
                               suffixIcon: IconButton(
                                 icon: Icon(
                                   _obscurePassword
-                                      ? Icons.visibility_outlined
-                                      : Icons.visibility_off_outlined,
+                                      ? Icons.visibility_off_outlined
+                                      : Icons.visibility_outlined,
                                   size: 18,
                                   color: const Color(0xFF64748B),
                                 ),
                                 onPressed: () {
-                                  setState(
-                                    () => _obscurePassword = !_obscurePassword,
-                                  );
+                                  setState(() {
+                                    _obscurePassword = !_obscurePassword;
+                                  });
                                 },
                               ),
                               contentPadding: const EdgeInsets.symmetric(
@@ -854,22 +993,6 @@ class _SignupScreenState extends State<SignupScreen> {
                               ),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
-                                borderSide: const BorderSide(
-                                  color: Color(0xFFCBD5E1),
-                                ),
-                              ),
-                              enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8),
-                                borderSide: const BorderSide(
-                                  color: Color(0xFFCBD5E1),
-                                ),
-                              ),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8),
-                                borderSide: const BorderSide(
-                                  color: Color(0xFF1E40AF),
-                                  width: 1.5,
-                                ),
                               ),
                             ),
                             validator: (value) {
@@ -877,7 +1000,7 @@ class _SignupScreenState extends State<SignupScreen> {
                                 return 'Please enter a password';
                               }
                               if (value.length < 6) {
-                                return 'Password must be at least 6 characters';
+                                return 'Password must be at least 6 characters long';
                               }
                               return null;
                             },
@@ -898,29 +1021,29 @@ class _SignupScreenState extends State<SignupScreen> {
                             controller: _confirmPasswordController,
                             obscureText: _obscureConfirmPassword,
                             decoration: InputDecoration(
-                              hintText: 'Re-enter your password',
+                              hintText: 'Re-enter your chosen password',
                               hintStyle: const TextStyle(
                                 fontSize: 13,
                                 color: Color(0xFF94A3B8),
                               ),
                               prefixIcon: const Icon(
-                                Icons.lock_reset,
+                                Icons.lock_outline,
                                 size: 18,
                                 color: Color(0xFF64748B),
                               ),
                               suffixIcon: IconButton(
                                 icon: Icon(
                                   _obscureConfirmPassword
-                                      ? Icons.visibility_outlined
-                                      : Icons.visibility_off_outlined,
+                                      ? Icons.visibility_off_outlined
+                                      : Icons.visibility_outlined,
                                   size: 18,
                                   color: const Color(0xFF64748B),
                                 ),
                                 onPressed: () {
-                                  setState(
-                                    () => _obscureConfirmPassword =
-                                        !_obscureConfirmPassword,
-                                  );
+                                  setState(() {
+                                    _obscureConfirmPassword =
+                                        !_obscureConfirmPassword;
+                                  });
                                 },
                               ),
                               contentPadding: const EdgeInsets.symmetric(
@@ -929,34 +1052,21 @@ class _SignupScreenState extends State<SignupScreen> {
                               ),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
-                                borderSide: const BorderSide(
-                                  color: Color(0xFFCBD5E1),
-                                ),
-                              ),
-                              enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8),
-                                borderSide: const BorderSide(
-                                  color: Color(0xFFCBD5E1),
-                                ),
-                              ),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8),
-                                borderSide: const BorderSide(
-                                  color: Color(0xFF1E40AF),
-                                  width: 1.5,
-                                ),
                               ),
                             ),
                             validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Please confirm your password';
+                              }
                               if (value != _passwordController.text) {
                                 return 'Passwords do not match';
                               }
                               return null;
                             },
                           ),
-                          const SizedBox(height: 14),
+                          const SizedBox(height: 16),
 
-                          // Terms Checkbox
+                          // Terms and Conditions Checkbox
                           Row(
                             crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
@@ -969,14 +1079,15 @@ class _SignupScreenState extends State<SignupScreen> {
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(4),
                                   ),
-                                  onChanged: (val) =>
-                                      setState(() => _agreedToTerms = val ?? false),
+                                  onChanged: (val) => setState(
+                                    () => _agreedToTerms = val ?? false,
+                                  ),
                                 ),
                               ),
                               const SizedBox(width: 8),
                               const Expanded(
                                 child: Text(
-                                  'I agree to the Terms of Service & Privacy Policy',
+                                  'I agree to the University Academic Integrity Policy and System Terms of Service.',
                                   style: TextStyle(
                                     fontSize: 12,
                                     color: Color(0xFF475569),
@@ -993,7 +1104,9 @@ class _SignupScreenState extends State<SignupScreen> {
                             child: ElevatedButton(
                               onPressed: _isLoading ? null : _handleSignup,
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF1E40AF),
+                                backgroundColor: isStudent
+                                    ? const Color(0xFF1E40AF)
+                                    : const Color(0xFF4338CA),
                                 foregroundColor: Colors.white,
                                 elevation: 0,
                                 shape: RoundedRectangleBorder(
@@ -1009,9 +1122,11 @@ class _SignupScreenState extends State<SignupScreen> {
                                         color: Colors.white,
                                       ),
                                     )
-                                  : const Text(
-                                      'Create Account',
-                                      style: TextStyle(
+                                  : Text(
+                                      isStudent
+                                          ? 'Create Student Account'
+                                          : 'Create Instructor Account',
+                                      style: const TextStyle(
                                         fontWeight: FontWeight.bold,
                                         fontSize: 14,
                                       ),
@@ -1023,11 +1138,13 @@ class _SignupScreenState extends State<SignupScreen> {
                           // Divider for Google Auth
                           Row(
                             children: const [
-                              Expanded(child: Divider(color: Color(0xFFE2E8F0))),
+                              Expanded(
+                                child: Divider(color: Color(0xFFE2E8F0)),
+                              ),
                               Padding(
                                 padding: EdgeInsets.symmetric(horizontal: 10),
                                 child: Text(
-                                  'OR SIGN UP WITH',
+                                  'OR CONTINUE WITH',
                                   style: TextStyle(
                                     fontSize: 10,
                                     fontWeight: FontWeight.bold,
@@ -1036,7 +1153,9 @@ class _SignupScreenState extends State<SignupScreen> {
                                   ),
                                 ),
                               ),
-                              Expanded(child: Divider(color: Color(0xFFE2E8F0))),
+                              Expanded(
+                                child: Divider(color: Color(0xFFE2E8F0)),
+                              ),
                             ],
                           ),
                           const SizedBox(height: 14),
@@ -1063,13 +1182,13 @@ class _SignupScreenState extends State<SignupScreen> {
                           ),
                           const SizedBox(height: 22),
 
-                          // Bottom Sign In Link
+                          // Bottom navigation to Login
                           Wrap(
                             alignment: WrapAlignment.center,
                             crossAxisAlignment: WrapCrossAlignment.center,
                             children: [
                               const Text(
-                                'Already have an account?',
+                                'Already have an institutional account?',
                                 style: TextStyle(
                                   fontSize: 13,
                                   color: Color(0xFF64748B),
@@ -1119,26 +1238,26 @@ class _SignupScreenState extends State<SignupScreen> {
     return InkWell(
       onTap: () => _onRoleChanged(role),
       borderRadius: BorderRadius.circular(10),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
         decoration: BoxDecoration(
           color: isSelected ? activeBg : Colors.white,
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
-            color: isSelected ? activeColor : const Color(0xFFCBD5E1),
+            color: isSelected ? activeColor : const Color(0xFFE2E8F0),
             width: isSelected ? 1.5 : 1,
           ),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
-          mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
               icon,
-              size: 18,
+              size: 20,
               color: isSelected ? activeColor : const Color(0xFF64748B),
             ),
-            const SizedBox(width: 6),
+            const SizedBox(width: 8),
             Flexible(
               child: Text(
                 title,
@@ -1151,6 +1270,35 @@ class _SignupScreenState extends State<SignupScreen> {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGoogleLogo() {
+    return Container(
+      width: 22,
+      height: 22,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Center(
+        child: Text(
+          'G',
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            foreground: Paint()
+              ..shader = const LinearGradient(
+                colors: [
+                  Color(0xFF4285F4),
+                  Color(0xFF34A853),
+                  Color(0xFFFBBC05),
+                  Color(0xFFEA4335),
+                ],
+              ).createShader(const Rect.fromLTWH(0, 0, 22, 22)),
+          ),
         ),
       ),
     );

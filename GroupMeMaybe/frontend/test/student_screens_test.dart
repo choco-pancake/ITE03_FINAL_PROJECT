@@ -3,6 +3,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/screens/student_classes_screen.dart';
 import 'package:frontend/screens/student_dashboard_screen.dart';
 import 'package:frontend/screens/student_settings_screen.dart';
+import 'package:frontend/screens/student_groups_screen.dart';
+import 'package:frontend/screens/widgets/student_sidebar.dart';
+import 'package:frontend/services/auth_service.dart';
 
 void main() {
   testWidgets('StudentDashboardScreen renders welcome header and metrics', (
@@ -65,4 +68,37 @@ void main() {
       expect(find.text('Save Profile'), findsOneWidget);
     },
   );
+
+  testWidgets('Student welcome uses the registered first name', (tester) async {
+    AuthService.currentUser = const AuthUser(
+      name: 'Maria Santos',
+      email: 'other.prefix@example.com',
+      role: 'student',
+    );
+    addTearDown(() => AuthService.currentUser = null);
+    await tester.pumpWidget(const MaterialApp(home: StudentDashboardScreen()));
+    await tester.pumpAndSettle();
+    expect(find.text('Welcome back, Maria!'), findsOneWidget);
+  });
+
+  testWidgets('Settings opens for a saved section outside the preset list', (
+    tester,
+  ) async {
+    AuthService.currentUser = const AuthUser(
+      name: 'Maria Santos',
+      email: 'maria@example.com',
+      role: 'student',
+      departmentOrSection: 'BSIT',
+    );
+    addTearDown(() => AuthService.currentUser = null);
+    await tester.pumpWidget(const MaterialApp(home: StudentSettingsScreen()));
+    expect(tester.takeException(), isNull);
+    expect(find.text('My Profile'), findsOneWidget);
+  });
+
+  testWidgets('Groups uses the shared student sidebar', (tester) async {
+    await tester.pumpWidget(const MaterialApp(home: StudentGroupsScreen()));
+    final sidebar = tester.widget<StudentSidebar>(find.byType(StudentSidebar));
+    expect(sidebar.currentDestination, StudentNavDestination.groups);
+  });
 }

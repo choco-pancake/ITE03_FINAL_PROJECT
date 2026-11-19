@@ -44,10 +44,7 @@ class LandingTopBar extends StatelessWidget {
               onTap: () => _navigateToLanding(context),
               borderRadius: BorderRadius.circular(8),
               child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 4,
-                  vertical: 2,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -93,9 +90,8 @@ class LandingTopBar extends StatelessWidget {
 
             const Spacer(),
 
-            // Contextual Top-Right Action Button (Sign Up removed as requested)
-            if (currentRoute == LandingTopBarRoute.landing ||
-                currentRoute == LandingTopBarRoute.signup) ...[
+            // Only the landing page has a top-right action.
+            if (currentRoute == LandingTopBarRoute.landing) ...[
               OutlinedButton(
                 onPressed: () => _navigateToLogin(context),
                 style: OutlinedButton.styleFrom(

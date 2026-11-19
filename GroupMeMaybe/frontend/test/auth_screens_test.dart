@@ -37,7 +37,7 @@ void main() {
   );
 
   testWidgets(
-    'SignupScreen renders role selection, split name fields, google auth, and no back arrow',
+    'SignupScreen renders role selection, split name fields, year/section dropdowns, and instructor faculty code',
     (tester) async {
       await tester.binding.setSurfaceSize(const Size(1200, 1000));
       addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -54,12 +54,16 @@ void main() {
       expect(find.text('Last Name'), findsOneWidget);
       expect(find.text('Full Name'), findsNothing);
 
-      expect(find.text('Create Account'), findsOneWidget);
+      // Student Year Level and Section dropdowns
+      expect(find.text('Year Level'), findsOneWidget);
+      expect(find.text('Class Section / Block'), findsOneWidget);
+      expect(find.text('Preferred Project Role'), findsOneWidget);
+
+      expect(find.text('Create Student Account'), findsOneWidget);
       expect(find.text('Sign up with Google'), findsOneWidget);
 
-      // Student has Class Section / Block
-      expect(find.text('Class Section / Block'), findsOneWidget);
-      expect(find.text('Department / College'), findsNothing);
+      // Faculty code should not be visible for student
+      expect(find.text('Faculty Authorization Code'), findsNothing);
 
       // Top-left arrow should not exist
       expect(find.byIcon(Icons.arrow_back), findsNothing);
@@ -77,9 +81,14 @@ void main() {
       await tester.tap(find.text('Instructor / Prof'));
       await tester.pumpAndSettle();
 
-      // Instructor should NOT have Department / College field (locked to BSIT)
-      expect(find.text('Department / College'), findsNothing);
+      // Instructor should have Faculty Authorization Code
+      expect(find.text('Faculty Authorization Code'), findsOneWidget);
+      expect(find.text('Create Instructor Account'), findsOneWidget);
+
+      // Student-specific fields should be hidden for Instructor
+      expect(find.text('Year Level'), findsNothing);
       expect(find.text('Class Section / Block'), findsNothing);
+      expect(find.text('Preferred Project Role'), findsNothing);
     },
   );
 

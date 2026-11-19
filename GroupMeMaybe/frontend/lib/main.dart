@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 
 import 'screens/landing_screen.dart';
 import 'screens/professor_activities_screen.dart';
+import 'screens/professor_dashboard_screen.dart';
 import 'screens/profile_list_screen.dart';
+import 'screens/student_dashboard_screen.dart';
+import 'services/auth_service.dart';
 
 void main() {
   runApp(const MyApp());
@@ -35,8 +38,60 @@ class MyApp extends StatelessWidget {
           },
         ),
       ),
-      home: const LandingScreen(),
+      home: const AppEntryPoint(),
     );
+  }
+}
+
+class AppEntryPoint extends StatefulWidget {
+  const AppEntryPoint({super.key});
+
+  @override
+  State<AppEntryPoint> createState() => _AppEntryPointState();
+}
+
+class _AppEntryPointState extends State<AppEntryPoint> {
+  bool _checking = true;
+  AuthUser? _restoredUser;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkRememberedSession();
+  }
+
+  Future<void> _checkRememberedSession() async {
+    try {
+      final user = await AuthService.restoreSession();
+      if (mounted) {
+        setState(() {
+          _restoredUser = user;
+          _checking = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _checking = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_checking) {
+      return const Scaffold(
+        backgroundColor: Colors.white,
+        body: Center(
+          child: CircularProgressIndicator(color: Color(0xFF1E40AF)),
+        ),
+      );
+    }
+
+    if (_restoredUser != null) {
+      return _restoredUser!.isProfessor
+          ? const ProfessorDashboardScreen()
+          : const StudentDashboardScreen();
+    }
+
+    return const LandingScreen();
   }
 }
 

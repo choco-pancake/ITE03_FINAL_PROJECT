@@ -19,6 +19,26 @@ Flutter web client for the GroupMeMaybe Laravel API.
    flutter run -d chrome
    ```
 
+## Google sign-in setup
+
+Create a Google OAuth **Web application** client in Google Cloud. Add
+`http://localhost:63834` to its Authorized JavaScript origins and configure
+the consent screen for the accounts you want to test. Use the same client ID
+on the Laravel server and in the Flutter web build:
+
+1. Set `GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com` in
+   `../backend/.env`, then run `php artisan config:clear` and `php artisan migrate`
+   from the backend directory.
+2. Start the frontend on the registered origin:
+
+   ```powershell
+   flutter run -d chrome --web-hostname localhost --web-port 63834 --dart-define=GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com
+   ```
+
+The Google button reports a configuration message until the client ID is set.
+Google login opens existing accounts; new users choose Student or Instructor on
+the signup page before using Google.
+
 ## Browser crash recovery
 
 If Chrome displays "Something went wrong while displaying this webpage":

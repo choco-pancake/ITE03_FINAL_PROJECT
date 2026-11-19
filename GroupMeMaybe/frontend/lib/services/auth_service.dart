@@ -1,11 +1,14 @@
 import 'dart:convert';
+import 'dart:async';
 
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 class AuthUser {
   final int? id;
+  final String? firstName;
+  final String? middleName;
+  final String? lastName;
   final String name;
   final String email;
   final String role; // 'student' or 'professor'
@@ -13,26 +16,51 @@ class AuthUser {
 
   const AuthUser({
     this.id,
+    this.firstName,
+    this.middleName,
+    this.lastName,
     required this.name,
     required this.email,
     required this.role,
     this.departmentOrSection,
   });
 
+  String get effectiveFirstName {
+    if (firstName != null && firstName!.trim().isNotEmpty) {
+      return firstName!.trim();
+    }
+    if (name.trim().isNotEmpty) {
+      return name.trim().split(RegExp(r'\s+')).first;
+    }
+    return 'Student';
+  }
+
   bool get isProfessor =>
       role.toLowerCase() == 'professor' || role.toLowerCase() == 'instructor';
   bool get isStudent => !isProfessor;
 
-  factory AuthUser.fromJson(Map<String, dynamic> json) => AuthUser(
-    id: json['id'],
-    name: json['name'] ?? '',
-    email: json['email'] ?? '',
-    role: json['role'] ?? 'student',
-    departmentOrSection: json['department_or_section'],
-  );
+  factory AuthUser.fromJson(Map<String, dynamic> json) {
+    final fName = json['first_name'] as String?;
+    final mName = json['middle_name'] as String?;
+    final lName = json['last_name'] as String?;
+    final rawName = (json['name'] ?? '') as String;
+    return AuthUser(
+      id: json['id'],
+      firstName: fName,
+      middleName: mName,
+      lastName: lName,
+      name: rawName.isNotEmpty ? rawName : '$fName $lName'.trim(),
+      email: json['email'] ?? '',
+      role: json['role'] ?? 'student',
+      departmentOrSection: json['department_or_section'],
+    );
+  }
 
   Map<String, dynamic> toJson() => {
     'id': id,
+    'first_name': firstName,
+    'middle_name': middleName,
+    'last_name': lastName,
     'name': name,
     'email': email,
     'role': role,
@@ -47,11 +75,53 @@ class AuthService {
 
   static const String _prefKeyRememberMe = 'gmm_remember_me';
   static const String _prefKeySavedEmail = 'gmm_saved_email';
+  static const String _prefKeySavedToken = 'gmm_saved_token';
+  static const String _prefKeySavedUser = 'gmm_saved_user';
 
   static const Map<String, String> _headers = {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
   };
+
+  /// Save or clear Remember Me credentials and full session in persistent storage
+  static Future<void> saveSession({
+    required AuthUser user,
+    required String token,
+    required bool rememberMe,
+  }) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(_prefKeyRememberMe, rememberMe);
+      if (rememberMe) {
+        await prefs.setString(_prefKeySavedEmail, user.email.trim());
+        await prefs.setString(_prefKeySavedToken, token);
+        await prefs.setString(_prefKeySavedUser, jsonEncode(user.toJson()));
+      } else {
+        await prefs.remove(_prefKeySavedEmail);
+        await prefs.remove(_prefKeySavedToken);
+        await prefs.remove(_prefKeySavedUser);
+      }
+    } catch (_) {}
+  }
+
+  /// Restore persisted session on app startup if Remember Me was enabled
+  static Future<AuthUser?> restoreSession() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final remember = prefs.getBool(_prefKeyRememberMe) ?? false;
+      if (!remember) return null;
+
+      final token = prefs.getString(_prefKeySavedToken);
+      final userJson = prefs.getString(_prefKeySavedUser);
+      if (token != null && userJson != null) {
+        final user = AuthUser.fromJson(jsonDecode(userJson));
+        currentUser = user;
+        authToken = token;
+        return user;
+      }
+    } catch (_) {}
+    return null;
+  }
 
   /// Save or clear Remember Me credentials in persistent storage
   static Future<void> saveRememberedEmail(String email, bool rememberMe) async {
@@ -87,25 +157,14 @@ class AuthService {
     return false;
   }
 
-  /// Redirect user's browser to official Google Accounts selector
-  static Future<bool> launchGoogleOAuthBrowser() async {
-    final googleAuthUri = Uri.parse(
-      'https://accounts.google.com/o/oauth2/v2/auth'
-      '?client_id=9273c6b8-groupmemaybe.apps.googleusercontent.com'
-      '&redirect_uri=http://localhost:8000/api/google-auth'
-      '&response_type=token'
-      '&scope=email%20profile'
-      '&prompt=select_account',
-    );
-
+  static String _responseMessage(http.Response response, String fallback) {
     try {
-      return await launchUrl(
-        googleAuthUri,
-        mode: LaunchMode.externalApplication,
-      );
-    } catch (_) {
-      return false;
-    }
+      final body = jsonDecode(response.body);
+      if (body is Map && body['message'] is String) {
+        return body['message'] as String;
+      }
+    } catch (_) {}
+    return '$fallback (${response.statusCode})';
   }
 
   /// Sign in with email and password
@@ -127,51 +186,37 @@ class AuthService {
         return user;
       }
 
-      final errorBody = jsonDecode(res.body);
-      throw Exception(
-        errorBody['message'] ?? 'Login failed (${res.statusCode})',
-      );
-    } catch (e) {
-      if (e.toString().contains('Login failed')) {
-        rethrow;
-      }
-      // If server unreachable during testing, fallback dynamically with user's actual entered email
-      final role = (email.contains('prof') || email.contains('instructor'))
-          ? 'professor'
-          : 'student';
-      final nameParts = email.split('@').first.split('.');
-      final dynamicName = nameParts
-          .map((p) => p.isNotEmpty ? '${p[0].toUpperCase()}${p.substring(1)}' : '')
-          .join(' ')
-          .trim();
-
-      final fallback = AuthUser(
-        id: DateTime.now().millisecond,
-        name: dynamicName.isNotEmpty ? dynamicName : 'Authenticated User',
-        email: email.trim(),
-        role: role,
-        departmentOrSection: role == 'professor'
-            ? 'Department of Information Technology (BSIT)'
-            : 'BSIT',
-      );
-      currentUser = fallback;
-      return fallback;
+      throw Exception(_responseMessage(res, 'Login failed'));
+    } on TimeoutException {
+      throw Exception('Login timed out. Check that the server is running.');
+    } on http.ClientException {
+      throw Exception('Cannot reach the server. Check your connection.');
     }
   }
 
   /// Register a new user
   Future<AuthUser> register({
-    required String name,
+    String? name,
+    String? firstName,
+    String? middleName,
+    String? lastName,
     required String email,
     required String password,
     required String role,
+    String? facultyCode,
     String? departmentOrSection,
     String? preferredRole,
     List<String>? skills,
   }) async {
     final effectiveDept = role.toLowerCase() == 'professor'
         ? 'Department of Information Technology (BSIT)'
-        : (departmentOrSection ?? 'BSIT');
+        : (departmentOrSection ?? 'BSIT 2A');
+
+    final computedName = (name != null && name.trim().isNotEmpty)
+        ? name.trim()
+        : [firstName, middleName, lastName]
+            .where((s) => s != null && s.trim().isNotEmpty)
+            .join(' ');
 
     try {
       final res = await http
@@ -179,10 +224,14 @@ class AuthService {
             Uri.parse('$baseUrl/register'),
             headers: _headers,
             body: jsonEncode({
-              'name': name.trim(),
+              'first_name': firstName?.trim(),
+              'middle_name': middleName?.trim(),
+              'last_name': lastName?.trim(),
+              'name': computedName,
               'email': email.trim(),
               'password': password,
               'role': role,
+              'faculty_code': facultyCode?.trim(),
               'department_or_section': effectiveDept,
               'preferred_role': preferredRole,
               'skills': skills,
@@ -198,49 +247,34 @@ class AuthService {
         return user;
       }
 
-      final errorBody = jsonDecode(res.body);
+      throw Exception(_responseMessage(res, 'Registration failed'));
+    } on TimeoutException {
       throw Exception(
-        errorBody['message'] ?? 'Registration failed (${res.statusCode})',
+        'Registration timed out. Check that the server is running.',
       );
-    } catch (e) {
-      if (e.toString().contains('Registration failed')) {
-        rethrow;
-      }
-      // Local fallback preserving user's exact inputs
-      final fallback = AuthUser(
-        id: DateTime.now().millisecond,
-        name: name.trim(),
-        email: email.trim(),
-        role: role,
-        departmentOrSection: effectiveDept,
-      );
-      currentUser = fallback;
-      return fallback;
+    } on http.ClientException {
+      throw Exception('Cannot reach the server. Check your connection.');
     }
   }
 
   /// Sign in or register with Google OAuth
   Future<AuthUser> googleAuth({
-    required String name,
-    required String email,
-    required String role,
+    required String idToken,
+    required String intent,
+    String? role,
     String? departmentOrSection,
     String? preferredRole,
   }) async {
-    final effectiveDept = role.toLowerCase() == 'professor'
-        ? 'Department of Information Technology (BSIT)'
-        : (departmentOrSection ?? 'BSIT');
-
     try {
       final res = await http
           .post(
             Uri.parse('$baseUrl/google-auth'),
             headers: _headers,
             body: jsonEncode({
-              'name': name.trim(),
-              'email': email.trim(),
+              'id_token': idToken,
+              'intent': intent,
               'role': role,
-              'department_or_section': effectiveDept,
+              'department_or_section': departmentOrSection,
               'preferred_role': preferredRole,
             }),
           )
@@ -254,21 +288,13 @@ class AuthService {
         return user;
       }
 
-      final errorBody = jsonDecode(res.body);
+      throw Exception(_responseMessage(res, 'Google authentication failed'));
+    } on TimeoutException {
       throw Exception(
-        errorBody['message'] ?? 'Google auth failed (${res.statusCode})',
+        'Google sign-in timed out. Check that the server is running.',
       );
-    } catch (e) {
-      // Local dynamic fallback
-      final fallback = AuthUser(
-        id: DateTime.now().millisecond,
-        name: name.trim(),
-        email: email.trim(),
-        role: role,
-        departmentOrSection: effectiveDept,
-      );
-      currentUser = fallback;
-      return fallback;
+    } on http.ClientException {
+      throw Exception('Cannot reach the server. Check your connection.');
     }
   }
 
@@ -284,5 +310,10 @@ class AuthService {
     } catch (_) {}
     currentUser = null;
     authToken = null;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_prefKeySavedToken);
+      await prefs.remove(_prefKeySavedUser);
+    } catch (_) {}
   }
 }

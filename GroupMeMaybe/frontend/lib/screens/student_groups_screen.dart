@@ -4,10 +4,7 @@ import '../models/grouping_activity.dart';
 import '../models/profile.dart';
 import '../services/activity_service.dart';
 import '../services/profile_service.dart';
-import 'landing_screen.dart';
-import 'student_classes_screen.dart';
-import 'student_dashboard_screen.dart';
-import 'student_settings_screen.dart';
+import 'widgets/student_sidebar.dart';
 
 class StudentCandidate {
   final int id;
@@ -59,7 +56,6 @@ class _StudentGroupsScreenState extends State<StudentGroupsScreen> {
 
   String _filterMode = 'skills'; // 'skills', 'availability', 'all'
   String _projectStatusFilter = 'all';
-  bool _isSidebarCollapsed = false;
 
   // Local state for teams created during the session
   final Map<int, Map<String, dynamic>> _localCreatedTeams = {};
@@ -754,8 +750,9 @@ class _StudentGroupsScreenState extends State<StudentGroupsScreen> {
       backgroundColor: const Color(0xFFF8FAFC),
       body: Row(
         children: [
-          // Collapsible Student Sidebar
-          _buildCollapsibleSidebar(),
+          const StudentSidebar(
+            currentDestination: StudentNavDestination.groups,
+          ),
 
           // Main POV Content Area
           Expanded(
@@ -800,13 +797,6 @@ class _StudentGroupsScreenState extends State<StudentGroupsScreen> {
       ),
       child: Row(
         children: [
-          IconButton(
-            icon: Icon(_isSidebarCollapsed ? Icons.menu_open : Icons.menu),
-            onPressed: () =>
-                setState(() => _isSidebarCollapsed = !_isSidebarCollapsed),
-            tooltip: 'Toggle Sidebar',
-          ),
-          const SizedBox(width: 8),
           Expanded(
             child: Text(
               _selectedActivity == null
@@ -853,184 +843,6 @@ class _StudentGroupsScreenState extends State<StudentGroupsScreen> {
             style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildCollapsibleSidebar() {
-    final width = _isSidebarCollapsed ? 76.0 : 220.0;
-
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 200),
-      width: width,
-      decoration: BoxDecoration(
-        color: const Color(0xFF0F172A),
-        border: Border(right: BorderSide(color: Colors.grey.shade900)),
-      ),
-      child: Column(
-        children: [
-          Container(
-            padding: EdgeInsets.symmetric(
-              horizontal: _isSidebarCollapsed ? 8 : 16,
-              vertical: 16,
-            ),
-            child: _isSidebarCollapsed
-                ? Center(
-                    child: Container(
-                      padding: const EdgeInsets.all(6),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF1E40AF),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Icon(
-                        Icons.hub,
-                        color: Colors.white,
-                        size: 20,
-                      ),
-                    ),
-                  )
-                : Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(6),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF1E40AF),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: const Icon(
-                          Icons.hub,
-                          color: Colors.white,
-                          size: 20,
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      const Expanded(
-                        child: Text(
-                          'GroupMeMaybe',
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 14,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-          ),
-          const Divider(color: Colors.white12),
-
-          _buildSidebarItem(
-            icon: Icons.dashboard_outlined,
-            title: 'Dashboard',
-            isSelected: false,
-            onTap: () => Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (_) => const StudentDashboardScreen()),
-            ),
-          ),
-          _buildSidebarItem(
-            icon: Icons.school_outlined,
-            title: 'Classes',
-            isSelected: false,
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const StudentClassesScreen()),
-            ),
-          ),
-          _buildSidebarItem(
-            icon: Icons.groups_outlined,
-            title: 'Groups (Teams)',
-            isSelected: true,
-            onTap: () {
-              setState(() => _selectedActivity = null);
-            },
-          ),
-          _buildSidebarItem(
-            icon: Icons.settings_outlined,
-            title: 'Settings',
-            isSelected: false,
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const StudentSettingsScreen()),
-            ),
-          ),
-
-          const Spacer(),
-          const Divider(color: Colors.white12),
-          _buildSidebarItem(
-            icon: Icons.logout,
-            title: 'Log Out',
-            isSelected: false,
-            color: Colors.redAccent,
-            onTap: () => Navigator.pushAndRemoveUntil(
-              context,
-              MaterialPageRoute(builder: (_) => const LandingScreen()),
-              (r) => false,
-            ),
-          ),
-          const SizedBox(height: 12),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSidebarItem({
-    required IconData icon,
-    required String title,
-    required bool isSelected,
-    Color? color,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      child: Container(
-        padding: EdgeInsets.symmetric(
-          horizontal: _isSidebarCollapsed ? 8 : 16,
-          vertical: 12,
-        ),
-        color: isSelected ? Colors.white12 : Colors.transparent,
-        child: _isSidebarCollapsed
-            ? Center(
-                child: Icon(
-                  icon,
-                  size: 20,
-                  color:
-                      color ??
-                      (isSelected
-                          ? const Color(0xFF60A5FA)
-                          : Colors.grey.shade400),
-                ),
-              )
-            : Row(
-                children: [
-                  Icon(
-                    icon,
-                    size: 20,
-                    color:
-                        color ??
-                        (isSelected
-                            ? const Color(0xFF60A5FA)
-                            : Colors.grey.shade400),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      title,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 13,
-                        color:
-                            color ??
-                            (isSelected ? Colors.white : Colors.grey.shade300),
-                        fontWeight: isSelected
-                            ? FontWeight.bold
-                            : FontWeight.normal,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
       ),
     );
   }

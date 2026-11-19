@@ -214,8 +214,9 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
       final parts = user.name.trim().split(RegExp(r'\s+'));
       if (parts.isNotEmpty) _firstNameController.text = parts.first;
       if (parts.length > 2) {
-        _middleNameController.text =
-            parts.sublist(1, parts.length - 1).join(' ');
+        _middleNameController.text = parts
+            .sublist(1, parts.length - 1)
+            .join(' ');
         _lastNameController.text = parts.last;
       } else if (parts.length == 2) {
         _lastNameController.text = parts.last;
@@ -240,11 +241,9 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
       final profiles = await _profileService.getProfiles();
       final currentEmail = _emailController.text.trim();
       final myProfile = profiles.cast<Profile?>().firstWhere(
-            (p) =>
-                p != null &&
-                p.email.toLowerCase() == currentEmail.toLowerCase(),
-            orElse: () => null,
-          );
+        (p) => p != null && p.email.toLowerCase() == currentEmail.toLowerCase(),
+        orElse: () => null,
+      );
 
       if (myProfile != null && mounted) {
         setState(() {
@@ -283,7 +282,7 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
 
   List<String> get _combinedTechnicalSkills {
     final approved = SkillApprovalService().approvedSkills;
-    return [..._allTechnicalSkills, ...approved];
+    return {..._allTechnicalSkills, ...approved}.toList();
   }
 
   // Calculate dynamic proficiency level based on skill counts and tools
@@ -399,8 +398,9 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
       email: _emailController.text.trim(),
       skills: _selectedSkills,
       interests: _selectedInterests,
-      preferredRole:
-          _rolePriority1.isNotEmpty ? _rolePriority1 : 'Frontend developer',
+      preferredRole: _rolePriority1.isNotEmpty
+          ? _rolePriority1
+          : 'Frontend developer',
       availability: _selectedBlock,
     );
 
@@ -424,12 +424,11 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          isDraft
-              ? 'Draft saved successfully!'
-              : 'Profile complete! You are now visible in team matching recommendations.',
+          isDraft ? 'Draft saved successfully!' : 'Profile complete! You are now visible in team matching recommendations.',
         ),
-        backgroundColor:
-            isDraft ? const Color(0xFF2563EB) : const Color(0xFF16A34A),
+        backgroundColor: isDraft
+            ? const Color(0xFF2563EB)
+            : const Color(0xFF16A34A),
         behavior: SnackBarBehavior.floating,
       ),
     );
@@ -708,6 +707,7 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
                                       ),
                                       const SizedBox(height: 6),
                                       DropdownButtonFormField<String>(
+                                        key: ValueKey(_selectedBlock),
                                         isExpanded: true,
                                         initialValue: _selectedBlock,
                                         decoration: InputDecoration(
@@ -722,7 +722,7 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
                                             ),
                                           ),
                                         ),
-                                        items: _blocks
+                                        items: {..._blocks, _selectedBlock}
                                             .map(
                                               (b) => DropdownMenuItem(
                                                 value: b,
@@ -766,6 +766,7 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
                               children: [
                                 Expanded(
                                   child: DropdownButtonFormField<String>(
+                                    key: ValueKey(_selectedSkills.join('|')),
                                     isExpanded: true,
                                     hint: const Text(
                                       'Select a technical skill to add...',
@@ -1575,6 +1576,7 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
         ),
         const SizedBox(height: 6),
         DropdownButtonFormField<String>(
+          key: ValueKey('$priorityLabel:$value'),
           isExpanded: true,
           initialValue: value,
           decoration: InputDecoration(
@@ -1597,7 +1599,7 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
                   style: TextStyle(fontSize: 13, color: Colors.grey),
                 ),
               ),
-            ..._allProjectRoles.map(
+            ...{..._allProjectRoles, ?value}.map(
               (r) => DropdownMenuItem(
                 value: r,
                 child: Text(

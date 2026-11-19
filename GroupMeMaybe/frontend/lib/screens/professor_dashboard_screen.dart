@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
 
 import '../models/custom_skill_request.dart';
+import '../models/grouping_activity.dart';
+import '../models/profile.dart';
+import '../services/activity_service.dart';
+import '../services/auth_service.dart';
+import '../services/profile_service.dart';
 import '../services/skill_approval_service.dart';
 import 'professor_evaluation_screen.dart';
 import 'widgets/professor_sidebar.dart';
@@ -100,6 +105,8 @@ class ProfessorDashboardScreen extends StatefulWidget {
 
 class _ProfessorDashboardScreenState extends State<ProfessorDashboardScreen> {
   final SkillApprovalService _skillService = SkillApprovalService();
+  final ProfileService _profileService = ProfileService();
+  final ActivityService _activityService = ActivityService();
   final TextEditingController _studentSearchController =
       TextEditingController();
 
@@ -109,14 +116,14 @@ class _ProfessorDashboardScreenState extends State<ProfessorDashboardScreen> {
   // Skill approval filter: null for all, or SkillApprovalStatus
   SkillApprovalStatus? _selectedSkillStatusFilter;
 
-  // Mock Students Roster
-  late List<StudentRosterItem> _allStudents;
+  // Dynamic Students Roster
+  List<StudentRosterItem> _allStudents = [];
 
-  // Mock Teams
-  late List<TeamOverviewItem> _teams;
+  // Dynamic Teams
+  List<TeamOverviewItem> _teams = [];
 
   // Unassigned Students past deadline
-  late List<UnassignedStudent> _unassignedStudents;
+  List<UnassignedStudent> _unassignedStudents = [];
 
   @override
   void initState() {
@@ -137,175 +144,137 @@ class _ProfessorDashboardScreenState extends State<ProfessorDashboardScreen> {
   }
 
   void _initData() {
-    _allStudents = [
-      StudentRosterItem(
-        id: 's-01',
-        name: 'Carlos Mendoza',
-        studentId: '2023-10492',
-        block: 'BSIT-3A',
-        status: ProfileCompletionStatus.complete,
-        primaryRole: 'Frontend Developer',
-        skillLevel: 'Advanced',
-        topSkills: ['Flutter', 'React', 'TypeScript', 'Node.js'],
-        email: 'carlos.mendoza@student.edu',
-      ),
-      StudentRosterItem(
-        id: 's-02',
-        name: 'Bianca Cruz',
-        studentId: '2023-10114',
-        block: 'BSIT-3A',
-        status: ProfileCompletionStatus.complete,
-        primaryRole: 'UI/UX Designer',
-        skillLevel: 'Intermediate',
-        topSkills: ['Figma', 'UI/UX Design', 'Canva', 'HTML/CSS'],
-        email: 'bianca.cruz@student.edu',
-      ),
-      StudentRosterItem(
-        id: 's-03',
-        name: 'Dani Garcia',
-        studentId: '2023-10229',
-        block: 'BSIT-3B',
-        status: ProfileCompletionStatus.complete,
-        primaryRole: 'QA / Software Tester',
-        skillLevel: 'Intermediate',
-        topSkills: ['Software Testing', 'Postman', 'Python', 'Git'],
-        email: 'dani.garcia@student.edu',
-      ),
-      StudentRosterItem(
-        id: 's-04',
-        name: 'Alex Santos',
-        studentId: '2023-10555',
-        block: 'BSIT-3A',
-        status: ProfileCompletionStatus.complete,
-        primaryRole: 'Backend Developer',
-        skillLevel: 'Advanced',
-        topSkills: ['Laravel', 'PostgreSQL', 'Docker', 'REST API'],
-        email: 'alex.santos@student.edu',
-      ),
-      StudentRosterItem(
-        id: 's-05',
-        name: 'Marcus Vance',
-        studentId: '2023-10671',
-        block: 'BSIT-3A',
-        status: ProfileCompletionStatus.incomplete,
-        primaryRole: 'Mobile App Developer',
-        skillLevel: 'Beginner',
-        topSkills: ['Kotlin', 'Android Studio'],
-        email: 'marcus.vance@student.edu',
-      ),
-      StudentRosterItem(
-        id: 's-06',
-        name: 'Leo Reyes',
-        studentId: '2023-10782',
-        block: 'BSIT-3B',
-        status: ProfileCompletionStatus.incomplete,
-        primaryRole: 'Database Administrator',
-        skillLevel: 'Intermediate',
-        topSkills: ['MySQL', 'Database Management'],
-        email: 'leo.reyes@student.edu',
-      ),
-      StudentRosterItem(
-        id: 's-07',
-        name: 'Ryan Tan',
-        studentId: '2023-10901',
-        block: 'BSIT-3A',
-        status: ProfileCompletionStatus.uninitialized,
-        email: 'ryan.tan@student.edu',
-      ),
-      StudentRosterItem(
-        id: 's-08',
-        name: 'Chloe Diaz',
-        studentId: '2023-10992',
-        block: 'BSIT-3B',
-        status: ProfileCompletionStatus.uninitialized,
-        email: 'chloe.diaz@student.edu',
-      ),
-    ];
+    _allStudents = [];
+    _teams = [];
+    _unassignedStudents = [];
+    _loadDynamicData();
+  }
 
-    _teams = [
-      TeamOverviewItem(
-        id: 'team-alpha',
-        name: 'Alpha Squad',
-        course: 'ITE 03 - Object Oriented Programming',
-        activityName: 'Final Capstone Project',
-        status: 'Needs 1 Member (3/4)',
-        maxMembers: 4,
-        members: [
-          _allStudents[0], // Carlos
-          _allStudents[1], // Bianca
-          _allStudents[2], // Dani
-        ],
-      ),
-      TeamOverviewItem(
-        id: 'team-devninjas',
-        name: 'DevNinjas',
-        course: 'ITE 03 - Object Oriented Programming',
-        activityName: 'Final Capstone Project',
-        status: 'Needs Backend (2/4)',
-        maxMembers: 4,
-        members: [
-          _allStudents[3], // Alex
-          _allStudents[4], // Marcus
-        ],
-      ),
-      TeamOverviewItem(
-        id: 'team-bytecraft',
-        name: 'ByteCraft',
-        course: 'IT 211 - Data Structures & Algorithms',
-        activityName: 'Midterm Algorithm Lab',
-        status: 'Full (4/4)',
-        maxMembers: 4,
-        members: [
-          _allStudents[0],
-          _allStudents[1],
-          _allStudents[2],
-          _allStudents[3],
-        ],
-      ),
-    ];
+  Future<void> _loadDynamicData() async {
+    try {
+      final profilesFuture = _profileService.getProfiles();
+      final activitiesFuture = _activityService.getActivities();
+      final results = await Future.wait([profilesFuture, activitiesFuture]);
 
-    _unassignedStudents = [
-      UnassignedStudent(
-        id: 'unassign-01',
-        name: 'Leo Reyes',
-        studentId: '2023-10782',
-        block: 'BSIT-3B',
-        preferredRole: 'Database Administrator',
-        skillLevel: 'Intermediate',
-        skills: ['MySQL', 'PostgreSQL', 'Database Management'],
-        recommendedGroups: [
-          RecommendedGroupMatch(
-            teamId: 'team-alpha',
-            teamName: 'Alpha Squad',
-            matchPercentage: 96,
-            reason: 'Alpha Squad specifically lacks a dedicated Database Administrator role.',
-          ),
-          RecommendedGroupMatch(
-            teamId: 'team-devninjas',
-            teamName: 'DevNinjas',
-            matchPercentage: 84,
-            reason: 'DevNinjas requires persistence layer support.',
-          ),
-        ],
-      ),
-      UnassignedStudent(
-        id: 'unassign-02',
-        name: 'Ryan Tan',
-        studentId: '2023-10901',
-        block: 'BSIT-3A',
-        preferredRole: 'Backend Developer',
-        skillLevel: 'Beginner',
-        skills: ['Node.js', 'Express.js', 'Git'],
-        recommendedGroups: [
-          RecommendedGroupMatch(
-            teamId: 'team-devninjas',
-            teamName: 'DevNinjas',
-            matchPercentage: 91,
-            reason: 'DevNinjas has open backend slot and complementary mentorship from Alex Santos.',
-          ),
-        ],
-      ),
-    ];
+      final profiles = results[0] as List<Profile>;
+      final activities = results[1] as List<GroupingActivity>;
+
+      if (!mounted) return;
+
+      setState(() {
+        // Build students from real registered profiles
+        _allStudents = profiles.map((p) {
+          final hasRole = p.preferredRole.isNotEmpty;
+          final hasSkills = p.skills.isNotEmpty;
+          final status = (hasRole && hasSkills)
+              ? ProfileCompletionStatus.complete
+              : ((hasRole || hasSkills)
+                  ? ProfileCompletionStatus.incomplete
+                  : ProfileCompletionStatus.uninitialized);
+
+          return StudentRosterItem(
+            id: 's-${p.id ?? DateTime.now().millisecond}',
+            name: p.name,
+            studentId: '2023-${(p.id ?? 1).toString().padLeft(4, '0')}',
+            block: p.availability.isNotEmpty ? p.availability : 'General',
+            status: status,
+            primaryRole: p.preferredRole.isNotEmpty ? p.preferredRole : null,
+            skillLevel: p.skills.length >= 4
+                ? 'Advanced'
+                : (p.skills.length >= 2 ? 'Intermediate' : 'Beginner'),
+            topSkills: p.skills,
+            email: p.email,
+          );
+        }).toList();
+
+        // Build teams from activities
+        _teams = [];
+        for (final act in activities) {
+          if (act.formedTeams != null && act.formedTeams!.isNotEmpty) {
+            for (final tm in act.formedTeams!) {
+              if (tm is Map) {
+                final membersRaw = (tm['members'] as List?) ?? [];
+                final teamMembers = membersRaw.map((m) {
+                  final mName = (m is Map)
+                      ? (m['name']?.toString() ?? 'Member')
+                      : m.toString();
+                  final existing = _allStudents
+                      .cast<StudentRosterItem?>()
+                      .firstWhere(
+                        (s) =>
+                            s != null &&
+                            s.name.toLowerCase() == mName.toLowerCase(),
+                        orElse: () => null,
+                      );
+                  return existing ??
+                      StudentRosterItem(
+                        id: 'tm-${mName.hashCode}',
+                        name: mName,
+                        studentId: '2023-0000',
+                        block: 'General',
+                        status: ProfileCompletionStatus.complete,
+                        primaryRole:
+                            (m is Map) ? m['role']?.toString() : 'Member',
+                        skillLevel: (m is Map)
+                            ? m['level']?.toString()
+                            : 'Intermediate',
+                        topSkills: (m is Map)
+                            ? ((m['skills'] as List?)
+                                    ?.map((s) => s.toString())
+                                    .toList() ??
+                                [])
+                            : [],
+                        email:
+                            '${mName.toLowerCase().replaceAll(' ', '.')}@student.edu',
+                      );
+                }).toList();
+
+                _teams.add(
+                  TeamOverviewItem(
+                    id: 'team-${tm['name'] ?? act.id}',
+                    name: tm['name']?.toString() ?? 'Formed Team',
+                    course: act.className,
+                    activityName: act.title,
+                    status: '${teamMembers.length}/${act.groupCapacity}',
+                    maxMembers: act.groupCapacity,
+                    members: teamMembers,
+                  ),
+                );
+              }
+            }
+          }
+        }
+
+        // Compute unassigned students dynamically
+        final assignedNames = _teams
+            .expand((t) => t.members.map((m) => m.name.toLowerCase()))
+            .toSet();
+        _unassignedStudents = _allStudents
+            .where((s) => !assignedNames.contains(s.name.toLowerCase()))
+            .map((s) => UnassignedStudent(
+                  id: s.id,
+                  name: s.name,
+                  studentId: s.studentId,
+                  block: s.block,
+                  preferredRole: s.primaryRole ?? 'Collaborator',
+                  skillLevel: s.skillLevel ?? 'Intermediate',
+                  skills: s.topSkills,
+                  recommendedGroups: _teams
+                      .where((t) => t.members.length < t.maxMembers)
+                      .take(2)
+                      .map((t) => RecommendedGroupMatch(
+                            teamId: t.id,
+                            teamName: t.name,
+                            matchPercentage: 88,
+                            reason: 'Open slot available in ${t.name}',
+                          ))
+                      .toList(),
+                ))
+            .toList();
+      });
+    } catch (_) {
+      // Graceful fallback for offline mode
+    }
   }
 
   // --- Assign Unassigned Student Action ---
@@ -577,14 +546,17 @@ class _ProfessorDashboardScreenState extends State<ProfessorDashboardScreen> {
     // Filtered students
     final filteredStudents = _allStudents.where((s) {
       if (_selectedCompletionFilter == 'complete' &&
-          s.status != ProfileCompletionStatus.complete)
+          s.status != ProfileCompletionStatus.complete) {
         return false;
+      }
       if (_selectedCompletionFilter == 'incomplete' &&
-          s.status != ProfileCompletionStatus.incomplete)
+          s.status != ProfileCompletionStatus.incomplete) {
         return false;
+      }
       if (_selectedCompletionFilter == 'uninitialized' &&
-          s.status != ProfileCompletionStatus.uninitialized)
+          s.status != ProfileCompletionStatus.uninitialized) {
         return false;
+      }
 
       final query = _studentSearchController.text.trim().toLowerCase();
       if (query.isNotEmpty) {
@@ -663,6 +635,15 @@ class _ProfessorDashboardScreenState extends State<ProfessorDashboardScreen> {
 
   // Welcome Header Card
   Widget _buildWelcomeHeader() {
+    final profName = (AuthService.currentUser?.name.isNotEmpty == true)
+        ? AuthService.currentUser!.name
+        : 'Prof. Aivhan';
+    final profInitial = profName.isNotEmpty ? profName[0].toUpperCase() : 'P';
+    final department =
+        (AuthService.currentUser?.departmentOrSection?.isNotEmpty == true)
+            ? AuthService.currentUser!.departmentOrSection!
+            : 'College of Information and Computing Sciences';
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
       decoration: BoxDecoration(
@@ -682,12 +663,12 @@ class _ProfessorDashboardScreenState extends State<ProfessorDashboardScreen> {
           final isNarrow = constraints.maxWidth < 700;
           final avatarAndInfo = Row(
             children: [
-              const CircleAvatar(
+              CircleAvatar(
                 radius: 26,
-                backgroundColor: Color(0xFF1E40AF),
+                backgroundColor: const Color(0xFF1E40AF),
                 child: Text(
-                  'A',
-                  style: TextStyle(
+                  profInitial,
+                  style: const TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
                     color: Colors.white,
@@ -704,9 +685,9 @@ class _ProfessorDashboardScreenState extends State<ProfessorDashboardScreen> {
                       spacing: 8,
                       runSpacing: 4,
                       children: [
-                        const Text(
-                          'Welcome, Prof. Aivhan!',
-                          style: TextStyle(
+                        Text(
+                          'Welcome, $profName!',
+                          style: const TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
                             color: Color(0xFF0F172A),
@@ -733,9 +714,12 @@ class _ProfessorDashboardScreenState extends State<ProfessorDashboardScreen> {
                       ],
                     ),
                     const SizedBox(height: 4),
-                    const Text(
-                      'College of Information and Computing Sciences • Academic Year 2026-2027',
-                      style: TextStyle(fontSize: 13, color: Color(0xFF64748B)),
+                    Text(
+                      '$department • Academic Year 2026-2027',
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: Color(0xFF64748B),
+                      ),
                     ),
                   ],
                 ),
@@ -1308,8 +1292,43 @@ class _ProfessorDashboardScreenState extends State<ProfessorDashboardScreen> {
         ),
         const SizedBox(height: 14),
 
-        LayoutBuilder(
-          builder: (context, constraints) {
+        if (_teams.isEmpty)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 36, horizontal: 20),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
+            ),
+            child: Column(
+              children: [
+                Icon(
+                  Icons.groups_outlined,
+                  size: 40,
+                  color: Colors.blueGrey.shade300,
+                ),
+                const SizedBox(height: 10),
+                const Text(
+                  'No Teams Formed Yet',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 15,
+                    color: Color(0xFF0F172A),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                const Text(
+                  'Formed student squads and their skill levels will be listed here automatically as teams form in activities.',
+                  style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          )
+        else
+          LayoutBuilder(
+            builder: (context, constraints) {
             final crossAxisCount = constraints.maxWidth >= 900
                 ? 3
                 : (constraints.maxWidth >= 600 ? 2 : 1);
@@ -1557,8 +1576,46 @@ class _ProfessorDashboardScreenState extends State<ProfessorDashboardScreen> {
           ),
           const SizedBox(height: 16),
 
-          // Students Table
-          ListView.separated(
+          if (students.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 32),
+              child: Center(
+                child: Column(
+                  children: [
+                    Icon(
+                      Icons.person_search_outlined,
+                      size: 36,
+                      color: Colors.blueGrey.shade300,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      _allStudents.isEmpty
+                          ? 'No Students Registered Yet'
+                          : 'No Students Matching Filter',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                        color: Color(0xFF0F172A),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      _allStudents.isEmpty
+                          ? 'Student completion statuses and rosters will populate automatically as students register.'
+                          : 'Try clearing your search query or selecting "All".',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Color(0xFF64748B),
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              ),
+            )
+          else
+            // Students Table
+            ListView.separated(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             itemCount: students.length,
@@ -1648,6 +1705,74 @@ class _ProfessorDashboardScreenState extends State<ProfessorDashboardScreen> {
     );
   }
 
+  void _showAddSkillDialog() {
+    final nameCtrl = TextEditingController();
+    final studentNameCtrl = TextEditingController(text: 'Sample Student');
+    final domainCtrl = TextEditingController(text: 'Web Development');
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Add Custom Skill Request'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: nameCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Skill Name (e.g. GraphQL, Flutter)',
+              ),
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: domainCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Domain (e.g. API Development, Mobile)',
+              ),
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: studentNameCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Requesting Student Name',
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF1E40AF),
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () {
+              final skill = nameCtrl.text.trim();
+              if (skill.isEmpty) return;
+              _skillService.submitRequest(
+                studentName: studentNameCtrl.text.trim().isNotEmpty
+                    ? studentNameCtrl.text.trim()
+                    : 'Student',
+                studentId: '2026-001',
+                block: 'General',
+                skillName: skill,
+                domain: domainCtrl.text.trim().isNotEmpty
+                    ? domainCtrl.text.trim()
+                    : 'General',
+              );
+              Navigator.pop(ctx);
+            },
+            child: const Text('Submit Request'),
+          ),
+        ],
+      ),
+    );
+  }
+
   // Custom Requested Skills Approval Queue Section
   Widget _buildCustomSkillsApprovalSection() {
     final requests = _skillService.getRequestsByStatus(
@@ -1689,26 +1814,48 @@ class _ProfessorDashboardScreenState extends State<ProfessorDashboardScreen> {
                 ],
               ),
 
-              // Filter Tabs (All, Pending, Under Review, Approved, Rejected)
               Wrap(
-                spacing: 6,
+                spacing: 8,
+                crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
-                  _buildSkillStatusFilterChip('All', null),
-                  _buildSkillStatusFilterChip(
-                    'Pending',
-                    SkillApprovalStatus.pending,
+                  // Filter Tabs (All, Pending, Under Review, Approved, Rejected)
+                  Wrap(
+                    spacing: 6,
+                    children: [
+                      _buildSkillStatusFilterChip('All', null),
+                      _buildSkillStatusFilterChip(
+                        'Pending',
+                        SkillApprovalStatus.pending,
+                      ),
+                      _buildSkillStatusFilterChip(
+                        'Under Review',
+                        SkillApprovalStatus.underReview,
+                      ),
+                      _buildSkillStatusFilterChip(
+                        'Approved',
+                        SkillApprovalStatus.approved,
+                      ),
+                      _buildSkillStatusFilterChip(
+                        'Rejected',
+                        SkillApprovalStatus.rejected,
+                      ),
+                    ],
                   ),
-                  _buildSkillStatusFilterChip(
-                    'Under Review',
-                    SkillApprovalStatus.underReview,
-                  ),
-                  _buildSkillStatusFilterChip(
-                    'Approved',
-                    SkillApprovalStatus.approved,
-                  ),
-                  _buildSkillStatusFilterChip(
-                    'Rejected',
-                    SkillApprovalStatus.rejected,
+                  ElevatedButton.icon(
+                    onPressed: _showAddSkillDialog,
+                    icon: const Icon(Icons.add, size: 14),
+                    label: const Text('Add Skill Request'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF1E40AF),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                    ),
                   ),
                 ],
               ),

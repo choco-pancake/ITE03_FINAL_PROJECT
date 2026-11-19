@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../services/auth_service.dart';
 import '../landing_screen.dart';
 import '../student_classes_screen.dart';
 import '../student_dashboard_screen.dart';
@@ -121,6 +122,69 @@ class StudentSidebar extends StatelessWidget {
           ),
 
           const Spacer(),
+          const Divider(color: Colors.white12, height: 1),
+
+          // Student User Card
+          Builder(
+            builder: (context) {
+              final user = AuthService.currentUser;
+              final name = (user != null && user.name.isNotEmpty)
+                  ? user.name
+                  : 'Student User';
+              final initial = name.isNotEmpty ? name[0].toUpperCase() : 'S';
+              final dept = (user != null &&
+                      user.departmentOrSection != null &&
+                      user.departmentOrSection!.isNotEmpty)
+                  ? user.departmentOrSection!
+                  : 'Student Portal';
+
+              return Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                child: Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 14,
+                      backgroundColor: const Color(0xFF1E40AF),
+                      child: Text(
+                        initial,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            name,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          Text(
+                            dept,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: Color(0xFF94A3B8),
+                              fontSize: 10,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
           const Divider(color: Colors.white12, height: 1),
 
           // Log Out

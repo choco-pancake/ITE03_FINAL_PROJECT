@@ -1,5 +1,5 @@
 class AcademicClass {
-  final int id;
+  final int? id;
   final String name;
   final String? section;
   final String classCode;
@@ -8,7 +8,7 @@ class AcademicClass {
   final int activitiesCount;
 
   AcademicClass({
-    required this.id,
+    this.id,
     required this.name,
     this.section,
     required this.classCode,
@@ -22,7 +22,7 @@ class AcademicClass {
 
   factory AcademicClass.fromJson(Map<String, dynamic> json) {
     return AcademicClass(
-      id: json['id'] as int,
+      id: json['id'] as int?,
       name: json['name'] as String,
       section: json['section'] as String?,
       classCode: json['class_code'] as String? ?? '',
@@ -37,7 +37,7 @@ class AcademicClass {
   }
 
   Map<String, dynamic> toJson() => {
-    'id': id,
+    if (id != null) 'id': id,
     'name': name,
     'section': section,
     'class_code': classCode,

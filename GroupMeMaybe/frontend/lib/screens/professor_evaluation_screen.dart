@@ -98,68 +98,6 @@ String _fmtDate(DateTime d) {
   return '${m[d.month - 1]} ${d.day}, ${d.year}';
 }
 
-// Sample data: replace with your API / database call.
-List<_Request> _sampleRequests() => [
-  _Request(
-    studentName: 'Maria Santos',
-    studentId: '2023-0142',
-    program: 'BSIT 3',
-    title: 'Change of surname',
-    field: 'Last name',
-    currentValue: 'Santos',
-    requestedValue: 'Santos-Reyes',
-    submitted: DateTime(2026, 11, 3),
-    attachments: ['marriage_certificate.pdf'],
-  ),
-  _Request(
-    studentName: 'John Dela Cruz',
-    studentId: '2023-0388',
-    program: 'BSIT 3',
-    title: 'Correct midterm score',
-    field: 'Midterm exam score',
-    currentValue: '78',
-    requestedValue: '87',
-    submitted: DateTime(2026, 11, 5),
-    attachments: ['exam_paper_scan.jpg', 'recount_request.pdf'],
-    status: _Status.underReview,
-  ),
-  _Request(
-    studentName: 'Angela Ramos',
-    studentId: '2022-0911',
-    program: 'BSCS 4',
-    title: 'Update section',
-    field: 'Section',
-    currentValue: 'BSCS 4-B',
-    requestedValue: 'BSCS 4-A',
-    submitted: DateTime(2026, 10, 28),
-  ),
-  _Request(
-    studentName: 'Paolo Mendoza',
-    studentId: '2024-0057',
-    program: 'BSIT 2',
-    title: 'Correct birth date',
-    field: 'Date of birth',
-    currentValue: 'Mar 12, 2005',
-    requestedValue: 'Mar 21, 2005',
-    submitted: DateTime(2026, 10, 20),
-    attachments: ['birth_certificate.pdf'],
-    status: _Status.approved,
-    remarks: 'Verified against the PSA copy.',
-  ),
-  _Request(
-    studentName: 'Kyla Bautista',
-    studentId: '2023-0620',
-    program: 'BSIT 3',
-    title: 'Late activity score',
-    field: 'Activity 4 score',
-    currentValue: '0',
-    requestedValue: '90',
-    submitted: DateTime(2026, 10, 15),
-    status: _Status.rejected,
-    remarks: 'Submitted after the posted deadline.',
-  ),
-];
-
 // ───────────────────────── Shared widgets ─────────────────────────
 
 class _Centered extends StatelessWidget {
@@ -287,10 +225,136 @@ class ProfessorEvaluationScreen extends StatefulWidget {
 }
 
 class _ProfessorEvaluationScreenState extends State<ProfessorEvaluationScreen> {
-  final List<_Request> _requests = _sampleRequests();
+  final List<_Request> _requests = [];
   final _searchCtrl = TextEditingController();
   final Set<_Status> _filters = {};
   _Sort _sort = _Sort.newest;
+
+  void _showCreateRequestDialog() {
+    final studentNameCtrl = TextEditingController();
+    final studentIdCtrl = TextEditingController();
+    final programCtrl = TextEditingController(text: 'BSIT 3A');
+    final titleCtrl = TextEditingController();
+    final fieldCtrl = TextEditingController();
+    final currentValCtrl = TextEditingController();
+    final requestedValCtrl = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Row(
+          children: [
+            Icon(Icons.edit_note, color: _C.primary),
+            SizedBox(width: 8),
+            Text(
+              'Create Modification Request',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
+        content: SizedBox(
+          width: 420,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                TextField(
+                  controller: studentNameCtrl,
+                  decoration:
+                      _fieldDecoration('Student Name (e.g. Maria Santos)'),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: studentIdCtrl,
+                  decoration: _fieldDecoration('Student ID (e.g. 2023-0142)'),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: programCtrl,
+                  decoration:
+                      _fieldDecoration('Program / Section (e.g. BSIT 3A)'),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: titleCtrl,
+                  decoration: _fieldDecoration(
+                      'Request Title (e.g. Change of surname)'),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: fieldCtrl,
+                  decoration:
+                      _fieldDecoration('Field to Modify (e.g. Last name)'),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: currentValCtrl,
+                  decoration:
+                      _fieldDecoration('Current Value (e.g. Santos)'),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: requestedValCtrl,
+                  decoration:
+                      _fieldDecoration('Requested Value (e.g. Santos-Reyes)'),
+                ),
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: _C.primary,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () {
+              final sName = studentNameCtrl.text.trim();
+              final sTitle = titleCtrl.text.trim();
+              if (sName.isEmpty || sTitle.isEmpty) return;
+
+              setState(() {
+                _requests.insert(
+                  0,
+                  _Request(
+                    studentName: sName,
+                    studentId: studentIdCtrl.text.trim().isNotEmpty
+                        ? studentIdCtrl.text.trim()
+                        : '2026-${DateTime.now().millisecond}',
+                    program: programCtrl.text.trim().isNotEmpty
+                        ? programCtrl.text.trim()
+                        : 'General',
+                    title: sTitle,
+                    field: fieldCtrl.text.trim().isNotEmpty
+                        ? fieldCtrl.text.trim()
+                        : 'Record Detail',
+                    currentValue: currentValCtrl.text.trim().isNotEmpty
+                        ? currentValCtrl.text.trim()
+                        : 'Original',
+                    requestedValue: requestedValCtrl.text.trim().isNotEmpty
+                        ? requestedValCtrl.text.trim()
+                        : 'Updated',
+                    submitted: DateTime.now(),
+                    attachments: const [],
+                    status: _Status.pending,
+                    remarks: '',
+                  ),
+                );
+              });
+              Navigator.pop(ctx);
+            },
+            child: const Text('Submit Request'),
+          ),
+        ],
+      ),
+    );
+  }
 
   bool get _hasActiveFilter =>
       _filters.isNotEmpty || _searchCtrl.text.isNotEmpty;
@@ -346,19 +410,37 @@ class _ProfessorEvaluationScreenState extends State<ProfessorEvaluationScreen> {
             child: _Centered(
               child: Column(
                 children: [
-                  // Title
-                  const Padding(
-                    padding: EdgeInsets.fromLTRB(20, 24, 20, 16),
-                    child: Align(
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        'Modification Requests',
-                        style: TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                          color: _C.text,
+                  // Title & Action
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 24, 20, 16),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Modification Requests',
+                          style: TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            color: _C.text,
+                          ),
                         ),
-                      ),
+                        ElevatedButton.icon(
+                          onPressed: _showCreateRequestDialog,
+                          icon: const Icon(Icons.add, size: 16),
+                          label: const Text('New Request'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: _C.primary,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 10,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
 

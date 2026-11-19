@@ -65,22 +65,18 @@ void main() {
 
       // Teams Section
       expect(find.text('Formed Teams & Squad Member Profiles'), findsOneWidget);
-      expect(find.text('Alpha Squad'), findsWidgets);
-
-      // Unassigned Students Section
-      expect(
-        find.text('Manage Unassigned Students (Past Deadline)'),
-        findsOneWidget,
-      );
-      expect(find.text('Assign to Group'), findsWidgets);
+      expect(find.text('No Teams Formed Yet'), findsOneWidget);
 
       // Custom Skills Approval Queue
       expect(
         find.text('Custom Requested Skills Approval Queue'),
         findsOneWidget,
       );
-      expect(find.text('Pending'), findsWidgets);
-      expect(find.text('Approve'), findsWidgets);
+      expect(
+        find.text('No custom skill requests found in this category.'),
+        findsOneWidget,
+      );
+      expect(find.text('Add Skill Request'), findsOneWidget);
 
       // Tap Review Requests & Evaluations button to navigate
       await tester.tap(find.text('Review Requests & Evaluations'));
@@ -120,9 +116,14 @@ void main() {
       await tester.tap(find.text('Formed Teams & Groups'));
       await tester.pumpAndSettle();
 
-      // Verify groups content is displayed inside Projects
-      expect(find.text('Alpha Squad'), findsOneWidget);
-      expect(find.text('Carlos Mendoza'), findsOneWidget);
+      // Verify groups content is displayed inside Projects (empty state when no teams created yet)
+      expect(find.text('No Teams Formed Yet'), findsOneWidget);
+      expect(
+        find.text(
+          'Teams will appear here once formed or assigned in your grouping activities.',
+        ),
+        findsOneWidget,
+      );
     },
   );
 
@@ -168,8 +169,8 @@ void main() {
 
       expect(find.text('Course Sections & Class Codes'), findsOneWidget);
       expect(find.text('Create Class & Generate Code'), findsOneWidget);
-      expect(find.text('ITE 03 - Object Oriented Programming'), findsOneWidget);
-      expect(find.text('OOP3A1'), findsOneWidget);
+      expect(find.text('No classes found.'), findsOneWidget);
+      expect(find.text('Create New Class'), findsOneWidget);
     },
   );
 

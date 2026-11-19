@@ -7,65 +7,10 @@ class SkillApprovalService extends ChangeNotifier {
       SkillApprovalService._internal();
   factory SkillApprovalService() => _instance;
 
-  SkillApprovalService._internal() {
-    _initDefaultRequests();
-  }
+  SkillApprovalService._internal();
 
   final List<CustomSkillRequest> _requests = [];
-  final Set<String> _approvedSkills = {
-    'Solidity',
-    'Unreal Engine 5',
-    'Kubernetes',
-  };
-
-  void _initDefaultRequests() {
-    _requests.addAll([
-      CustomSkillRequest(
-        id: 'csr-01',
-        studentName: 'Carlos Mendoza',
-        studentId: '2023-10492',
-        block: 'BSIT-3A',
-        skillName: 'GraphQL',
-        domain: 'API Development & Integration',
-        submittedAt: DateTime.now().subtract(const Duration(hours: 3)),
-        status: SkillApprovalStatus.pending,
-      ),
-      CustomSkillRequest(
-        id: 'csr-02',
-        studentName: 'Bianca Cruz',
-        studentId: '2023-10114',
-        block: 'BSIT-3A',
-        skillName: 'Three.js 3D Web Graphics',
-        domain: 'Frontend Development',
-        submittedAt: DateTime.now().subtract(const Duration(hours: 12)),
-        status: SkillApprovalStatus.underReview,
-        remarks:
-            'Checking syllabus alignment with interactive graphics module.',
-      ),
-      CustomSkillRequest(
-        id: 'csr-03',
-        studentName: 'Dani Garcia',
-        studentId: '2023-10229',
-        block: 'BSIT-3B',
-        skillName: 'Solidity Smart Contracts',
-        domain: 'Cybersecurity & Blockchain',
-        submittedAt: DateTime.now().subtract(const Duration(days: 1)),
-        status: SkillApprovalStatus.approved,
-        remarks: 'Approved for Decentralized App activity.',
-      ),
-      CustomSkillRequest(
-        id: 'csr-04',
-        studentName: 'Juan Dela Cruz',
-        studentId: '2023-10881',
-        block: 'BSIT-3B',
-        skillName: 'Fortran 77 Legacy Maintenance',
-        domain: 'Programming Languages',
-        submittedAt: DateTime.now().subtract(const Duration(days: 2)),
-        status: SkillApprovalStatus.rejected,
-        remarks: 'Not applicable for Modern Web and Cloud capstones.',
-      ),
-    ]);
-  }
+  final Set<String> _approvedSkills = {};
 
   List<CustomSkillRequest> get requests => List.unmodifiable(_requests);
 
@@ -114,6 +59,11 @@ class SkillApprovalService extends ChangeNotifier {
       }
       notifyListeners();
     }
+  }
+
+  void deleteRequest(String requestId) {
+    _requests.removeWhere((r) => r.id == requestId);
+    notifyListeners();
   }
 
   bool isSkillApproved(String skill) {

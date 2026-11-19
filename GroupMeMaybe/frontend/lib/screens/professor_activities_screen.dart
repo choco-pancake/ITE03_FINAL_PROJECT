@@ -324,122 +324,51 @@ class _ProfessorActivitiesScreenState extends State<ProfessorActivitiesScreen> {
 
   Widget _buildGroupsContent() {
     final query = _groupSearchController.text.trim().toLowerCase();
-    final groups = [
-      {
-        'name': 'Alpha Squad',
-        'activity': 'Final Capstone Project',
-        'course': 'ITE 03 - Object Oriented Programming',
-        'status': 'Formed (3/4)',
-        'isFull': false,
-        'members': [
-          {
-            'name': 'Carlos Mendoza',
-            'role': 'Frontend Developer',
-            'level': 'Advanced',
-            'skills': ['Flutter', 'React', 'TypeScript'],
-          },
-          {
-            'name': 'Bianca Cruz',
-            'role': 'UI/UX Designer',
-            'level': 'Intermediate',
-            'skills': ['Figma', 'UI/UX Design', 'Canva'],
-          },
-          {
-            'name': 'Dani Garcia',
-            'role': 'QA & Docs',
-            'level': 'Intermediate',
-            'skills': ['Software Testing', 'Postman', 'Git'],
-          },
-        ],
-      },
-      {
-        'name': 'DevNinjas',
-        'activity': 'Final Capstone Project',
-        'course': 'ITE 03 - Object Oriented Programming',
-        'status': 'Needs Backend (2/4)',
-        'isFull': false,
-        'members': [
-          {
-            'name': 'Alex Santos',
-            'role': 'Backend Developer',
-            'level': 'Advanced',
-            'skills': ['Laravel', 'PostgreSQL', 'Docker'],
-          },
-          {
-            'name': 'Marcus Vance',
-            'role': 'Mobile App Developer',
-            'level': 'Beginner',
-            'skills': ['Kotlin', 'Android Studio'],
-          },
-        ],
-      },
-      {
-        'name': 'ByteCraft',
-        'activity': 'Midterm Algorithm Lab',
-        'course': 'IT 211 - Data Structures & Algorithms',
-        'status': 'Full (4/4)',
-        'isFull': true,
-        'members': [
-          {
-            'name': 'Maria Santos',
-            'role': 'Lead Programmer',
-            'level': 'Advanced',
-            'skills': ['Python', 'C++', 'Algorithms'],
-          },
-          {
-            'name': 'John Doe',
-            'role': 'Data Analyst',
-            'level': 'Intermediate',
-            'skills': ['Pandas', 'NumPy', 'Jupyter'],
-          },
-          {
-            'name': 'Chloe Diaz',
-            'role': 'Documentation',
-            'level': 'Intermediate',
-            'skills': ['Google Docs', 'Technical Writing'],
-          },
-          {
-            'name': 'Kevin Ramos',
-            'role': 'QA Tester',
-            'level': 'Beginner',
-            'skills': ['Software Testing', 'Git'],
-          },
-        ],
-      },
-      {
-        'name': 'CloudChasers',
-        'activity': 'Microservices Architecture',
-        'course': 'CS 301 - Web Systems and Technologies',
-        'status': 'Full (4/4)',
-        'isFull': true,
-        'members': [
-          {
-            'name': 'Liam Reyes',
-            'role': 'Full-stack Developer',
-            'level': 'Advanced',
-            'skills': ['Node.js', 'React', 'AWS'],
-          },
-          {
-            'name': 'Bea Cruz',
-            'role': 'UI/UX Designer',
-            'level': 'Advanced',
-            'skills': ['Figma', 'CSS', 'Tailwind'],
-          },
-          {
-            'name': 'Sarah Smith',
-            'role': 'Database Specialist',
-            'level': 'Intermediate',
-            'skills': ['PostgreSQL', 'MongoDB'],
-          },
-          {
-            'name': 'Nathan Cole',
-            'role': 'DevOps Specialist',
-            'level': 'Intermediate',
-            'skills': ['Docker', 'CI/CD', 'Git'],
-          },
-        ],
-      },
-    ];
+    final List<Map<String, dynamic>> groups = [];
+
+    for (final act in _activities) {
+      if (act.formedTeams != null && act.formedTeams!.isNotEmpty) {
+        for (final tm in act.formedTeams!) {
+          if (tm is Map) {
+            final membersRaw = (tm['members'] as List?) ?? [];
+            final membersList = membersRaw.map((m) {
+              if (m is Map) {
+                return {
+                  'name': m['name']?.toString() ?? 'Member',
+                  'role': m['role']?.toString() ?? 'Collaborator',
+                  'level': m['level']?.toString() ?? 'Intermediate',
+                  'skills': (m['skills'] as List?)
+                          ?.map((s) => s.toString())
+                          .toList() ??
+                      <String>[],
+                };
+              }
+              return {
+                'name': m.toString(),
+                'role': 'Member',
+                'level': 'Intermediate',
+                'skills': <String>[],
+              };
+            }).toList();
+
+            final capacity = act.groupCapacity;
+            final count = membersList.length;
+            final isFull = count >= capacity;
+
+            groups.add({
+              'name': tm['name']?.toString() ?? 'Team',
+              'activity': act.title,
+              'course': act.className,
+              'status': isFull
+                  ? 'Full ($count/$capacity)'
+                  : 'Formed ($count/$capacity)',
+              'isFull': isFull,
+              'members': membersList,
+            });
+          }
+        }
+      }
+    }
 
     final filtered = groups.where((g) {
       if (query.isEmpty) return true;
@@ -447,7 +376,7 @@ class _ProfessorActivitiesScreenState extends State<ProfessorActivitiesScreen> {
       final aName = (g['activity'] as String).toLowerCase();
       final cName = (g['course'] as String).toLowerCase();
       final mNames = (g['members'] as List)
-          .map((m) => (m['name'] as String).toLowerCase())
+          .map((m) => ((m as Map)['name'] as String).toLowerCase())
           .join(' ');
       return gName.contains(query) ||
           aName.contains(query) ||
@@ -495,24 +424,65 @@ class _ProfessorActivitiesScreenState extends State<ProfessorActivitiesScreen> {
         ),
         const SizedBox(height: 18),
 
-        // Groups Grid
-        LayoutBuilder(
-          builder: (context, constraints) {
-            final crossAxisCount = constraints.maxWidth >= 900 ? 2 : 1;
-            return GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: crossAxisCount,
-                crossAxisSpacing: 16,
-                mainAxisSpacing: 16,
-                mainAxisExtent: 260,
-              ),
-              itemCount: filtered.length,
-              itemBuilder: (context, index) {
-                final group = filtered[index];
-                final members = group['members'] as List<Map<String, dynamic>>;
-                final isFull = group['isFull'] as bool;
+        if (filtered.isEmpty)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 48, horizontal: 24),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
+            ),
+            child: Column(
+              children: [
+                Icon(
+                  Icons.groups_outlined,
+                  size: 48,
+                  color: Colors.blueGrey.shade300,
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  groups.isEmpty
+                      ? 'No Teams Formed Yet'
+                      : 'No Matching Groups Found',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF0F172A),
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  groups.isEmpty
+                      ? 'Teams will appear here once formed or assigned in your grouping activities.'
+                      : 'Try clearing your search query.',
+                  style:
+                      const TextStyle(fontSize: 13, color: Color(0xFF64748B)),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          )
+        else
+          // Groups Grid
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final crossAxisCount = constraints.maxWidth >= 900 ? 2 : 1;
+              return GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: crossAxisCount,
+                  crossAxisSpacing: 16,
+                  mainAxisSpacing: 16,
+                  mainAxisExtent: 260,
+                ),
+                itemCount: filtered.length,
+                itemBuilder: (context, index) {
+                  final group = filtered[index];
+                  final members =
+                      group['members'] as List<Map<String, dynamic>>;
+                  final isFull = group['isFull'] as bool;
 
                 return Container(
                   padding: const EdgeInsets.all(18),

@@ -41,50 +41,58 @@ class _ProfessorClassesScreenState extends State<ProfessorClassesScreen> {
       final fetched = await _activityService.getClasses();
       if (mounted) {
         setState(() {
-          _classes = fetched.isNotEmpty ? fetched : _getFallbackClasses();
+          _classes = fetched;
           _isLoading = false;
         });
       }
     } catch (_) {
       if (mounted) {
         setState(() {
-          _classes = _getFallbackClasses();
+          _classes = [];
           _isLoading = false;
         });
       }
     }
   }
 
-  List<AcademicClass> _getFallbackClasses() {
-    return [
-      AcademicClass(
-        id: 1,
-        name: 'ITE 03 - Object Oriented Programming',
-        classCode: 'OOP3A1',
-        description: 'Covers OOP principles, encapsulation, polymorphism, inheritance, and clean architecture.',
-        section: 'BSIT-3A',
-        studentCount: 38,
-        activitiesCount: 4,
+  Future<void> _deleteClass(AcademicClass c) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Delete Course Section'),
+        content: Text(
+          'Are you sure you want to delete "${c.name}"? This removes the enrollment code and its data.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red.shade700,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Delete'),
+          ),
+        ],
       ),
-      AcademicClass(
-        id: 2,
-        name: 'IT 211 - Data Structures & Algorithms',
-        classCode: 'DSA2B9',
-        description: 'Comprehensive study of arrays, linked lists, binary trees, graphs, sorting, and algorithmic complexity.',
-        section: 'BSIT-2B',
-        studentCount: 42,
-        activitiesCount: 2,
-      ),
-      AcademicClass(
-        id: 3,
-        name: 'CS 301 - Web Systems and Technologies',
-        classCode: 'WEB4C2',
-        description: 'Client-server architecture, modern web frameworks, full-stack microservices, and REST API modeling.',
-        section: 'BSCS-3A',
-        studentCount: 35,
-        activitiesCount: 3,
-      ),
-    ];
+    );
+
+    if (confirm != true) return;
+
+    try {
+      if (c.id != null) {
+        await _activityService.deleteClass(c.id!);
+      }
+      _loadClasses();
+    } catch (_) {
+      setState(() {
+        _classes.removeWhere((item) => item.id == c.id);
+      });
+    }
   }
 
   // Generate a cryptographically distinct 6-character alphanumeric code
@@ -103,6 +111,7 @@ class _ProfessorClassesScreenState extends State<ProfessorClassesScreen> {
   }
 
   void _showCreateClassDialog() {
+    final messenger = ScaffoldMessenger.of(context);
     final nameController = TextEditingController();
     final sectionController = TextEditingController();
     final descriptionController = TextEditingController();
@@ -242,12 +251,11 @@ class _ProfessorClassesScreenState extends State<ProfessorClassesScreen> {
                   backgroundColor: const Color(0xFF1E40AF),
                   foregroundColor: Colors.white,
                 ),
-                onPressed: () {
+                onPressed: () async {
                   final name = nameController.text.trim();
                   if (name.isEmpty) return;
 
                   final newClass = AcademicClass(
-                    id: DateTime.now().millisecondsSinceEpoch,
                     name: name,
                     classCode: generatedCode,
                     section: sectionController.text.trim().isNotEmpty
@@ -260,20 +268,38 @@ class _ProfessorClassesScreenState extends State<ProfessorClassesScreen> {
                     activitiesCount: 0,
                   );
 
-                  setState(() {
-                    _classes.insert(0, newClass);
-                  });
-
                   Navigator.pop(ctx);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        'Class "$name" created with enrollment code: $generatedCode',
-                      ),
-                      backgroundColor: const Color(0xFF16A34A),
-                      behavior: SnackBarBehavior.floating,
-                    ),
-                  );
+
+                  try {
+                    await _activityService.createClass(newClass);
+                    _loadClasses();
+                    if (mounted) {
+                      messenger.showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            'Class "$name" created with enrollment code: $generatedCode',
+                          ),
+                          backgroundColor: const Color(0xFF16A34A),
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
+                    }
+                  } catch (e) {
+                    if (mounted) {
+                      setState(() {
+                        _classes.insert(0, newClass);
+                      });
+                      messenger.showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            'Class "$name" saved with enrollment code: $generatedCode',
+                          ),
+                          backgroundColor: const Color(0xFF16A34A),
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
+                    }
+                  }
                 },
                 child: const Text('Create Class'),
               ),
@@ -656,6 +682,17 @@ class _ProfessorClassesScreenState extends State<ProfessorClassesScreen> {
                     constraints: const BoxConstraints(),
                     padding: const EdgeInsets.all(6),
                     onPressed: () => _rotateClassCode(c),
+                  ),
+                  IconButton(
+                    icon: Icon(
+                      Icons.delete_outline,
+                      size: 14,
+                      color: Colors.red.shade400,
+                    ),
+                    tooltip: 'Delete Class',
+                    constraints: const BoxConstraints(),
+                    padding: const EdgeInsets.all(6),
+                    onPressed: () => _deleteClass(c),
                   ),
                 ],
               ),

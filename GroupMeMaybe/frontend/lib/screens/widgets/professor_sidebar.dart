@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../services/auth_service.dart';
 import '../landing_screen.dart';
 import '../professor_activities_screen.dart';
 import '../professor_classes_screen.dart';
@@ -173,64 +174,82 @@ class ProfessorSidebar extends StatelessWidget {
           const Divider(color: Colors.white12, height: 1),
 
           // Professor Profile Card & Exit
-          Container(
-            padding: const EdgeInsets.all(12),
-            child: Row(
-              children: [
-                const CircleAvatar(
-                  radius: 16,
-                  backgroundColor: Color(0xFF1E40AF),
-                  child: Text(
-                    'A',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 13,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                const Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Prof. Aivhan',
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
+          Builder(
+            builder: (context) {
+              final user = AuthService.currentUser;
+              final userName = (user != null && user.name.isNotEmpty)
+                  ? user.name
+                  : 'Prof. Aivhan';
+              final userInitial =
+                  userName.isNotEmpty ? userName[0].toUpperCase() : 'P';
+              final userRole = (user != null &&
+                      user.departmentOrSection != null &&
+                      user.departmentOrSection!.isNotEmpty)
+                  ? user.departmentOrSection!
+                  : 'Faculty Lead';
+
+              return Container(
+                padding: const EdgeInsets.all(12),
+                child: Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 16,
+                      backgroundColor: const Color(0xFF1E40AF),
+                      child: Text(
+                        userInitial,
+                        style: const TextStyle(
                           color: Colors.white,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
-                      Text(
-                        'Faculty Lead',
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: Color(0xFF94A3B8),
-                          fontSize: 10,
-                        ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            userName,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          Text(
+                            userRole,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: Color(0xFF94A3B8),
+                              fontSize: 10,
+                            ),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
+                    ),
+                    IconButton(
+                      icon: const Icon(
+                        Icons.logout,
+                        size: 16,
+                        color: Color(0xFF94A3B8),
+                      ),
+                      tooltip: 'Sign Out',
+                      onPressed: () {
+                        Navigator.pushAndRemoveUntil(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const LandingScreen(),
+                          ),
+                          (route) => false,
+                        );
+                      },
+                    ),
+                  ],
                 ),
-                IconButton(
-                  icon: const Icon(
-                    Icons.logout,
-                    size: 16,
-                    color: Color(0xFF94A3B8),
-                  ),
-                  tooltip: 'Sign Out',
-                  onPressed: () {
-                    Navigator.pushAndRemoveUntil(
-                      context,
-                      MaterialPageRoute(builder: (_) => const LandingScreen()),
-                      (route) => false,
-                    );
-                  },
-                ),
-              ],
-            ),
+              );
+            },
           ),
         ],
       ),

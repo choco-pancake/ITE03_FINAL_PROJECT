@@ -27,7 +27,7 @@ class AcademicClassController extends Controller
             'section' => 'nullable|string|max:50',
             'class_code' => 'required|string|unique:academic_classes,class_code',
             'description' => 'nullable|string',
-            'student_count' => 'nullable|integer|min:1',
+            'student_count' => 'nullable|integer|min:0',
         ]);
 
         $class = AcademicClass::create($validated);
@@ -42,5 +42,35 @@ class AcademicClassController extends Controller
     {
         $class = AcademicClass::with('activities')->findOrFail($id);
         return response()->json($class);
+    }
+
+    /**
+     * Update the specified class.
+     */
+    public function update(Request $request, int $id): JsonResponse
+    {
+        $class = AcademicClass::findOrFail($id);
+        $validated = $request->validate([
+            'name' => 'sometimes|string|max:255',
+            'section' => 'nullable|string|max:50',
+            'class_code' => 'sometimes|string|unique:academic_classes,class_code,' . $id,
+            'description' => 'nullable|string',
+            'student_count' => 'nullable|integer|min:0',
+        ]);
+
+        $class->update($validated);
+
+        return response()->json($class);
+    }
+
+    /**
+     * Remove the specified class.
+     */
+    public function destroy(int $id): JsonResponse
+    {
+        $class = AcademicClass::findOrFail($id);
+        $class->delete();
+
+        return response()->json(null, 204);
     }
 }

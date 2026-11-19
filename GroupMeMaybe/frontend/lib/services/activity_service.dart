@@ -133,6 +133,67 @@ class ActivityService {
     throw Exception('Failed to load classes (${response.statusCode})');
   }
 
+  /// Create a new academic class in backend
+  Future<AcademicClass> createClass(AcademicClass academicClass) async {
+    final uri = Uri.parse('${ApiService.baseUrl}/classes');
+    final response = await http.post(
+      uri,
+      headers: _headers,
+      body: jsonEncode({
+        'name': academicClass.name,
+        'class_code': academicClass.classCode,
+        'section': academicClass.section,
+        'description': academicClass.description,
+        'student_count': academicClass.studentCount,
+      }),
+    );
+
+    if (response.statusCode == 201) {
+      return AcademicClass.fromJson(jsonDecode(response.body));
+    }
+
+    throw Exception(
+      'Failed to create class (${response.statusCode}): ${response.body}',
+    );
+  }
+
+  /// Update an academic class in backend
+  Future<AcademicClass> updateClass(
+    int id,
+    AcademicClass academicClass,
+  ) async {
+    final uri = Uri.parse('${ApiService.baseUrl}/classes/$id');
+    final response = await http.put(
+      uri,
+      headers: _headers,
+      body: jsonEncode({
+        'name': academicClass.name,
+        'class_code': academicClass.classCode,
+        'section': academicClass.section,
+        'description': academicClass.description,
+        'student_count': academicClass.studentCount,
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      return AcademicClass.fromJson(jsonDecode(response.body));
+    }
+
+    throw Exception(
+      'Failed to update class (${response.statusCode}): ${response.body}',
+    );
+  }
+
+  /// Delete an academic class from backend
+  Future<void> deleteClass(int id) async {
+    final uri = Uri.parse('${ApiService.baseUrl}/classes/$id');
+    final response = await http.delete(uri, headers: _headers);
+
+    if (response.statusCode != 200 && response.statusCode != 204) {
+      throw Exception('Failed to delete class (${response.statusCode})');
+    }
+  }
+
   /// Get skill distribution and scarcity analysis for an activity
   Future<ScarcityReport> getScarcityReport(int activityId) async {
     final uri = Uri.parse(

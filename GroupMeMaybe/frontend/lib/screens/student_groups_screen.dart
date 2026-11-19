@@ -283,36 +283,7 @@ class _StudentGroupsScreenState extends State<StudentGroupsScreen> {
       return candidates;
     }
 
-    return [
-      StudentCandidate(
-        id: 991,
-        name: 'Jordan Santos',
-        block: section,
-        avatarUrl: 'J',
-        skills: activity.requiredSkills.take(2).toList(),
-        interests: ['Software Development'],
-        availability: 'Weekdays after 2 PM',
-        commonHours: activity.minCommonHours,
-        compatibilityScore: 92.0,
-        preferredRole: 'Developer',
-        isInvited: invitedSet.contains('Jordan Santos'),
-      ),
-      StudentCandidate(
-        id: 992,
-        name: 'Morgan Lee',
-        block: section,
-        avatarUrl: 'M',
-        skills: activity.preferredSkills.isNotEmpty
-            ? activity.preferredSkills.take(2).toList()
-            : activity.requiredSkills.skip(1).take(2).toList(),
-        interests: ['Research and Testing'],
-        availability: 'Mon, Wed, Fri (1-5 PM)',
-        commonHours: activity.minCommonHours,
-        compatibilityScore: 86.0,
-        preferredRole: 'Analyst',
-        isInvited: invitedSet.contains('Morgan Lee'),
-      ),
-    ];
+    return [];
   }
 
   List<StudentCandidate> _getSortedCandidates(GroupingActivity activity) {
@@ -2062,16 +2033,52 @@ class _StudentGroupsScreenState extends State<StudentGroupsScreen> {
         ),
         const SizedBox(height: 16),
 
-        ListView.separated(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: candidates.length,
-          separatorBuilder: (_, index) => const SizedBox(height: 12),
-          itemBuilder: (context, index) {
-            final c = candidates[index];
-            return _buildCandidateCard(c, activity);
-          },
-        ),
+        if (candidates.isEmpty)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 36, horizontal: 20),
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.grey.shade200),
+            ),
+            child: Column(
+              children: [
+                Icon(
+                  Icons.person_search_outlined,
+                  size: 40,
+                  color: Colors.blueGrey.shade300,
+                ),
+                const SizedBox(height: 10),
+                const Text(
+                  'No Candidates Available',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 15,
+                    color: Color(0xFF0F172A),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                const Text(
+                  'Candidates will appear here as students register and fill out their technical profiles.',
+                  style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          )
+        else
+          ListView.separated(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: candidates.length,
+            separatorBuilder: (_, index) => const SizedBox(height: 12),
+            itemBuilder: (context, index) {
+              final c = candidates[index];
+              return _buildCandidateCard(c, activity);
+            },
+          ),
       ],
     );
   }

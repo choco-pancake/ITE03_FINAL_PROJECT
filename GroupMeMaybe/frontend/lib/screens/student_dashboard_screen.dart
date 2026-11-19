@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 
 import '../models/academic_class.dart';
 import '../models/grouping_activity.dart';
+import '../models/profile.dart';
 import '../services/activity_service.dart';
+import '../services/auth_service.dart';
+import '../services/profile_service.dart';
 import 'student_classes_screen.dart';
 import 'student_groups_screen.dart';
 import 'student_settings_screen.dart';
@@ -23,10 +26,15 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
   bool _isLoading = true;
 
   // Student info state
-  final String _studentName = 'Carlos Mendoza';
-  final String _studentBlock = 'BSIT 2A';
-  final String _primaryRole = 'Frontend Developer';
-  final String _skillLevel = 'Intermediate';
+  String get _studentName => (AuthService.currentUser?.name.isNotEmpty == true)
+      ? AuthService.currentUser!.name
+      : 'Student User';
+  String get _studentBlock =>
+      (AuthService.currentUser?.departmentOrSection?.isNotEmpty == true)
+          ? AuthService.currentUser!.departmentOrSection!
+          : 'BSIT 2A';
+  String _primaryRole = 'Frontend Developer';
+  String _skillLevel = 'Intermediate';
 
   @override
   void initState() {
@@ -39,12 +47,38 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
     try {
       final activitiesFuture = _activityService.getActivities();
       final classesFuture = _activityService.getClasses();
+      final profilesFuture = ProfileService().getProfiles();
 
-      final results = await Future.wait([activitiesFuture, classesFuture]);
+      final results = await Future.wait([
+        activitiesFuture,
+        classesFuture,
+        profilesFuture,
+      ]);
       if (mounted) {
+        final profiles = results[2] as List<Profile>;
+        final currentEmail = AuthService.currentUser?.email ?? '';
+        final myProfile = profiles.cast<Profile?>().firstWhere(
+              (p) =>
+                  p != null &&
+                  p.email.toLowerCase() == currentEmail.toLowerCase(),
+              orElse: () => null,
+            );
+
         setState(() {
           _activities = results[0] as List<GroupingActivity>;
           _classes = results[1] as List<AcademicClass>;
+          if (myProfile != null) {
+            if (myProfile.preferredRole.isNotEmpty) {
+              _primaryRole = myProfile.preferredRole;
+            }
+            if (myProfile.skills.isNotEmpty) {
+              _skillLevel = myProfile.skills.length >= 4
+                  ? 'Advanced'
+                  : (myProfile.skills.length >= 2
+                      ? 'Intermediate'
+                      : 'Beginner');
+            }
+          }
           _isLoading = false;
         });
       }

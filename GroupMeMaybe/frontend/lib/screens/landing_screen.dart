@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 
-import 'login_screen.dart';
-import 'professor_activities_screen.dart';
 import 'signup_screen.dart';
+import 'widgets/landing_top_bar.dart';
 
 class LandingScreen extends StatelessWidget {
   const LandingScreen({super.key});
@@ -13,8 +12,8 @@ class LandingScreen extends StatelessWidget {
       backgroundColor: const Color(0xFFF8FAFC),
       body: Column(
         children: [
-          // Top Navigation Bar
-          _buildTopBar(context),
+          // Fixed Top Navigation Bar
+          const LandingTopBar(currentRoute: LandingTopBarRoute.landing),
 
           // Main Viewport Area
           Expanded(
@@ -135,112 +134,6 @@ class LandingScreen extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  // Top Bar matching the photo
-  Widget _buildTopBar(BuildContext context) {
-    return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        border: Border(bottom: BorderSide(color: Color(0xFFE2E8F0), width: 1)),
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
-      child: SafeArea(
-        bottom: false,
-        child: Row(
-          children: [
-            // Logo
-            Container(
-              padding: const EdgeInsets.all(7),
-              decoration: BoxDecoration(
-                color: const Color(0xFF1E40AF),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: const Icon(Icons.hub, color: Colors.white, size: 18),
-            ),
-            const SizedBox(width: 10),
-
-            // App Brand Name & Slogan
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text(
-                  'GroupMeMaybe',
-                  style: TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF0F172A),
-                    letterSpacing: -0.2,
-                  ),
-                ),
-                Text(
-                  'Find your people. Build your team.',
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: Colors.blueGrey.shade500,
-                  ),
-                ),
-              ],
-            ),
-
-            const Spacer(),
-
-            // Log In button
-            OutlinedButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const LoginScreen()),
-                );
-              },
-              style: OutlinedButton.styleFrom(
-                foregroundColor: const Color(0xFF0F172A),
-                side: const BorderSide(color: Color(0xFFCBD5E1)),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 10,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-              child: const Text(
-                'Log In',
-                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
-              ),
-            ),
-            const SizedBox(width: 10),
-
-            // Sign Up button
-            ElevatedButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const SignupScreen()),
-                );
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF1E40AF),
-                foregroundColor: Colors.white,
-                elevation: 0,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 18,
-                  vertical: 10,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-              child: const Text(
-                'Sign Up',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }
@@ -559,7 +452,7 @@ class LandingScreen extends StatelessWidget {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => const ProfessorActivitiesScreen(),
+                    builder: (_) => const SignupScreen(initialRole: 'professor'),
                   ),
                 );
               },

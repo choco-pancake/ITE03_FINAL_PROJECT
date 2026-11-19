@@ -36,6 +36,39 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
   String _primaryRole = 'Frontend Developer';
   String _skillLevel = 'Intermediate';
 
+  GroupingActivity? get _urgentImpendingActivity {
+    if (_activities.isEmpty) return null;
+    final studentName = _studentName.toLowerCase();
+
+    for (final act in _activities) {
+      bool inTeam = false;
+      if (act.formedTeams != null) {
+        for (final team in act.formedTeams!) {
+          if (team is Map) {
+            final members = (team['members'] as List?) ?? [];
+            for (final m in members) {
+              final mName =
+                  (m is Map) ? (m['name']?.toString() ?? '') : m.toString();
+              if (mName.toLowerCase() == studentName) {
+                inTeam = true;
+                break;
+              }
+            }
+          }
+          if (inTeam) break;
+        }
+      }
+
+      if (!inTeam) {
+        final diff = act.groupingDeadline.difference(DateTime.now());
+        if (diff.isNegative || diff.inHours <= 24) {
+          return act;
+        }
+      }
+    }
+    return null;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -260,9 +293,13 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                               _buildWelcomeHeader(),
                               const SizedBox(height: 20),
 
-                              // 24-Hour Urgent Grouping Reminder Alert Banner
-                              _buildDeadlineAlertBanner(),
-                              const SizedBox(height: 20),
+                              // 24-Hour Urgent Grouping Reminder Alert Banner (Eventful only)
+                              if (_urgentImpendingActivity != null) ...[
+                                _buildDeadlineAlertBanner(
+                                  _urgentImpendingActivity!,
+                                ),
+                                const SizedBox(height: 20),
+                              ],
 
                               // Metrics Row
                               _buildMetricsRow(),
@@ -462,8 +499,8 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
     );
   }
 
-  // 24-Hour Urgent Grouping Deadline Alert Banner
-  Widget _buildDeadlineAlertBanner() {
+  // 24-Hour Urgent Grouping Deadline Alert Banner (strictly eventful)
+  Widget _buildDeadlineAlertBanner(GroupingActivity activity) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -490,8 +527,8 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: const [
-                Text(
+              children: [
+                const Text(
                   'Urgent: Group Formation Deadline Approaching (< 24 Hours Left)',
                   style: TextStyle(
                     fontSize: 14,
@@ -499,10 +536,10 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                     color: Color(0xFF92400E),
                   ),
                 ),
-                SizedBox(height: 4),
+                const SizedBox(height: 4),
                 Text(
-                  'The grouping deadline for "Automated Integration Testing Activity" closes tomorrow at 11:59 PM. If you are not in a confirmed team by the deadline, your professor will automatically assign you to a group.',
-                  style: TextStyle(
+                  'The grouping deadline for "${activity.title}" is approaching. If you are not in a confirmed team by the deadline, your professor will automatically assign you to a group.',
+                  style: const TextStyle(
                     fontSize: 12,
                     color: Color(0xFFB45309),
                     height: 1.4,

@@ -19,9 +19,10 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.textContaining('Welcome back'), findsOneWidget);
+    // Urgent deadline notification only appears when eventful (active activity with deadline < 24h)
     expect(
       find.textContaining('Urgent: Group Formation Deadline'),
-      findsOneWidget,
+      findsNothing,
     );
     expect(find.text('Enrolled Classes'), findsOneWidget);
   });

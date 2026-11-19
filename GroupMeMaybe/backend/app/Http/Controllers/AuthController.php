@@ -26,25 +26,28 @@ class AuthController extends Controller
         ]);
 
         $role = $validated['role'] ?? 'student';
+        $departmentOrSection = ($role === 'professor')
+            ? 'Department of Information Technology (BSIT)'
+            : ($validated['department_or_section'] ?? 'BSIT');
 
         $user = User::create([
             'name' => $validated['name'],
             'email' => $validated['email'],
             'password' => Hash::make($validated['password']),
             'role' => $role,
-            'department_or_section' => $validated['department_or_section'] ?? null,
+            'department_or_section' => $departmentOrSection,
         ]);
 
         // If the user registered as a student, create or link a student Profile
         if ($role === 'student') {
-            Profile::firstOrCreate(
+            Profile::updateOrCreate(
                 ['email' => $user->email],
                 [
                     'name' => $user->name,
-                    'skills' => $validated['skills'] ?? ['Frontend Development', 'UI/UX Design'],
+                    'skills' => $validated['skills'] ?? [],
                     'interests' => ['Web Development', 'Mobile Apps'],
                     'preferred_role' => $validated['preferred_role'] ?? 'Frontend Developer',
-                    'availability' => 'Weekdays after 3PM',
+                    'availability' => $departmentOrSection,
                 ]
             );
         }
@@ -63,6 +66,63 @@ class AuthController extends Controller
             ],
             'token' => $token,
         ], 201);
+    }
+
+    /**
+     * Authenticate or register using Google OAuth credentials.
+     */
+    public function googleAuth(Request $request)
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|string|email|max:255',
+            'role' => 'nullable|string|in:student,professor',
+            'department_or_section' => 'nullable|string|max:255',
+            'preferred_role' => 'nullable|string|max:255',
+        ]);
+
+        $role = $validated['role'] ?? 'student';
+        $departmentOrSection = ($role === 'professor')
+            ? 'Department of Information Technology (BSIT)'
+            : ($validated['department_or_section'] ?? 'BSIT');
+
+        $user = User::firstOrCreate(
+            ['email' => $validated['email']],
+            [
+                'name' => $validated['name'],
+                'password' => Hash::make(bin2hex(random_bytes(16))),
+                'role' => $role,
+                'department_or_section' => $departmentOrSection,
+            ]
+        );
+
+        if ($role === 'student') {
+            Profile::firstOrCreate(
+                ['email' => $user->email],
+                [
+                    'name' => $user->name,
+                    'skills' => [],
+                    'interests' => ['Web Development', 'Mobile Apps'],
+                    'preferred_role' => $validated['preferred_role'] ?? 'Frontend Developer',
+                    'availability' => $user->department_or_section ?? $departmentOrSection,
+                ]
+            );
+        }
+
+        $token = $user->createToken('auth_token')->plainTextToken;
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Google authentication successful',
+            'user' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'role' => $user->role ?? $role,
+                'department_or_section' => $user->department_or_section ?? $departmentOrSection,
+            ],
+            'token' => $token,
+        ]);
     }
 
     /**

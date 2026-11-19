@@ -38,6 +38,19 @@ void main() {
       expect(find.byIcon(Icons.check_circle), findsNothing);
       expect(find.text('Join as Student'), findsOneWidget);
       expect(find.text('Launch Team Match'), findsOneWidget);
+
+      // Verify top right of topbar only has Log In, not redundant Sign Up
+      expect(find.text('Log In'), findsOneWidget);
+      expect(find.widgetWithText(ElevatedButton, 'Sign Up'), findsNothing);
+
+      // Tap Launch Team Match and verify it navigates to Instructor Sign Up
+      await tester.tap(find.text('Launch Team Match'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Create Your Account'), findsOneWidget);
+      expect(find.text('Instructor / Prof'), findsOneWidget);
+      // Department field should be removed for instructor
+      expect(find.text('Department / College'), findsNothing);
     },
   );
 }

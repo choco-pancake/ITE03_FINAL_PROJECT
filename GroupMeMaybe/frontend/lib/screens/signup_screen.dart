@@ -4,6 +4,7 @@ import '../services/auth_service.dart';
 import 'login_screen.dart';
 import 'professor_dashboard_screen.dart';
 import 'student_dashboard_screen.dart';
+import 'widgets/bottom_right_notification.dart';
 import 'widgets/landing_top_bar.dart';
 
 class SignupScreen extends StatefulWidget {
@@ -17,7 +18,9 @@ class SignupScreen extends StatefulWidget {
 
 class _SignupScreenState extends State<SignupScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _nameController = TextEditingController();
+  final _firstNameController = TextEditingController();
+  final _middleNameController = TextEditingController();
+  final _lastNameController = TextEditingController();
   final _emailController = TextEditingController();
   final _sectionController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -60,7 +63,9 @@ class _SignupScreenState extends State<SignupScreen> {
 
   @override
   void dispose() {
-    _nameController.dispose();
+    _firstNameController.dispose();
+    _middleNameController.dispose();
+    _lastNameController.dispose();
     _emailController.dispose();
     _sectionController.dispose();
     _passwordController.dispose();
@@ -94,6 +99,11 @@ class _SignupScreenState extends State<SignupScreen> {
     });
 
     try {
+      final first = _firstNameController.text.trim();
+      final middle = _middleNameController.text.trim();
+      final last = _lastNameController.text.trim();
+      final fullName = middle.isNotEmpty ? '$first $middle $last' : '$first $last';
+
       final effectiveDept = _selectedRole == 'professor'
           ? 'Department of Information Technology (BSIT)'
           : (_sectionController.text.trim().isNotEmpty
@@ -101,7 +111,7 @@ class _SignupScreenState extends State<SignupScreen> {
               : 'BSIT');
 
       final user = await _authService.register(
-        name: _nameController.text.trim(),
+        name: fullName,
         email: _emailController.text.trim(),
         password: _passwordController.text,
         role: _selectedRole,
@@ -113,13 +123,7 @@ class _SignupScreenState extends State<SignupScreen> {
 
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Account successfully created! Welcome, ${user.name}!'),
-          backgroundColor: const Color(0xFF16A34A),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      AppNotification.showWelcome(context, user.name);
 
       // Route to respective portal
       if (user.isProfessor) {
@@ -246,6 +250,7 @@ class _SignupScreenState extends State<SignupScreen> {
     });
 
     try {
+      await AuthService.launchGoogleOAuthBrowser();
       final email = emailCtrl.text.trim();
       final name = nameCtrl.text.trim();
 
@@ -260,13 +265,7 @@ class _SignupScreenState extends State<SignupScreen> {
       );
 
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Account successfully created! Welcome, ${user.name}!'),
-          backgroundColor: const Color(0xFF16A34A),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      AppNotification.showWelcome(context, user.name);
 
       if (user.isProfessor) {
         Navigator.pushAndRemoveUntil(
@@ -470,9 +469,9 @@ class _SignupScreenState extends State<SignupScreen> {
                           ),
                           const SizedBox(height: 20),
 
-                          // Full Name Input
+                          // First Name Input
                           const Text(
-                            'Full Name',
+                            'First Name',
                             style: TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.w600,
@@ -481,11 +480,11 @@ class _SignupScreenState extends State<SignupScreen> {
                           ),
                           const SizedBox(height: 6),
                           TextFormField(
-                            controller: _nameController,
+                            controller: _firstNameController,
                             decoration: InputDecoration(
                               hintText: isStudent
-                                  ? 'e.g. Maria Santos'
-                                  : 'e.g. Prof. Aivhan Navarro',
+                                  ? 'e.g. Maria'
+                                  : 'e.g. Aivhan',
                               hintStyle: const TextStyle(
                                 fontSize: 13,
                                 color: Color(0xFF94A3B8),
@@ -521,7 +520,115 @@ class _SignupScreenState extends State<SignupScreen> {
                             ),
                             validator: (value) {
                               if (value == null || value.trim().isEmpty) {
-                                return 'Please enter your full name';
+                                return 'Please enter your first name';
+                              }
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 14),
+
+                          // Middle Name Input (Optional)
+                          const Text(
+                            'Middle Name (Optional)',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF334155),
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          TextFormField(
+                            controller: _middleNameController,
+                            decoration: const InputDecoration(
+                              hintText: 'e.g. Dela Cruz',
+                              hintStyle: TextStyle(
+                                fontSize: 13,
+                                color: Color(0xFF94A3B8),
+                              ),
+                              prefixIcon: Icon(
+                                Icons.person_outline,
+                                size: 18,
+                                color: Color(0xFF64748B),
+                              ),
+                              contentPadding: EdgeInsets.symmetric(
+                                horizontal: 14,
+                                vertical: 12,
+                              ),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.all(Radius.circular(8)),
+                                borderSide: BorderSide(
+                                  color: Color(0xFFCBD5E1),
+                                ),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.all(Radius.circular(8)),
+                                borderSide: BorderSide(
+                                  color: Color(0xFFCBD5E1),
+                                ),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.all(Radius.circular(8)),
+                                borderSide: BorderSide(
+                                  color: Color(0xFF1E40AF),
+                                  width: 1.5,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 14),
+
+                          // Last Name Input
+                          const Text(
+                            'Last Name',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF334155),
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          TextFormField(
+                            controller: _lastNameController,
+                            decoration: InputDecoration(
+                              hintText: isStudent
+                                  ? 'e.g. Santos'
+                                  : 'e.g. Navarro',
+                              hintStyle: const TextStyle(
+                                fontSize: 13,
+                                color: Color(0xFF94A3B8),
+                              ),
+                              prefixIcon: const Icon(
+                                Icons.person_outline,
+                                size: 18,
+                                color: Color(0xFF64748B),
+                              ),
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 14,
+                                vertical: 12,
+                              ),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: const BorderSide(
+                                  color: Color(0xFFCBD5E1),
+                                ),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: const BorderSide(
+                                  color: Color(0xFFCBD5E1),
+                                ),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: const BorderSide(
+                                  color: Color(0xFF1E40AF),
+                                  width: 1.5,
+                                ),
+                              ),
+                            ),
+                            validator: (value) {
+                              if (value == null || value.trim().isEmpty) {
+                                return 'Please enter your last name';
                               }
                               return null;
                             },

@@ -351,6 +351,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
 
   // Welcome Header with Student Status & Level
   Widget _buildWelcomeHeader() {
+    final firstName = _studentName.trim().split(RegExp(r'\s+')).first;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
       decoration: BoxDecoration(
@@ -393,7 +394,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                       runSpacing: 4,
                       children: [
                         Text(
-                          'Welcome back, $_studentName!',
+                          'Welcome back, $firstName!',
                           style: const TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.bold,

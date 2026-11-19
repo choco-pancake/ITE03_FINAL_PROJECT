@@ -14,10 +14,67 @@ class StudentSidebar extends StatelessWidget {
 
   const StudentSidebar({super.key, required this.currentDestination});
 
+  Future<void> _confirmSignOut(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: const [
+            Icon(Icons.logout, color: Color(0xFFDC2626), size: 22),
+            SizedBox(width: 10),
+            Text(
+              'Confirm Sign Out',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
+        content: const Text(
+          'Are you sure you want to log out of GroupMeMaybe?',
+          style: TextStyle(fontSize: 14, color: Color(0xFF475569)),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(
+                color: Color(0xFF64748B),
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFDC2626),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Log Out'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && context.mounted) {
+      await AuthService().logout();
+      if (context.mounted) {
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (_) => const LandingScreen()),
+          (route) => false,
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 220,
+      width: 230,
       decoration: const BoxDecoration(
         color: Color(0xFF0F172A),
         border: Border(right: BorderSide(color: Color(0xFF1E293B), width: 1)),
@@ -30,7 +87,7 @@ class StudentSidebar extends StatelessWidget {
             child: Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(6),
+                  padding: const EdgeInsets.all(7),
                   decoration: BoxDecoration(
                     color: const Color(0xFF1E40AF),
                     borderRadius: BorderRadius.circular(8),
@@ -38,15 +95,40 @@ class StudentSidebar extends StatelessWidget {
                   child: const Icon(Icons.hub, color: Colors.white, size: 20),
                 ),
                 const SizedBox(width: 10),
-                const Expanded(
-                  child: Text(
-                    'GroupMeMaybe',
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                    ),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'GroupMeMaybe',
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                      ),
+                      Container(
+                        margin: const EdgeInsets.only(top: 2),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 5,
+                          vertical: 1,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF1E293B),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: const Text(
+                          'STUDENT PORTAL',
+                          style: TextStyle(
+                            color: Color(0xFF93C5FD),
+                            fontSize: 9,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
@@ -136,26 +218,25 @@ class StudentSidebar extends StatelessWidget {
                       user.departmentOrSection != null &&
                       user.departmentOrSection!.isNotEmpty)
                   ? user.departmentOrSection!
-                  : 'Student Portal';
+                  : 'Student Lead';
 
               return Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                padding: const EdgeInsets.all(12),
                 child: Row(
                   children: [
                     CircleAvatar(
-                      radius: 14,
+                      radius: 16,
                       backgroundColor: const Color(0xFF1E40AF),
                       child: Text(
                         initial,
                         style: const TextStyle(
                           color: Colors.white,
-                          fontSize: 11,
+                          fontSize: 13,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: 10),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -180,29 +261,20 @@ class StudentSidebar extends StatelessWidget {
                         ],
                       ),
                     ),
+                    IconButton(
+                      icon: const Icon(
+                        Icons.logout,
+                        size: 16,
+                        color: Color(0xFF94A3B8),
+                      ),
+                      tooltip: 'Sign Out',
+                      onPressed: () => _confirmSignOut(context),
+                    ),
                   ],
                 ),
               );
             },
           ),
-          const Divider(color: Colors.white12, height: 1),
-
-          // Log Out
-          _buildItem(
-            context: context,
-            icon: Icons.logout,
-            title: 'Log Out',
-            isSelected: false,
-            color: Colors.redAccent,
-            onTap: () {
-              Navigator.pushAndRemoveUntil(
-                context,
-                MaterialPageRoute(builder: (_) => const LandingScreen()),
-                (route) => false,
-              );
-            },
-          ),
-          const SizedBox(height: 14),
         ],
       ),
     );

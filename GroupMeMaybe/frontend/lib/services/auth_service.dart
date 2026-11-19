@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class AuthUser {
   final int? id;
@@ -86,14 +87,37 @@ class AuthService {
     return false;
   }
 
+  /// Redirect user's browser to official Google Accounts selector
+  static Future<bool> launchGoogleOAuthBrowser() async {
+    final googleAuthUri = Uri.parse(
+      'https://accounts.google.com/o/oauth2/v2/auth'
+      '?client_id=9273c6b8-groupmemaybe.apps.googleusercontent.com'
+      '&redirect_uri=http://localhost:8000/api/google-auth'
+      '&response_type=token'
+      '&scope=email%20profile'
+      '&prompt=select_account',
+    );
+
+    try {
+      return await launchUrl(
+        googleAuthUri,
+        mode: LaunchMode.externalApplication,
+      );
+    } catch (_) {
+      return false;
+    }
+  }
+
   /// Sign in with email and password
   Future<AuthUser> login(String email, String password) async {
     try {
-      final res = await http.post(
-        Uri.parse('$baseUrl/login'),
-        headers: _headers,
-        body: jsonEncode({'email': email.trim(), 'password': password}),
-      );
+      final res = await http
+          .post(
+            Uri.parse('$baseUrl/login'),
+            headers: _headers,
+            body: jsonEncode({'email': email.trim(), 'password': password}),
+          )
+          .timeout(const Duration(milliseconds: 2500));
 
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body);
@@ -150,19 +174,21 @@ class AuthService {
         : (departmentOrSection ?? 'BSIT');
 
     try {
-      final res = await http.post(
-        Uri.parse('$baseUrl/register'),
-        headers: _headers,
-        body: jsonEncode({
-          'name': name.trim(),
-          'email': email.trim(),
-          'password': password,
-          'role': role,
-          'department_or_section': effectiveDept,
-          'preferred_role': preferredRole,
-          'skills': skills,
-        }),
-      );
+      final res = await http
+          .post(
+            Uri.parse('$baseUrl/register'),
+            headers: _headers,
+            body: jsonEncode({
+              'name': name.trim(),
+              'email': email.trim(),
+              'password': password,
+              'role': role,
+              'department_or_section': effectiveDept,
+              'preferred_role': preferredRole,
+              'skills': skills,
+            }),
+          )
+          .timeout(const Duration(milliseconds: 2500));
 
       if (res.statusCode == 201 || res.statusCode == 200) {
         final data = jsonDecode(res.body);
@@ -206,17 +232,19 @@ class AuthService {
         : (departmentOrSection ?? 'BSIT');
 
     try {
-      final res = await http.post(
-        Uri.parse('$baseUrl/google-auth'),
-        headers: _headers,
-        body: jsonEncode({
-          'name': name.trim(),
-          'email': email.trim(),
-          'role': role,
-          'department_or_section': effectiveDept,
-          'preferred_role': preferredRole,
-        }),
-      );
+      final res = await http
+          .post(
+            Uri.parse('$baseUrl/google-auth'),
+            headers: _headers,
+            body: jsonEncode({
+              'name': name.trim(),
+              'email': email.trim(),
+              'role': role,
+              'department_or_section': effectiveDept,
+              'preferred_role': preferredRole,
+            }),
+          )
+          .timeout(const Duration(milliseconds: 2500));
 
       if (res.statusCode == 200 || res.statusCode == 201) {
         final data = jsonDecode(res.body);

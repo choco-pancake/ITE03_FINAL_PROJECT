@@ -4,6 +4,7 @@ import '../services/auth_service.dart';
 import 'professor_dashboard_screen.dart';
 import 'signup_screen.dart';
 import 'student_dashboard_screen.dart';
+import 'widgets/bottom_right_notification.dart';
 import 'widgets/landing_top_bar.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -69,13 +70,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Welcome back, ${user.name}!'),
-          backgroundColor: const Color(0xFF16A34A),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      AppNotification.showWelcome(context, user.name);
 
       // Navigate based on role
       if (user.isProfessor) {
@@ -104,10 +99,15 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _handleGoogleSignIn() async {
+    // 1. Launch real Google Accounts sign-in URL in browser
+    await AuthService.launchGoogleOAuthBrowser();
+
+    // 2. Account verification dialog
     final emailCtrl = TextEditingController(text: 'student@university.edu');
     final nameCtrl = TextEditingController(text: 'University Student');
     String selectedRole = 'student';
 
+    if (!mounted) return;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => StatefulBuilder(
@@ -118,7 +118,7 @@ class _LoginScreenState extends State<LoginScreen> {
               _buildGoogleLogo(),
               const SizedBox(width: 10),
               const Text(
-                'Google Institutional Sign-In',
+                'Google Browser Sign-In',
                 style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
               ),
             ],
@@ -127,9 +127,25 @@ class _LoginScreenState extends State<LoginScreen> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'Select your institutional Google Account (@university.edu or @student.edu) to authenticate.',
-                style: TextStyle(fontSize: 13, color: Color(0xFF64748B)),
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEFF6FF),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: const Color(0xFFBFDBFE)),
+                ),
+                child: Row(
+                  children: const [
+                    Icon(Icons.open_in_new, size: 16, color: Color(0xFF1D4ED8)),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Google accounts page opened in browser. Confirm your institutional account credentials below to finish entering the portal.',
+                        style: TextStyle(fontSize: 12, color: Color(0xFF1E40AF)),
+                      ),
+                    ),
+                  ],
+                ),
               ),
               const SizedBox(height: 14),
               TextField(
@@ -187,7 +203,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 foregroundColor: Colors.white,
               ),
               onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Continue with Google'),
+              child: const Text('Confirm & Sign In'),
             ),
           ],
         ),
@@ -219,13 +235,7 @@ class _LoginScreenState extends State<LoginScreen> {
       }
 
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Signed in with Google as ${user.name}!'),
-          backgroundColor: const Color(0xFF16A34A),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      AppNotification.showWelcome(context, user.name);
 
       if (user.isProfessor) {
         Navigator.pushAndRemoveUntil(

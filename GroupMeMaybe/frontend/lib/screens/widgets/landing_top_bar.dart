@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../landing_screen.dart';
 import '../login_screen.dart';
-import '../signup_screen.dart';
 
 enum LandingTopBarRoute { landing, login, signup }
 
@@ -25,14 +24,6 @@ class LandingTopBar extends StatelessWidget {
     Navigator.push(
       context,
       MaterialPageRoute(builder: (_) => const LoginScreen()),
-    );
-  }
-
-  void _navigateToSignup(BuildContext context) {
-    if (currentRoute == LandingTopBarRoute.signup) return;
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => const SignupScreen()),
     );
   }
 
@@ -102,47 +93,9 @@ class LandingTopBar extends StatelessWidget {
 
             const Spacer(),
 
-            // Contextual Top-Right Action Button
-            if (currentRoute == LandingTopBarRoute.landing) ...[
-              OutlinedButton(
-                onPressed: () => _navigateToLogin(context),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: const Color(0xFF0F172A),
-                  side: const BorderSide(color: Color(0xFFCBD5E1)),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 10,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-                child: const Text(
-                  'Log In',
-                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
-                ),
-              ),
-            ] else if (currentRoute == LandingTopBarRoute.login) ...[
-              ElevatedButton(
-                onPressed: () => _navigateToSignup(context),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF1E40AF),
-                  foregroundColor: Colors.white,
-                  elevation: 0,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 18,
-                    vertical: 10,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-                child: const Text(
-                  'Sign Up',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                ),
-              ),
-            ] else if (currentRoute == LandingTopBarRoute.signup) ...[
+            // Contextual Top-Right Action Button (Sign Up removed as requested)
+            if (currentRoute == LandingTopBarRoute.landing ||
+                currentRoute == LandingTopBarRoute.signup) ...[
               OutlinedButton(
                 onPressed: () => _navigateToLogin(context),
                 style: OutlinedButton.styleFrom(

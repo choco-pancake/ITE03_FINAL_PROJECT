@@ -28,11 +28,13 @@ class GroupingActivity extends Model
         'student_modification_deadline',
         'status',
         'students_count',
+        'formed_teams',
     ];
 
     protected $casts = [
         'required_skills' => 'array',
         'preferred_skills' => 'array',
+        'formed_teams' => 'array',
         'grouping_deadline' => 'datetime',
         'student_modification_deadline' => 'datetime',
         'group_capacity' => 'integer',

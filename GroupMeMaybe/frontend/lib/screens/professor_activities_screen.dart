@@ -6,6 +6,7 @@ import '../services/activity_service.dart';
 import 'widgets/activity_card.dart';
 import 'widgets/activity_details_dialog.dart';
 import 'widgets/activity_form_dialog.dart';
+import 'widgets/professor_sidebar.dart';
 import 'widgets/scarcity_report_dialog.dart';
 import 'widgets/summary_cards_row.dart';
 
@@ -176,46 +177,53 @@ class _ProfessorActivitiesScreenState extends State<ProfessorActivitiesScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 20.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Page Header: Grouping Activities + + Create Activity button
-            _buildPageHeader(),
-            const SizedBox(height: 20),
+      body: Row(
+        children: [
+          const ProfessorSidebar(currentDestination: ProfessorNavDestination.activities),
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 20.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Page Header: Grouping Activities + + Create Activity button
+                  _buildPageHeader(),
+                  const SizedBox(height: 20),
 
-            // Summary Cards
-            SummaryCardsRow(
-              summary: _summary,
-              selectedFilter: _selectedStatus,
-              onSelectFilter: (filterKey) {
-                setState(() => _selectedStatus = filterKey);
-                _loadData();
-              },
+                  // Summary Cards
+                  SummaryCardsRow(
+                    summary: _summary,
+                    selectedFilter: _selectedStatus,
+                    onSelectFilter: (filterKey) {
+                      setState(() => _selectedStatus = filterKey);
+                      _loadData();
+                    },
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Search & Filter Toolbar
+                  _buildToolbar(),
+                  const SizedBox(height: 18),
+
+                  // Main Content Area
+                  if (_isLoading)
+                    const Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(40.0),
+                        child: CircularProgressIndicator(),
+                      ),
+                    )
+                  else if (_errorMessage != null)
+                    _buildErrorState()
+                  else if (_activities.isEmpty)
+                    _buildEmptyState()
+                  else
+                    _buildActivityGrid(),
+                ],
+              ),
             ),
-            const SizedBox(height: 20),
-
-            // Search & Filter Toolbar
-            _buildToolbar(),
-            const SizedBox(height: 18),
-
-            // Main Content Area
-            if (_isLoading)
-              const Center(
-                child: Padding(
-                  padding: EdgeInsets.all(40.0),
-                  child: CircularProgressIndicator(),
-                ),
-              )
-            else if (_errorMessage != null)
-              _buildErrorState()
-            else if (_activities.isEmpty)
-              _buildEmptyState()
-            else
-              _buildActivityGrid(),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

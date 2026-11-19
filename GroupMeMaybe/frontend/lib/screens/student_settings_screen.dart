@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../services/skill_approval_service.dart';
 import 'widgets/student_sidebar.dart';
 
 class StudentSettingsScreen extends StatefulWidget {
@@ -164,7 +165,14 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
   };
 
   @override
+  void initState() {
+    super.initState();
+    SkillApprovalService().addListener(_onSkillsUpdated);
+  }
+
+  @override
   void dispose() {
+    SkillApprovalService().removeListener(_onSkillsUpdated);
     _firstNameController.dispose();
     _middleNameController.dispose();
     _lastNameController.dispose();
@@ -172,6 +180,15 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
     _emailController.dispose();
     _experienceController.dispose();
     super.dispose();
+  }
+
+  void _onSkillsUpdated() {
+    if (mounted) setState(() {});
+  }
+
+  List<String> get _combinedTechnicalSkills {
+    final approved = SkillApprovalService().approvedSkills;
+    return [..._allTechnicalSkills, ...approved];
   }
 
   // Calculate dynamic proficiency level based on skill counts and tools
@@ -329,6 +346,14 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
             onPressed: () {
               final newSkill = customSkillController.text.trim();
               if (newSkill.isNotEmpty) {
+                SkillApprovalService().submitRequest(
+                  studentName: '${_firstNameController.text.trim()} ${_lastNameController.text.trim()}'.trim(),
+                  studentId: _studentIdController.text.trim(),
+                  block: _selectedBlock,
+                  skillName: newSkill,
+                  domain: 'Custom Student Request',
+                );
+
                 setState(() {
                   if (!_selectedSkills.contains(newSkill)) {
                     _selectedSkills.add(newSkill);
@@ -572,7 +597,7 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
                                       contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                                     ),
-                                    items: _allTechnicalSkills
+                                    items: _combinedTechnicalSkills
                                         .where((s) => !_selectedSkills.contains(s))
                                         .map((s) => DropdownMenuItem(value: s, child: Text(s, style: const TextStyle(fontSize: 13), overflow: TextOverflow.ellipsis)))
                                         .toList(),

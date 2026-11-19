@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
-import '../main.dart';
 import '../services/auth_service.dart';
 import 'login_screen.dart';
+import 'professor_dashboard_screen.dart';
 import 'student_dashboard_screen.dart';
 
 class SignupScreen extends StatefulWidget {
@@ -125,7 +125,7 @@ class _SignupScreenState extends State<SignupScreen> {
       if (user.isProfessor) {
         Navigator.pushAndRemoveUntil(
           context,
-          MaterialPageRoute(builder: (_) => const MainNavigationShell()),
+          MaterialPageRoute(builder: (_) => const ProfessorDashboardScreen()),
           (route) => false,
         );
       } else {

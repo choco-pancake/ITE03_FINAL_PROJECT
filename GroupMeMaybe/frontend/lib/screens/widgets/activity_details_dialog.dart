@@ -75,7 +75,11 @@ class ActivityDetailsDialog extends StatelessWidget {
                         const SizedBox(height: 6),
                         Row(
                           children: [
-                            const Icon(Icons.school, size: 16, color: Colors.grey),
+                            const Icon(
+                              Icons.school,
+                              size: 16,
+                              color: Colors.grey,
+                            ),
                             const SizedBox(width: 6),
                             Text(
                               activity.className,
@@ -91,11 +95,16 @@ class ActivityDetailsDialog extends StatelessWidget {
                     ),
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
                     decoration: BoxDecoration(
                       color: statusColor.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: statusColor.withValues(alpha: 0.4)),
+                      border: Border.all(
+                        color: statusColor.withValues(alpha: 0.4),
+                      ),
                     ),
                     child: Text(
                       activity.status.toUpperCase(),
@@ -119,10 +128,14 @@ class ActivityDetailsDialog extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       // Description
-                      if (activity.description != null && activity.description!.isNotEmpty) ...[
+                      if (activity.description != null &&
+                          activity.description!.isNotEmpty) ...[
                         const Text(
                           'Activity Description',
-                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
                         ),
                         const SizedBox(height: 6),
                         Container(
@@ -135,7 +148,10 @@ class ActivityDetailsDialog extends StatelessWidget {
                           ),
                           child: Text(
                             activity.description!,
-                            style: TextStyle(color: Colors.grey[800], height: 1.4),
+                            style: TextStyle(
+                              color: Colors.grey[800],
+                              height: 1.4,
+                            ),
                           ),
                         ),
                         const SizedBox(height: 18),
@@ -160,7 +176,8 @@ class ActivityDetailsDialog extends StatelessWidget {
                           _buildDetailTile(
                             icon: Icons.format_list_numbered,
                             label: 'Planned Groups',
-                            value: '${activity.numberOfGroups} teams (${activity.studentsCount} students)',
+                            value:
+                                '${activity.numberOfGroups} teams (${activity.studentsCount} students)',
                           ),
                           _buildDetailTile(
                             icon: Icons.star_rate,
@@ -183,7 +200,9 @@ class ActivityDetailsDialog extends StatelessWidget {
                         decoration: BoxDecoration(
                           color: Colors.blue.withValues(alpha: 0.05),
                           borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: Colors.blue.withValues(alpha: 0.2)),
+                          border: Border.all(
+                            color: Colors.blue.withValues(alpha: 0.2),
+                          ),
                         ),
                         child: Row(
                           children: [
@@ -193,11 +212,18 @@ class ActivityDetailsDialog extends StatelessWidget {
                                 children: [
                                   Row(
                                     children: const [
-                                      Icon(Icons.event, size: 16, color: Colors.blue),
+                                      Icon(
+                                        Icons.event,
+                                        size: 16,
+                                        color: Colors.blue,
+                                      ),
                                       SizedBox(width: 6),
                                       Text(
                                         'Grouping Deadline',
-                                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 13,
+                                        ),
                                       ),
                                     ],
                                   ),
@@ -216,17 +242,26 @@ class ActivityDetailsDialog extends StatelessWidget {
                                   children: [
                                     Row(
                                       children: const [
-                                        Icon(Icons.edit_calendar, size: 16, color: Colors.indigo),
+                                        Icon(
+                                          Icons.edit_calendar,
+                                          size: 16,
+                                          color: Colors.indigo,
+                                        ),
                                         SizedBox(width: 6),
                                         Text(
                                           'Modification Deadline',
-                                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 13,
+                                          ),
                                         ),
                                       ],
                                     ),
                                     const SizedBox(height: 4),
                                     Text(
-                                      _formatDateTime(activity.studentModificationDeadline!),
+                                      _formatDateTime(
+                                        activity.studentModificationDeadline!,
+                                      ),
                                       style: const TextStyle(fontSize: 13),
                                     ),
                                   ],
@@ -240,7 +275,10 @@ class ActivityDetailsDialog extends StatelessWidget {
                       // Required Skills
                       const Text(
                         'Required Skills (Must have in each group)',
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
                       ),
                       const SizedBox(height: 8),
                       Wrap(
@@ -248,10 +286,20 @@ class ActivityDetailsDialog extends StatelessWidget {
                         runSpacing: 6,
                         children: activity.requiredSkills.map((skill) {
                           return Chip(
-                            label: Text(skill, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                            label: Text(
+                              skill,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
                             backgroundColor: Colors.blue[50],
                             side: BorderSide(color: Colors.blue[300]!),
-                            avatar: const Icon(Icons.check_circle_outline, size: 16, color: Colors.blue),
+                            avatar: const Icon(
+                              Icons.check_circle_outline,
+                              size: 16,
+                              color: Colors.blue,
+                            ),
                           );
                         }).toList(),
                       ),
@@ -261,7 +309,10 @@ class ActivityDetailsDialog extends StatelessWidget {
                       if (activity.preferredSkills.isNotEmpty) ...[
                         const Text(
                           'Preferred Skills (Bonus compatibility points)',
-                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
                         ),
                         const SizedBox(height: 8),
                         Wrap(
@@ -269,10 +320,17 @@ class ActivityDetailsDialog extends StatelessWidget {
                           runSpacing: 6,
                           children: activity.preferredSkills.map((skill) {
                             return Chip(
-                              label: Text(skill, style: const TextStyle(fontSize: 12)),
+                              label: Text(
+                                skill,
+                                style: const TextStyle(fontSize: 12),
+                              ),
                               backgroundColor: Colors.teal[50],
                               side: BorderSide(color: Colors.teal[300]!),
-                              avatar: const Icon(Icons.add_task, size: 16, color: Colors.teal),
+                              avatar: const Icon(
+                                Icons.add_task,
+                                size: 16,
+                                color: Colors.teal,
+                              ),
                             );
                           }).toList(),
                         ),
@@ -285,17 +343,27 @@ class ActivityDetailsDialog extends StatelessWidget {
                         decoration: BoxDecoration(
                           color: Colors.amber.withValues(alpha: 0.08),
                           borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.amber.withValues(alpha: 0.3)),
+                          border: Border.all(
+                            color: Colors.amber.withValues(alpha: 0.3),
+                          ),
                         ),
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Icon(Icons.pie_chart, size: 20, color: Colors.amber),
+                            const Icon(
+                              Icons.pie_chart,
+                              size: 20,
+                              color: Colors.amber,
+                            ),
                             const SizedBox(width: 10),
                             Expanded(
                               child: Text(
                                 'Compatibility algorithm weights: 40% Skills coverage, 30% Shared interests, 30% Availability overlap. Unassigned students will be flagged for scarcity distribution after student sign-up.',
-                                style: TextStyle(fontSize: 12, color: Colors.brown[800], height: 1.3),
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.brown[800],
+                                  height: 1.3,
+                                ),
                               ),
                             ),
                           ],

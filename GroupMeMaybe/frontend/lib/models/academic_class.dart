@@ -37,11 +37,11 @@ class AcademicClass {
   }
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'name': name,
-        'section': section,
-        'class_code': classCode,
-        'description': description,
-        'student_count': studentCount,
-      };
+    'id': id,
+    'name': name,
+    'section': section,
+    'class_code': classCode,
+    'description': description,
+    'student_count': studentCount,
+  };
 }

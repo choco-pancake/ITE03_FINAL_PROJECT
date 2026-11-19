@@ -21,7 +21,10 @@ class LandingScreen extends StatelessWidget {
             child: LayoutBuilder(
               builder: (context, constraints) {
                 return SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 16,
+                  ),
                   child: Center(
                     child: ConstrainedBox(
                       constraints: const BoxConstraints(maxWidth: 1100),
@@ -31,16 +34,25 @@ class LandingScreen extends StatelessWidget {
                         children: [
                           // Platform Badge
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 5,
+                            ),
                             decoration: BoxDecoration(
                               color: const Color(0xFFEFF6FF),
                               borderRadius: BorderRadius.circular(20),
-                              border: Border.all(color: const Color(0xFFBFDBFE)),
+                              border: Border.all(
+                                color: const Color(0xFFBFDBFE),
+                              ),
                             ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: const [
-                                Icon(Icons.auto_awesome, size: 15, color: Color(0xFF1D4ED8)),
+                                Icon(
+                                  Icons.auto_awesome,
+                                  size: 15,
+                                  color: Color(0xFF1D4ED8),
+                                ),
                                 SizedBox(width: 8),
                                 Text(
                                   'Smart Team Matching & Group Project Platform',
@@ -90,11 +102,18 @@ class LandingScreen extends StatelessWidget {
                               return isWide
                                   ? IntrinsicHeight(
                                       child: Row(
-                                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.stretch,
                                         children: [
-                                          Expanded(child: _buildStudentCard(context)),
+                                          Expanded(
+                                            child: _buildStudentCard(context),
+                                          ),
                                           const SizedBox(width: 24),
-                                          Expanded(child: _buildInstructorCard(context)),
+                                          Expanded(
+                                            child: _buildInstructorCard(
+                                              context,
+                                            ),
+                                          ),
                                         ],
                                       ),
                                     )
@@ -180,8 +199,13 @@ class LandingScreen extends StatelessWidget {
               style: OutlinedButton.styleFrom(
                 foregroundColor: const Color(0xFF0F172A),
                 side: const BorderSide(color: Color(0xFFCBD5E1)),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 10,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
               ),
               child: const Text(
                 'Log In',
@@ -202,8 +226,13 @@ class LandingScreen extends StatelessWidget {
                 backgroundColor: const Color(0xFF1E40AF),
                 foregroundColor: Colors.white,
                 elevation: 0,
-                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 18,
+                  vertical: 10,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
               ),
               child: const Text(
                 'Sign Up',
@@ -245,10 +274,17 @@ class LandingScreen extends StatelessWidget {
                   color: const Color(0xFFEFF6FF),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Icon(Icons.school, color: Color(0xFF1D4ED8), size: 24),
+                child: const Icon(
+                  Icons.school,
+                  color: Color(0xFF1D4ED8),
+                  size: 24,
+                ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
                   color: const Color(0xFFF1F5F9),
                   borderRadius: BorderRadius.circular(6),
@@ -311,11 +347,31 @@ class LandingScreen extends StatelessWidget {
             spacing: 8,
             runSpacing: 8,
             children: [
-              _buildRoleChip('Project Leader / Team Leader', const Color(0xFFFEF3C7), const Color(0xFF92400E)),
-              _buildRoleChip('Frontend Developer', const Color(0xFFDBEAFE), const Color(0xFF1E40AF)),
-              _buildRoleChip('Backend Developer', const Color(0xFFE0E7FF), const Color(0xFF3730A3)),
-              _buildRoleChip('UI / UX Designer', const Color(0xFFFCE7F3), const Color(0xFF9D174D)),
-              _buildRoleChip('QA / Software Tester', const Color(0xFFF3E8FF), const Color(0xFF6B21A8)),
+              _buildRoleChip(
+                'Project Leader / Team Leader',
+                const Color(0xFFFEF3C7),
+                const Color(0xFF92400E),
+              ),
+              _buildRoleChip(
+                'Frontend Developer',
+                const Color(0xFFDBEAFE),
+                const Color(0xFF1E40AF),
+              ),
+              _buildRoleChip(
+                'Backend Developer',
+                const Color(0xFFE0E7FF),
+                const Color(0xFF3730A3),
+              ),
+              _buildRoleChip(
+                'UI / UX Designer',
+                const Color(0xFFFCE7F3),
+                const Color(0xFF9D174D),
+              ),
+              _buildRoleChip(
+                'QA / Software Tester',
+                const Color(0xFFF3E8FF),
+                const Color(0xFF6B21A8),
+              ),
             ],
           ),
 
@@ -330,19 +386,26 @@ class LandingScreen extends StatelessWidget {
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const SignupScreen(initialRole: 'student')),
+                  MaterialPageRoute(
+                    builder: (_) => const SignupScreen(initialRole: 'student'),
+                  ),
                 );
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF1E40AF),
                 foregroundColor: Colors.white,
                 elevation: 0,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: const [
-                  Text('Join as Student', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                  Text(
+                    'Join as Student',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                  ),
                   SizedBox(width: 8),
                   Icon(Icons.arrow_forward, size: 16),
                 ],
@@ -383,10 +446,17 @@ class LandingScreen extends StatelessWidget {
                   color: const Color(0xFFEEF2FF),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Icon(Icons.co_present, color: Color(0xFF4338CA), size: 24),
+                child: const Icon(
+                  Icons.co_present,
+                  color: Color(0xFF4338CA),
+                  size: 24,
+                ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
                   color: const Color(0xFFF1F5F9),
                   borderRadius: BorderRadius.circular(6),
@@ -449,11 +519,31 @@ class LandingScreen extends StatelessWidget {
             spacing: 8,
             runSpacing: 8,
             children: [
-              _buildRoleChip('Project Creation', const Color(0xFFDBEAFE), const Color(0xFF1E40AF)),
-              _buildRoleChip('Skills Verification', const Color(0xFFDCFCE7), const Color(0xFF15803D)),
-              _buildRoleChip('Class Enrollment', const Color(0xFFE0E7FF), const Color(0xFF3730A3)),
-              _buildRoleChip('Group Management', const Color(0xFFF3E8FF), const Color(0xFF6B21A8)),
-              _buildRoleChip('Request Modification Approval', const Color(0xFFFFEDD5), const Color(0xFFC2410C)),
+              _buildRoleChip(
+                'Project Creation',
+                const Color(0xFFDBEAFE),
+                const Color(0xFF1E40AF),
+              ),
+              _buildRoleChip(
+                'Skills Verification',
+                const Color(0xFFDCFCE7),
+                const Color(0xFF15803D),
+              ),
+              _buildRoleChip(
+                'Class Enrollment',
+                const Color(0xFFE0E7FF),
+                const Color(0xFF3730A3),
+              ),
+              _buildRoleChip(
+                'Group Management',
+                const Color(0xFFF3E8FF),
+                const Color(0xFF6B21A8),
+              ),
+              _buildRoleChip(
+                'Request Modification Approval',
+                const Color(0xFFFFEDD5),
+                const Color(0xFFC2410C),
+              ),
             ],
           ),
 
@@ -468,16 +558,23 @@ class LandingScreen extends StatelessWidget {
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const ProfessorActivitiesScreen()),
+                  MaterialPageRoute(
+                    builder: (_) => const ProfessorActivitiesScreen(),
+                  ),
                 );
               },
               icon: const Icon(Icons.hub_outlined, size: 18),
-              label: const Text('Launch Team Match', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+              label: const Text(
+                'Launch Team Match',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+              ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF1E40AF),
                 foregroundColor: Colors.white,
                 elevation: 0,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
               ),
             ),
           ),

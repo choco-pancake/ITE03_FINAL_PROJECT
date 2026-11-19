@@ -8,11 +8,7 @@ class ActivityFormDialog extends StatefulWidget {
   final GroupingActivity? activity;
   final VoidCallback onSaved;
 
-  const ActivityFormDialog({
-    super.key,
-    this.activity,
-    required this.onSaved,
-  });
+  const ActivityFormDialog({super.key, this.activity, required this.onSaved});
 
   @override
   State<ActivityFormDialog> createState() => _ActivityFormDialogState();
@@ -35,7 +31,8 @@ class _ActivityFormDialogState extends State<ActivityFormDialog> {
   bool _loadingClasses = true;
 
   String _groupingMethod = 'auto'; // auto, manual, hybrid
-  String _minProficiencyLevel = 'Intermediate'; // Beginner, Intermediate, Advanced
+  String _minProficiencyLevel =
+      'Intermediate'; // Beginner, Intermediate, Advanced
   String _status = 'open'; // draft, open, grouping in progress, completed
 
   late DateTime _groupingDeadline;
@@ -74,12 +71,15 @@ class _ActivityFormDialogState extends State<ActivityFormDialog> {
 
     _titleController = TextEditingController(text: a?.title ?? '');
     _descriptionController = TextEditingController(text: a?.description ?? '');
-    _groupCapacityController =
-        TextEditingController(text: (a?.groupCapacity ?? 5).toString());
-    _numberOfGroupsController =
-        TextEditingController(text: (a?.numberOfGroups ?? 6).toString());
-    _minCommonHoursController =
-        TextEditingController(text: (a?.minCommonHours ?? 5).toString());
+    _groupCapacityController = TextEditingController(
+      text: (a?.groupCapacity ?? 5).toString(),
+    );
+    _numberOfGroupsController = TextEditingController(
+      text: (a?.numberOfGroups ?? 6).toString(),
+    );
+    _minCommonHoursController = TextEditingController(
+      text: (a?.minCommonHours ?? 5).toString(),
+    );
     _customSkillController = TextEditingController();
 
     _groupingMethod = a?.groupingMethod ?? 'auto';
@@ -91,7 +91,8 @@ class _ActivityFormDialogState extends State<ActivityFormDialog> {
 
     _groupingDeadline =
         a?.groupingDeadline ?? DateTime.now().add(const Duration(days: 14));
-    _modificationDeadline = a?.studentModificationDeadline ??
+    _modificationDeadline =
+        a?.studentModificationDeadline ??
         DateTime.now().add(const Duration(days: 17));
 
     if (a != null) {
@@ -335,32 +336,40 @@ class _ActivityFormDialogState extends State<ActivityFormDialog> {
                                   const Text(
                                     'Class Selection *',
                                     style: TextStyle(
-                                        fontWeight: FontWeight.w600,
-                                        fontSize: 13),
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 13,
+                                    ),
                                   ),
                                   const SizedBox(height: 6),
                                   _loadingClasses
                                       ? const LinearProgressIndicator()
                                       : DropdownButtonFormField<String>(
-                                          initialValue: _availableClasses.any((c) =>
-                                                  c.displayName ==
-                                                  _selectedClassDisplay)
+                                          initialValue:
+                                              _availableClasses.any(
+                                                (c) =>
+                                                    c.displayName ==
+                                                    _selectedClassDisplay,
+                                              )
                                               ? _selectedClassDisplay
                                               : (_availableClasses.isNotEmpty
-                                                  ? _availableClasses
-                                                      .first.displayName
-                                                  : null),
+                                                    ? _availableClasses
+                                                          .first
+                                                          .displayName
+                                                    : null),
                                           decoration: InputDecoration(
-                                            prefixIcon: const Icon(Icons.school,
-                                                size: 20),
+                                            prefixIcon: const Icon(
+                                              Icons.school,
+                                              size: 20,
+                                            ),
                                             border: OutlineInputBorder(
                                               borderRadius:
                                                   BorderRadius.circular(10),
                                             ),
                                             contentPadding:
                                                 const EdgeInsets.symmetric(
-                                                    horizontal: 12,
-                                                    vertical: 12),
+                                                  horizontal: 12,
+                                                  vertical: 12,
+                                                ),
                                           ),
                                           items: _availableClasses.map((c) {
                                             return DropdownMenuItem<String>(
@@ -371,8 +380,9 @@ class _ActivityFormDialogState extends State<ActivityFormDialog> {
                                           onChanged: (val) {
                                             if (val == null) return;
                                             final matching = _availableClasses
-                                                .firstWhere((c) =>
-                                                    c.displayName == val);
+                                                .firstWhere(
+                                                  (c) => c.displayName == val,
+                                                );
                                             setState(() {
                                               _selectedClassDisplay = val;
                                               _selectedClassId = matching.id;
@@ -393,8 +403,9 @@ class _ActivityFormDialogState extends State<ActivityFormDialog> {
                                   const Text(
                                     'Status',
                                     style: TextStyle(
-                                        fontWeight: FontWeight.w600,
-                                        fontSize: 13),
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 13,
+                                    ),
                                   ),
                                   const SizedBox(height: 6),
                                   DropdownButtonFormField<String>(
@@ -405,19 +416,27 @@ class _ActivityFormDialogState extends State<ActivityFormDialog> {
                                       ),
                                       contentPadding:
                                           const EdgeInsets.symmetric(
-                                              horizontal: 12, vertical: 12),
+                                            horizontal: 12,
+                                            vertical: 12,
+                                          ),
                                     ),
                                     items: const [
                                       DropdownMenuItem(
-                                          value: 'open', child: Text('Open')),
+                                        value: 'open',
+                                        child: Text('Open'),
+                                      ),
                                       DropdownMenuItem(
-                                          value: 'grouping in progress',
-                                          child: Text('Grouping in Progress')),
+                                        value: 'grouping in progress',
+                                        child: Text('Grouping in Progress'),
+                                      ),
                                       DropdownMenuItem(
-                                          value: 'completed',
-                                          child: Text('Completed')),
+                                        value: 'completed',
+                                        child: Text('Completed'),
+                                      ),
                                       DropdownMenuItem(
-                                          value: 'draft', child: Text('Draft')),
+                                        value: 'draft',
+                                        child: Text('Draft'),
+                                      ),
                                     ],
                                     onChanged: (val) {
                                       if (val != null) {
@@ -436,7 +455,9 @@ class _ActivityFormDialogState extends State<ActivityFormDialog> {
                         const Text(
                           'Activity Title *',
                           style: TextStyle(
-                              fontWeight: FontWeight.w600, fontSize: 13),
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13,
+                          ),
                         ),
                         const SizedBox(height: 6),
                         TextFormField(
@@ -448,7 +469,9 @@ class _ActivityFormDialogState extends State<ActivityFormDialog> {
                               borderRadius: BorderRadius.circular(10),
                             ),
                             contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 12, vertical: 12),
+                              horizontal: 12,
+                              vertical: 12,
+                            ),
                           ),
                           validator: (val) => val == null || val.trim().isEmpty
                               ? 'Activity title is required'
@@ -460,15 +483,16 @@ class _ActivityFormDialogState extends State<ActivityFormDialog> {
                         const Text(
                           'Activity Description',
                           style: TextStyle(
-                              fontWeight: FontWeight.w600, fontSize: 13),
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13,
+                          ),
                         ),
                         const SizedBox(height: 6),
                         TextFormField(
                           controller: _descriptionController,
                           maxLines: 2,
                           decoration: InputDecoration(
-                            hintText:
-                                'Explain the activity goals, expected deliverables, and grouping guidelines...',
+                            hintText: 'Explain the activity goals, expected deliverables, and grouping guidelines...',
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(10),
                             ),
@@ -489,20 +513,30 @@ class _ActivityFormDialogState extends State<ActivityFormDialog> {
                                   const Text(
                                     'Grouping Method *',
                                     style: TextStyle(
-                                        fontWeight: FontWeight.w600,
-                                        fontSize: 13),
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 13,
+                                    ),
                                   ),
                                   const SizedBox(height: 6),
                                   Row(
                                     children: [
                                       _buildMethodChip(
-                                          'auto', 'Auto (Algorithm)', Icons.smart_toy),
+                                        'auto',
+                                        'Auto (Algorithm)',
+                                        Icons.smart_toy,
+                                      ),
                                       const SizedBox(width: 8),
                                       _buildMethodChip(
-                                          'manual', 'Manual', Icons.person_search),
+                                        'manual',
+                                        'Manual',
+                                        Icons.person_search,
+                                      ),
                                       const SizedBox(width: 8),
                                       _buildMethodChip(
-                                          'hybrid', 'Hybrid', Icons.shuffle),
+                                        'hybrid',
+                                        'Hybrid',
+                                        Icons.shuffle,
+                                      ),
                                     ],
                                   ),
                                 ],
@@ -522,22 +556,28 @@ class _ActivityFormDialogState extends State<ActivityFormDialog> {
                                   const Text(
                                     'Group Capacity *',
                                     style: TextStyle(
-                                        fontWeight: FontWeight.w600,
-                                        fontSize: 13),
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 13,
+                                    ),
                                   ),
                                   const SizedBox(height: 6),
                                   TextFormField(
                                     controller: _groupCapacityController,
                                     keyboardType: TextInputType.number,
                                     decoration: InputDecoration(
-                                      prefixIcon: const Icon(Icons.group, size: 20),
+                                      prefixIcon: const Icon(
+                                        Icons.group,
+                                        size: 20,
+                                      ),
                                       suffixText: 'members',
                                       border: OutlineInputBorder(
                                         borderRadius: BorderRadius.circular(10),
                                       ),
                                       contentPadding:
                                           const EdgeInsets.symmetric(
-                                              horizontal: 12, vertical: 12),
+                                            horizontal: 12,
+                                            vertical: 12,
+                                          ),
                                     ),
                                     validator: (val) {
                                       final n = int.tryParse(val ?? '');
@@ -558,23 +598,28 @@ class _ActivityFormDialogState extends State<ActivityFormDialog> {
                                   const Text(
                                     'Number of Groups',
                                     style: TextStyle(
-                                        fontWeight: FontWeight.w600,
-                                        fontSize: 13),
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 13,
+                                    ),
                                   ),
                                   const SizedBox(height: 6),
                                   TextFormField(
                                     controller: _numberOfGroupsController,
                                     keyboardType: TextInputType.number,
                                     decoration: InputDecoration(
-                                      prefixIcon: const Icon(Icons.grid_view,
-                                          size: 20),
+                                      prefixIcon: const Icon(
+                                        Icons.grid_view,
+                                        size: 20,
+                                      ),
                                       suffixText: 'teams',
                                       border: OutlineInputBorder(
                                         borderRadius: BorderRadius.circular(10),
                                       ),
                                       contentPadding:
                                           const EdgeInsets.symmetric(
-                                              horizontal: 12, vertical: 12),
+                                            horizontal: 12,
+                                            vertical: 12,
+                                          ),
                                     ),
                                   ),
                                 ],
@@ -588,23 +633,28 @@ class _ActivityFormDialogState extends State<ActivityFormDialog> {
                                   const Text(
                                     'Min Common Hours *',
                                     style: TextStyle(
-                                        fontWeight: FontWeight.w600,
-                                        fontSize: 13),
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 13,
+                                    ),
                                   ),
                                   const SizedBox(height: 6),
                                   TextFormField(
                                     controller: _minCommonHoursController,
                                     keyboardType: TextInputType.number,
                                     decoration: InputDecoration(
-                                      prefixIcon: const Icon(Icons.access_time,
-                                          size: 20),
+                                      prefixIcon: const Icon(
+                                        Icons.access_time,
+                                        size: 20,
+                                      ),
                                       suffixText: 'hrs/wk',
                                       border: OutlineInputBorder(
                                         borderRadius: BorderRadius.circular(10),
                                       ),
                                       contentPadding:
                                           const EdgeInsets.symmetric(
-                                              horizontal: 12, vertical: 12),
+                                            horizontal: 12,
+                                            vertical: 12,
+                                          ),
                                     ),
                                   ),
                                 ],
@@ -618,8 +668,9 @@ class _ActivityFormDialogState extends State<ActivityFormDialog> {
                                   const Text(
                                     'Min Proficiency *',
                                     style: TextStyle(
-                                        fontWeight: FontWeight.w600,
-                                        fontSize: 13),
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 13,
+                                    ),
                                   ),
                                   const SizedBox(height: 6),
                                   DropdownButtonFormField<String>(
@@ -630,23 +681,29 @@ class _ActivityFormDialogState extends State<ActivityFormDialog> {
                                       ),
                                       contentPadding:
                                           const EdgeInsets.symmetric(
-                                              horizontal: 12, vertical: 12),
+                                            horizontal: 12,
+                                            vertical: 12,
+                                          ),
                                     ),
                                     items: const [
                                       DropdownMenuItem(
-                                          value: 'Beginner',
-                                          child: Text('Beginner')),
+                                        value: 'Beginner',
+                                        child: Text('Beginner'),
+                                      ),
                                       DropdownMenuItem(
-                                          value: 'Intermediate',
-                                          child: Text('Intermediate')),
+                                        value: 'Intermediate',
+                                        child: Text('Intermediate'),
+                                      ),
                                       DropdownMenuItem(
-                                          value: 'Advanced',
-                                          child: Text('Advanced')),
+                                        value: 'Advanced',
+                                        child: Text('Advanced'),
+                                      ),
                                     ],
                                     onChanged: (val) {
                                       if (val != null) {
                                         setState(
-                                            () => _minProficiencyLevel = val);
+                                          () => _minProficiencyLevel = val,
+                                        );
                                       }
                                     },
                                   ),
@@ -667,35 +724,47 @@ class _ActivityFormDialogState extends State<ActivityFormDialog> {
                                   const Text(
                                     'Grouping Deadline *',
                                     style: TextStyle(
-                                        fontWeight: FontWeight.w600,
-                                        fontSize: 13),
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 13,
+                                    ),
                                   ),
                                   const SizedBox(height: 6),
                                   InkWell(
                                     onTap: () => _pickDateTime(
                                       context: context,
                                       initialDate: _groupingDeadline,
-                                      onPicked: (dt) =>
-                                          setState(() => _groupingDeadline = dt),
+                                      onPicked: (dt) => setState(
+                                        () => _groupingDeadline = dt,
+                                      ),
                                     ),
                                     borderRadius: BorderRadius.circular(10),
                                     child: Container(
                                       padding: const EdgeInsets.symmetric(
-                                          horizontal: 12, vertical: 12),
+                                        horizontal: 12,
+                                        vertical: 12,
+                                      ),
                                       decoration: BoxDecoration(
                                         border: Border.all(
-                                            color: Colors.grey.shade400),
+                                          color: Colors.grey.shade400,
+                                        ),
                                         borderRadius: BorderRadius.circular(10),
                                       ),
                                       child: Row(
                                         children: [
-                                          const Icon(Icons.event,
-                                              size: 20, color: Colors.blue),
+                                          const Icon(
+                                            Icons.event,
+                                            size: 20,
+                                            color: Colors.blue,
+                                          ),
                                           const SizedBox(width: 8),
-                                          Text(_formatDateTime(_groupingDeadline)),
+                                          Text(
+                                            _formatDateTime(_groupingDeadline),
+                                          ),
                                           const Spacer(),
-                                          const Icon(Icons.arrow_drop_down,
-                                              color: Colors.grey),
+                                          const Icon(
+                                            Icons.arrow_drop_down,
+                                            color: Colors.grey,
+                                          ),
                                         ],
                                       ),
                                     ),
@@ -711,40 +780,55 @@ class _ActivityFormDialogState extends State<ActivityFormDialog> {
                                   const Text(
                                     'Student Modification Deadline (Switch cutoff)',
                                     style: TextStyle(
-                                        fontWeight: FontWeight.w600,
-                                        fontSize: 13),
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 13,
+                                    ),
                                   ),
                                   const SizedBox(height: 6),
                                   InkWell(
                                     onTap: () => _pickDateTime(
                                       context: context,
-                                      initialDate: _modificationDeadline ??
-                                          DateTime.now()
-                                              .add(const Duration(days: 17)),
+                                      initialDate:
+                                          _modificationDeadline ??
+                                          DateTime.now().add(
+                                            const Duration(days: 17),
+                                          ),
                                       onPicked: (dt) => setState(
-                                          () => _modificationDeadline = dt),
+                                        () => _modificationDeadline = dt,
+                                      ),
                                     ),
                                     borderRadius: BorderRadius.circular(10),
                                     child: Container(
                                       padding: const EdgeInsets.symmetric(
-                                          horizontal: 12, vertical: 12),
+                                        horizontal: 12,
+                                        vertical: 12,
+                                      ),
                                       decoration: BoxDecoration(
                                         border: Border.all(
-                                            color: Colors.grey.shade400),
+                                          color: Colors.grey.shade400,
+                                        ),
                                         borderRadius: BorderRadius.circular(10),
                                       ),
                                       child: Row(
                                         children: [
-                                          const Icon(Icons.edit_calendar,
-                                              size: 20, color: Colors.indigo),
+                                          const Icon(
+                                            Icons.edit_calendar,
+                                            size: 20,
+                                            color: Colors.indigo,
+                                          ),
                                           const SizedBox(width: 8),
-                                          Text(_modificationDeadline != null
-                                              ? _formatDateTime(
-                                                  _modificationDeadline!)
-                                              : 'Set deadline'),
+                                          Text(
+                                            _modificationDeadline != null
+                                                ? _formatDateTime(
+                                                    _modificationDeadline!,
+                                                  )
+                                                : 'Set deadline',
+                                          ),
                                           const Spacer(),
-                                          const Icon(Icons.arrow_drop_down,
-                                              color: Colors.grey),
+                                          const Icon(
+                                            Icons.arrow_drop_down,
+                                            color: Colors.grey,
+                                          ),
                                         ],
                                       ),
                                     ),
@@ -762,13 +846,17 @@ class _ActivityFormDialogState extends State<ActivityFormDialog> {
                             const Text(
                               'Required Skills *',
                               style: TextStyle(
-                                  fontWeight: FontWeight.bold, fontSize: 14),
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                              ),
                             ),
                             const SizedBox(width: 8),
                             Text(
                               '(${_requiredSkills.length} selected - Every group will require these)',
                               style: TextStyle(
-                                  color: Colors.grey[600], fontSize: 12),
+                                color: Colors.grey[600],
+                                fontSize: 12,
+                              ),
                             ),
                           ],
                         ),
@@ -804,13 +892,17 @@ class _ActivityFormDialogState extends State<ActivityFormDialog> {
                             const Text(
                               'Preferred Skills (Optional)',
                               style: TextStyle(
-                                  fontWeight: FontWeight.bold, fontSize: 14),
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                              ),
                             ),
                             const SizedBox(width: 8),
                             Text(
                               '(${_preferredSkills.length} selected - Weighted in matching score)',
                               style: TextStyle(
-                                  color: Colors.grey[600], fontSize: 12),
+                                color: Colors.grey[600],
+                                fontSize: 12,
+                              ),
                             ),
                           ],
                         ),
@@ -821,23 +913,26 @@ class _ActivityFormDialogState extends State<ActivityFormDialog> {
                           children: _standardSkills
                               .where((s) => !_requiredSkills.contains(s))
                               .map((skill) {
-                            final isSelected = _preferredSkills.contains(skill);
-                            return FilterChip(
-                              label: Text(skill),
-                              selected: isSelected,
-                              selectedColor: Colors.teal[100],
-                              checkmarkColor: Colors.teal[800],
-                              onSelected: (val) {
-                                setState(() {
-                                  if (val) {
-                                    _preferredSkills.add(skill);
-                                  } else {
-                                    _preferredSkills.remove(skill);
-                                  }
-                                });
-                              },
-                            );
-                          }).toList(),
+                                final isSelected = _preferredSkills.contains(
+                                  skill,
+                                );
+                                return FilterChip(
+                                  label: Text(skill),
+                                  selected: isSelected,
+                                  selectedColor: Colors.teal[100],
+                                  checkmarkColor: Colors.teal[800],
+                                  onSelected: (val) {
+                                    setState(() {
+                                      if (val) {
+                                        _preferredSkills.add(skill);
+                                      } else {
+                                        _preferredSkills.remove(skill);
+                                      }
+                                    });
+                                  },
+                                );
+                              })
+                              .toList(),
                         ),
                         const SizedBox(height: 12),
 
@@ -854,7 +949,9 @@ class _ActivityFormDialogState extends State<ActivityFormDialog> {
                                     borderRadius: BorderRadius.circular(10),
                                   ),
                                   contentPadding: const EdgeInsets.symmetric(
-                                      horizontal: 12, vertical: 10),
+                                    horizontal: 12,
+                                    vertical: 10,
+                                  ),
                                 ),
                                 onSubmitted: (_) => _addCustomSkill(true),
                               ),
@@ -887,8 +984,9 @@ class _ActivityFormDialogState extends State<ActivityFormDialog> {
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
                     OutlinedButton(
-                      onPressed:
-                          _isSaving ? null : () => Navigator.of(context).pop(),
+                      onPressed: _isSaving
+                          ? null
+                          : () => Navigator.of(context).pop(),
                       child: const Text('Cancel'),
                     ),
                     const SizedBox(width: 12),
@@ -897,7 +995,9 @@ class _ActivityFormDialogState extends State<ActivityFormDialog> {
                         backgroundColor: Colors.blue[700],
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 20, vertical: 12),
+                          horizontal: 20,
+                          vertical: 12,
+                        ),
                       ),
                       onPressed: _isSaving ? null : _save,
                       icon: _isSaving
@@ -905,7 +1005,9 @@ class _ActivityFormDialogState extends State<ActivityFormDialog> {
                               width: 16,
                               height: 16,
                               child: CircularProgressIndicator(
-                                  strokeWidth: 2, color: Colors.white),
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
                             )
                           : Icon(isEditing ? Icons.save : Icons.add_task),
                       label: Text(
@@ -926,8 +1028,11 @@ class _ActivityFormDialogState extends State<ActivityFormDialog> {
   Widget _buildMethodChip(String method, String label, IconData icon) {
     final isSelected = _groupingMethod == method;
     return ChoiceChip(
-      avatar: Icon(icon,
-          size: 16, color: isSelected ? Colors.white : Colors.grey[700]),
+      avatar: Icon(
+        icon,
+        size: 16,
+        color: isSelected ? Colors.white : Colors.grey[700],
+      ),
       label: Text(label),
       selected: isSelected,
       selectedColor: Colors.blue[700],

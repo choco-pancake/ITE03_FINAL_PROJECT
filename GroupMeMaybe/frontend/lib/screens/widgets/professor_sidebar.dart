@@ -4,24 +4,21 @@ import '../landing_screen.dart';
 import '../professor_activities_screen.dart';
 import '../professor_classes_screen.dart';
 import '../professor_dashboard_screen.dart';
+import '../professor_evaluation_screen.dart';
 import '../professor_settings_screen.dart';
-import '../profile_list_screen.dart';
 
 enum ProfessorNavDestination {
   dashboard,
   classes,
-  groups,
-  activities,
+  projects,
+  evaluation,
   settings,
 }
 
 class ProfessorSidebar extends StatelessWidget {
   final ProfessorNavDestination currentDestination;
 
-  const ProfessorSidebar({
-    super.key,
-    required this.currentDestination,
-  });
+  const ProfessorSidebar({super.key, required this.currentDestination});
 
   @override
   Widget build(BuildContext context) {
@@ -29,9 +26,7 @@ class ProfessorSidebar extends StatelessWidget {
       width: 230,
       decoration: const BoxDecoration(
         color: Color(0xFF0F172A),
-        border: Border(
-          right: BorderSide(color: Color(0xFF1E293B), width: 1),
-        ),
+        border: Border(right: BorderSide(color: Color(0xFF1E293B), width: 1)),
       ),
       child: Column(
         children: [
@@ -64,7 +59,10 @@ class ProfessorSidebar extends StatelessWidget {
                       ),
                       Container(
                         margin: const EdgeInsets.only(top: 2),
-                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 5,
+                          vertical: 1,
+                        ),
                         decoration: BoxDecoration(
                           color: const Color(0xFF1E293B),
                           borderRadius: BorderRadius.circular(4),
@@ -98,7 +96,9 @@ class ProfessorSidebar extends StatelessWidget {
               if (currentDestination != ProfessorNavDestination.dashboard) {
                 Navigator.pushReplacement(
                   context,
-                  MaterialPageRoute(builder: (_) => const ProfessorDashboardScreen()),
+                  MaterialPageRoute(
+                    builder: (_) => const ProfessorDashboardScreen(),
+                  ),
                 );
               }
             },
@@ -112,21 +112,9 @@ class ProfessorSidebar extends StatelessWidget {
               if (currentDestination != ProfessorNavDestination.classes) {
                 Navigator.pushReplacement(
                   context,
-                  MaterialPageRoute(builder: (_) => const ProfessorClassesScreen()),
-                );
-              }
-            },
-          ),
-          _buildItem(
-            context: context,
-            icon: Icons.groups_outlined,
-            title: 'Groups (Teams)',
-            isSelected: currentDestination == ProfessorNavDestination.groups,
-            onTap: () {
-              if (currentDestination != ProfessorNavDestination.groups) {
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(builder: (_) => const ProfileListScreen()),
+                  MaterialPageRoute(
+                    builder: (_) => const ProfessorClassesScreen(),
+                  ),
                 );
               }
             },
@@ -134,13 +122,32 @@ class ProfessorSidebar extends StatelessWidget {
           _buildItem(
             context: context,
             icon: Icons.assignment_outlined,
-            title: 'Activities',
-            isSelected: currentDestination == ProfessorNavDestination.activities,
+            title: 'Projects',
+            isSelected: currentDestination == ProfessorNavDestination.projects,
             onTap: () {
-              if (currentDestination != ProfessorNavDestination.activities) {
+              if (currentDestination != ProfessorNavDestination.projects) {
                 Navigator.pushReplacement(
                   context,
-                  MaterialPageRoute(builder: (_) => const ProfessorActivitiesScreen()),
+                  MaterialPageRoute(
+                    builder: (_) => const ProfessorActivitiesScreen(),
+                  ),
+                );
+              }
+            },
+          ),
+          _buildItem(
+            context: context,
+            icon: Icons.fact_check_outlined,
+            title: 'Evaluation',
+            isSelected:
+                currentDestination == ProfessorNavDestination.evaluation,
+            onTap: () {
+              if (currentDestination != ProfessorNavDestination.evaluation) {
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const ProfessorEvaluationScreen(),
+                  ),
                 );
               }
             },
@@ -154,7 +161,9 @@ class ProfessorSidebar extends StatelessWidget {
               if (currentDestination != ProfessorNavDestination.settings) {
                 Navigator.pushReplacement(
                   context,
-                  MaterialPageRoute(builder: (_) => const ProfessorSettingsScreen()),
+                  MaterialPageRoute(
+                    builder: (_) => const ProfessorSettingsScreen(),
+                  ),
                 );
               }
             },
@@ -173,7 +182,11 @@ class ProfessorSidebar extends StatelessWidget {
                   backgroundColor: Color(0xFF1E40AF),
                   child: Text(
                     'A',
-                    style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
                 const SizedBox(width: 10),
@@ -202,7 +215,11 @@ class ProfessorSidebar extends StatelessWidget {
                   ),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.logout, size: 16, color: Color(0xFF94A3B8)),
+                  icon: const Icon(
+                    Icons.logout,
+                    size: 16,
+                    color: Color(0xFF94A3B8),
+                  ),
                   tooltip: 'Sign Out',
                   onPressed: () {
                     Navigator.pushAndRemoveUntil(
@@ -243,7 +260,9 @@ class ProfessorSidebar extends StatelessWidget {
                 Icon(
                   icon,
                   size: 18,
-                  color: isSelected ? const Color(0xFF60A5FA) : const Color(0xFF94A3B8),
+                  color: isSelected
+                      ? const Color(0xFF60A5FA)
+                      : const Color(0xFF94A3B8),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -252,8 +271,12 @@ class ProfessorSidebar extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       fontSize: 13,
-                      fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                      color: isSelected ? Colors.white : const Color(0xFFCBD5E1),
+                      fontWeight: isSelected
+                          ? FontWeight.w600
+                          : FontWeight.normal,
+                      color: isSelected
+                          ? Colors.white
+                          : const Color(0xFFCBD5E1),
                     ),
                   ),
                 ),

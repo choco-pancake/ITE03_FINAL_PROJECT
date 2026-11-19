@@ -72,7 +72,8 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
               const Divider(),
               _buildNotificationItem(
                 title: 'Activity Deadline Approaching',
-                subtitle: 'Final Capstone Project grouping deadline in 24 hours.',
+                subtitle:
+                    'Final Capstone Project grouping deadline in 24 hours.',
                 time: '2h ago',
                 icon: Icons.alarm,
                 color: Colors.blue,
@@ -126,7 +127,10 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
               children: [
                 Text(
                   title,
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                  ),
                 ),
                 const SizedBox(height: 2),
                 Text(
@@ -204,7 +208,10 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
           IconButton(
             icon: const Badge(
               label: Text('3'),
-              child: Icon(Icons.notifications_outlined, color: Color(0xFF475569)),
+              child: Icon(
+                Icons.notifications_outlined,
+                color: Color(0xFF475569),
+              ),
             ),
             tooltip: 'Notifications',
             onPressed: () => _showNotificationsDialog(context),
@@ -327,7 +334,9 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
             Icon(
               icon,
               size: 18,
-              color: isSelected ? const Color(0xFF1E40AF) : const Color(0xFF64748B),
+              color: isSelected
+                  ? const Color(0xFF1E40AF)
+                  : const Color(0xFF64748B),
             ),
             const SizedBox(width: 6),
             Text(
@@ -335,7 +344,9 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                color: isSelected ? const Color(0xFF1E40AF) : const Color(0xFF64748B),
+                color: isSelected
+                    ? const Color(0xFF1E40AF)
+                    : const Color(0xFF64748B),
               ),
             ),
           ],

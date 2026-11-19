@@ -21,6 +21,7 @@ class ProfessorActivitiesScreen extends StatefulWidget {
 class _ProfessorActivitiesScreenState extends State<ProfessorActivitiesScreen> {
   final _activityService = ActivityService();
   final _searchController = TextEditingController();
+  final _groupSearchController = TextEditingController();
 
   List<GroupingActivity> _activities = [];
   ActivitySummary _summary = const ActivitySummary();
@@ -28,6 +29,8 @@ class _ProfessorActivitiesScreenState extends State<ProfessorActivitiesScreen> {
   bool _isLoading = true;
   String? _errorMessage;
   String _selectedStatus = 'all';
+  int _activeProjectTab =
+      0; // 0 = Activities & Milestones, 1 = Formed Teams & Groups
 
   @override
   void initState() {
@@ -38,6 +41,7 @@ class _ProfessorActivitiesScreenState extends State<ProfessorActivitiesScreen> {
   @override
   void dispose() {
     _searchController.dispose();
+    _groupSearchController.dispose();
     super.dispose();
   }
 
@@ -155,9 +159,8 @@ class _ProfessorActivitiesScreenState extends State<ProfessorActivitiesScreen> {
       try {
         await _activityService.deleteActivity(activity.id!);
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Activity deleted.')),
-          );
+          ScaffoldMessenger.of(context)
+              .showSnackBar(const SnackBar(content: Text('Activity deleted.')));
           _loadData();
         }
       } catch (e) {
@@ -179,49 +182,623 @@ class _ProfessorActivitiesScreenState extends State<ProfessorActivitiesScreen> {
       backgroundColor: const Color(0xFFF8FAFC),
       body: Row(
         children: [
-          const ProfessorSidebar(currentDestination: ProfessorNavDestination.activities),
+          const ProfessorSidebar(
+            currentDestination: ProfessorNavDestination.projects,
+          ),
           Expanded(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 20.0),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 24.0,
+                vertical: 20.0,
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // Page Header: Grouping Activities + + Create Activity button
                   _buildPageHeader(),
+                  const SizedBox(height: 16),
+
+                  // Top View Switcher (Activities vs Formed Groups)
+                  _buildViewSwitcher(),
                   const SizedBox(height: 20),
 
-                  // Summary Cards
-                  SummaryCardsRow(
-                    summary: _summary,
-                    selectedFilter: _selectedStatus,
-                    onSelectFilter: (filterKey) {
-                      setState(() => _selectedStatus = filterKey);
-                      _loadData();
-                    },
-                  ),
-                  const SizedBox(height: 20),
+                  if (_activeProjectTab == 0) ...[
+                    // Summary Cards
+                    SummaryCardsRow(
+                      summary: _summary,
+                      selectedFilter: _selectedStatus,
+                      onSelectFilter: (filterKey) {
+                        setState(() => _selectedStatus = filterKey);
+                        _loadData();
+                      },
+                    ),
+                    const SizedBox(height: 20),
 
-                  // Search & Filter Toolbar
-                  _buildToolbar(),
-                  const SizedBox(height: 18),
+                    // Search & Filter Toolbar
+                    _buildToolbar(),
+                    const SizedBox(height: 18),
 
-                  // Main Content Area
-                  if (_isLoading)
-                    const Center(
-                      child: Padding(
-                        padding: EdgeInsets.all(40.0),
-                        child: CircularProgressIndicator(),
-                      ),
-                    )
-                  else if (_errorMessage != null)
-                    _buildErrorState()
-                  else if (_activities.isEmpty)
-                    _buildEmptyState()
-                  else
-                    _buildActivityGrid(),
+                    // Main Content Area
+                    if (_isLoading)
+                      const Center(
+                        child: Padding(
+                          padding: EdgeInsets.all(40.0),
+                          child: CircularProgressIndicator(),
+                        ),
+                      )
+                    else if (_errorMessage != null)
+                      _buildErrorState()
+                    else if (_activities.isEmpty)
+                      _buildEmptyState()
+                    else
+                      _buildActivityGrid(),
+                  ] else ...[
+                    // Formed Teams & Groups View
+                    _buildGroupsContent(),
+                  ],
                 ],
               ),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildViewSwitcher() {
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFFF1F5F9),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      padding: const EdgeInsets.all(4),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _buildTabPill(
+            index: 0,
+            icon: Icons.assignment_outlined,
+            label: 'Activities & Milestones',
+          ),
+          const SizedBox(width: 4),
+          _buildTabPill(
+            index: 1,
+            icon: Icons.groups_outlined,
+            label: 'Formed Teams & Groups',
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTabPill({
+    required int index,
+    required IconData icon,
+    required String label,
+  }) {
+    final isSelected = _activeProjectTab == index;
+    return InkWell(
+      onTap: () => setState(() => _activeProjectTab = index),
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? Colors.white : Colors.transparent,
+          borderRadius: BorderRadius.circular(8),
+          boxShadow: isSelected
+              ? const [
+                  BoxShadow(
+                    color: Color(0x0A000000),
+                    blurRadius: 4,
+                    offset: Offset(0, 1),
+                  ),
+                ]
+              : null,
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              size: 16,
+              color: isSelected
+                  ? const Color(0xFF1E40AF)
+                  : const Color(0xFF64748B),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                color: isSelected
+                    ? const Color(0xFF0F172A)
+                    : const Color(0xFF64748B),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGroupsContent() {
+    final query = _groupSearchController.text.trim().toLowerCase();
+    final groups = [
+      {
+        'name': 'Alpha Squad',
+        'activity': 'Final Capstone Project',
+        'course': 'ITE 03 - Object Oriented Programming',
+        'status': 'Formed (3/4)',
+        'isFull': false,
+        'members': [
+          {
+            'name': 'Carlos Mendoza',
+            'role': 'Frontend Developer',
+            'level': 'Advanced',
+            'skills': ['Flutter', 'React', 'TypeScript'],
+          },
+          {
+            'name': 'Bianca Cruz',
+            'role': 'UI/UX Designer',
+            'level': 'Intermediate',
+            'skills': ['Figma', 'UI/UX Design', 'Canva'],
+          },
+          {
+            'name': 'Dani Garcia',
+            'role': 'QA & Docs',
+            'level': 'Intermediate',
+            'skills': ['Software Testing', 'Postman', 'Git'],
+          },
+        ],
+      },
+      {
+        'name': 'DevNinjas',
+        'activity': 'Final Capstone Project',
+        'course': 'ITE 03 - Object Oriented Programming',
+        'status': 'Needs Backend (2/4)',
+        'isFull': false,
+        'members': [
+          {
+            'name': 'Alex Santos',
+            'role': 'Backend Developer',
+            'level': 'Advanced',
+            'skills': ['Laravel', 'PostgreSQL', 'Docker'],
+          },
+          {
+            'name': 'Marcus Vance',
+            'role': 'Mobile App Developer',
+            'level': 'Beginner',
+            'skills': ['Kotlin', 'Android Studio'],
+          },
+        ],
+      },
+      {
+        'name': 'ByteCraft',
+        'activity': 'Midterm Algorithm Lab',
+        'course': 'IT 211 - Data Structures & Algorithms',
+        'status': 'Full (4/4)',
+        'isFull': true,
+        'members': [
+          {
+            'name': 'Maria Santos',
+            'role': 'Lead Programmer',
+            'level': 'Advanced',
+            'skills': ['Python', 'C++', 'Algorithms'],
+          },
+          {
+            'name': 'John Doe',
+            'role': 'Data Analyst',
+            'level': 'Intermediate',
+            'skills': ['Pandas', 'NumPy', 'Jupyter'],
+          },
+          {
+            'name': 'Chloe Diaz',
+            'role': 'Documentation',
+            'level': 'Intermediate',
+            'skills': ['Google Docs', 'Technical Writing'],
+          },
+          {
+            'name': 'Kevin Ramos',
+            'role': 'QA Tester',
+            'level': 'Beginner',
+            'skills': ['Software Testing', 'Git'],
+          },
+        ],
+      },
+      {
+        'name': 'CloudChasers',
+        'activity': 'Microservices Architecture',
+        'course': 'CS 301 - Web Systems and Technologies',
+        'status': 'Full (4/4)',
+        'isFull': true,
+        'members': [
+          {
+            'name': 'Liam Reyes',
+            'role': 'Full-stack Developer',
+            'level': 'Advanced',
+            'skills': ['Node.js', 'React', 'AWS'],
+          },
+          {
+            'name': 'Bea Cruz',
+            'role': 'UI/UX Designer',
+            'level': 'Advanced',
+            'skills': ['Figma', 'CSS', 'Tailwind'],
+          },
+          {
+            'name': 'Sarah Smith',
+            'role': 'Database Specialist',
+            'level': 'Intermediate',
+            'skills': ['PostgreSQL', 'MongoDB'],
+          },
+          {
+            'name': 'Nathan Cole',
+            'role': 'DevOps Specialist',
+            'level': 'Intermediate',
+            'skills': ['Docker', 'CI/CD', 'Git'],
+          },
+        ],
+      },
+    ];
+
+    final filtered = groups.where((g) {
+      if (query.isEmpty) return true;
+      final gName = (g['name'] as String).toLowerCase();
+      final aName = (g['activity'] as String).toLowerCase();
+      final cName = (g['course'] as String).toLowerCase();
+      final mNames = (g['members'] as List)
+          .map((m) => (m['name'] as String).toLowerCase())
+          .join(' ');
+      return gName.contains(query) ||
+          aName.contains(query) ||
+          cName.contains(query) ||
+          mNames.contains(query);
+    }).toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Search Toolbar for Groups
+        TextField(
+          controller: _groupSearchController,
+          onChanged: (_) => setState(() {}),
+          decoration: InputDecoration(
+            hintText:
+                'Search groups by team name, activity, or student member...',
+            prefixIcon: const Icon(
+              Icons.search,
+              size: 18,
+              color: Color(0xFF64748B),
+            ),
+            suffixIcon: _groupSearchController.text.isNotEmpty
+                ? IconButton(
+                    icon: const Icon(Icons.clear, size: 16),
+                    onPressed: () =>
+                        setState(() => _groupSearchController.clear()),
+                  )
+                : null,
+            filled: true,
+            fillColor: Colors.white,
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 14,
+              vertical: 10,
+            ),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+            ),
+          ),
+        ),
+        const SizedBox(height: 18),
+
+        // Groups Grid
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final crossAxisCount = constraints.maxWidth >= 900 ? 2 : 1;
+            return GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: crossAxisCount,
+                crossAxisSpacing: 16,
+                mainAxisSpacing: 16,
+                mainAxisExtent: 260,
+              ),
+              itemCount: filtered.length,
+              itemBuilder: (context, index) {
+                final group = filtered[index];
+                final members = group['members'] as List<Map<String, dynamic>>;
+                final isFull = group['isFull'] as bool;
+
+                return Container(
+                  padding: const EdgeInsets.all(18),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Color(0x06000000),
+                        blurRadius: 8,
+                        offset: Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              group['name'] as String,
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF0F172A),
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 3,
+                            ),
+                            decoration: BoxDecoration(
+                              color: isFull
+                                  ? const Color(0xFFECFDF5)
+                                  : const Color(0xFFEFF6FF),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              group['status'] as String,
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: isFull
+                                    ? const Color(0xFF047857)
+                                    : const Color(0xFF1D4ED8),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        group['course'] as String,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Color(0xFF64748B),
+                        ),
+                      ),
+                      Text(
+                        group['activity'] as String,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF2563EB),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      const Divider(color: Color(0xFFF1F5F9), height: 1),
+                      const SizedBox(height: 8),
+
+                      const Text(
+                        'Team Roster (click to view profile):',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF475569),
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Expanded(
+                        child: ListView.separated(
+                          physics: const NeverScrollableScrollPhysics(),
+                          itemCount: members.length,
+                          separatorBuilder: (_, _) => const SizedBox(height: 6),
+                          itemBuilder: (context, mi) {
+                            final m = members[mi];
+                            final name = m['name'] as String;
+                            final role = m['role'] as String;
+                            final level = m['level'] as String;
+                            final skills = (m['skills'] as List).cast<String>();
+
+                            return InkWell(
+                              onTap: () =>
+                                  _showMemberDialog(name, role, level, skills),
+                              borderRadius: BorderRadius.circular(6),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFF8FAFC),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Row(
+                                  children: [
+                                    CircleAvatar(
+                                      radius: 10,
+                                      backgroundColor: const Color(0xFF1E40AF),
+                                      child: Text(
+                                        name[0],
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 9,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        name,
+                                        style: const TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600,
+                                          color: Color(0xFF0F172A),
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                    Text(
+                                      role,
+                                      style: const TextStyle(
+                                        fontSize: 11,
+                                        color: Color(0xFF64748B),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  void _showMemberDialog(
+    String name,
+    String role,
+    String level,
+    List<String> skills,
+  ) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            CircleAvatar(
+              radius: 20,
+              backgroundColor: const Color(0xFF1E40AF),
+              child: Text(
+                name[0],
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    name,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  Text(
+                    role,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Color(0xFF64748B),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        content: SizedBox(
+          width: 380,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Proficiency Level:',
+                    style: TextStyle(fontSize: 13, color: Color(0xFF64748B)),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 3,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF3E8FF),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      level,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF7E22CE),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+              const Text(
+                'Skills & Stack:',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF475569),
+                ),
+              ),
+              const SizedBox(height: 6),
+              Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: skills.map((s) {
+                  return Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFEFF6FF),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      s,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF1D4ED8),
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF1E40AF),
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Close'),
           ),
         ],
       ),
@@ -247,10 +824,7 @@ class _ProfessorActivitiesScreenState extends State<ProfessorActivitiesScreen> {
             const SizedBox(height: 4),
             Text(
               'Create and manage group activities for your classes',
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.blueGrey.shade600,
-              ),
+              style: TextStyle(fontSize: 14, color: Colors.blueGrey.shade600),
             ),
           ],
         );
@@ -276,18 +850,15 @@ class _ProfessorActivitiesScreenState extends State<ProfessorActivitiesScreen> {
         if (isMobile) {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              titleBlock,
-              const SizedBox(height: 12),
-              createButton,
-            ],
+            children: [titleBlock, const SizedBox(height: 12), createButton],
           );
         }
 
         return Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            titleBlock,
+            Expanded(child: titleBlock),
+            const SizedBox(width: 16),
             createButton,
           ],
         );
@@ -344,7 +915,9 @@ class _ProfessorActivitiesScreenState extends State<ProfessorActivitiesScreen> {
                       borderSide: BorderSide(color: Colors.grey.shade300),
                     ),
                     contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 10),
+                      horizontal: 12,
+                      vertical: 10,
+                    ),
                   ),
                   onSubmitted: (_) => _loadData(),
                 ),
@@ -356,8 +929,10 @@ class _ProfessorActivitiesScreenState extends State<ProfessorActivitiesScreen> {
                 icon: const Icon(Icons.filter_list, size: 18),
                 label: const Text('Search'),
                 style: OutlinedButton.styleFrom(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 12,
+                  ),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8),
                   ),
@@ -390,8 +965,9 @@ class _ProfessorActivitiesScreenState extends State<ProfessorActivitiesScreen> {
                       color: isSelected
                           ? const Color(0xFF1E40AF)
                           : const Color(0xFF475569),
-                      fontWeight:
-                          isSelected ? FontWeight.bold : FontWeight.w500,
+                      fontWeight: isSelected
+                          ? FontWeight.bold
+                          : FontWeight.w500,
                       fontSize: 12,
                     ),
                     onSelected: (val) {
@@ -470,8 +1046,11 @@ class _ProfessorActivitiesScreenState extends State<ProfessorActivitiesScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.assignment_outlined,
-                size: 56, color: Colors.blueGrey.shade300),
+            Icon(
+              Icons.assignment_outlined,
+              size: 56,
+              color: Colors.blueGrey.shade300,
+            ),
             const SizedBox(height: 14),
             const Text(
               'No Activities Found',
@@ -532,10 +1111,7 @@ class _ProfessorActivitiesScreenState extends State<ProfessorActivitiesScreen> {
               style: TextStyle(fontSize: 12, color: Colors.red.shade800),
             ),
             const SizedBox(height: 14),
-            ElevatedButton(
-              onPressed: _loadData,
-              child: const Text('Retry'),
-            ),
+            ElevatedButton(onPressed: _loadData, child: const Text('Retry')),
           ],
         ),
       ),

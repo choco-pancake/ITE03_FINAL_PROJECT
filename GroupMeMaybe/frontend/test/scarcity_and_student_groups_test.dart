@@ -39,7 +39,7 @@ void main() {
             'count': 5,
             'needed': 6,
             'deficit': 1,
-          }
+          },
         ],
         'has_scarcity': true,
         'unassigned_students_count': 6,
@@ -92,11 +92,7 @@ void main() {
         tester.view.resetDevicePixelRatio();
       });
 
-      await tester.pumpWidget(
-        const MaterialApp(
-          home: StudentGroupsScreen(),
-        ),
-      );
+      await tester.pumpWidget(const MaterialApp(home: StudentGroupsScreen()));
 
       // Loading state or initial render
       expect(find.byType(StudentGroupsScreen), findsOneWidget);
@@ -110,7 +106,10 @@ void main() {
         'grouping_method': 'auto',
         'group_capacity': 5,
         'number_of_groups': 6,
-        'required_skills': ['Software Testing and Quality Assurance', 'Backend Development'],
+        'required_skills': [
+          'Software Testing and Quality Assurance',
+          'Backend Development',
+        ],
         'preferred_skills': ['Technical Documentation'],
         'min_proficiency_level': 'Intermediate',
         'min_common_hours': 4,

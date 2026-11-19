@@ -6,13 +6,18 @@ class ProfessorSettingsScreen extends StatefulWidget {
   const ProfessorSettingsScreen({super.key});
 
   @override
-  State<ProfessorSettingsScreen> createState() => _ProfessorSettingsScreenState();
+  State<ProfessorSettingsScreen> createState() =>
+      _ProfessorSettingsScreenState();
 }
 
 class _ProfessorSettingsScreenState extends State<ProfessorSettingsScreen> {
   final _nameController = TextEditingController(text: 'Prof. Aivhan');
-  final _emailController = TextEditingController(text: 'prof.aivhan@university.edu');
-  final _deptController = TextEditingController(text: 'College of Information and Computing Sciences');
+  final _emailController = TextEditingController(
+    text: 'prof.aivhan@university.edu',
+  );
+  final _deptController = TextEditingController(
+    text: 'College of Information and Computing Sciences',
+  );
   final _officeController = TextEditingController(text: 'Tech Building 402');
 
   bool _notifyDeadline = true;
@@ -46,7 +51,9 @@ class _ProfessorSettingsScreenState extends State<ProfessorSettingsScreen> {
       body: Row(
         children: [
           // Unified Professor Sidebar
-          const ProfessorSidebar(currentDestination: ProfessorNavDestination.settings),
+          const ProfessorSidebar(
+            currentDestination: ProfessorNavDestination.settings,
+          ),
 
           // Main Content
           Expanded(
@@ -60,12 +67,19 @@ class _ProfessorSettingsScreenState extends State<ProfessorSettingsScreen> {
                     children: [
                       const Text(
                         'Faculty Settings',
-                        style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800, color: Color(0xFF0F172A)),
+                        style: TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFF0F172A),
+                        ),
                       ),
                       const SizedBox(height: 4),
                       const Text(
                         'Manage your academic profile, notification preferences, and team formation defaults.',
-                        style: TextStyle(fontSize: 14, color: Color(0xFF64748B)),
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Color(0xFF64748B),
+                        ),
                       ),
                       const SizedBox(height: 24),
 
@@ -82,9 +96,20 @@ class _ProfessorSettingsScreenState extends State<ProfessorSettingsScreen> {
                           children: [
                             Row(
                               children: const [
-                                Icon(Icons.person_outline, color: Color(0xFF1E40AF), size: 20),
+                                Icon(
+                                  Icons.person_outline,
+                                  color: Color(0xFF1E40AF),
+                                  size: 20,
+                                ),
                                 SizedBox(width: 8),
-                                Text('Instructor Profile Details', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
+                                Text(
+                                  'Instructor Profile Details',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFF0F172A),
+                                  ),
+                                ),
                               ],
                             ),
                             const SizedBox(height: 18),
@@ -93,7 +118,9 @@ class _ProfessorSettingsScreenState extends State<ProfessorSettingsScreen> {
                               controller: _nameController,
                               decoration: InputDecoration(
                                 labelText: 'Display Name',
-                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
                               ),
                             ),
                             const SizedBox(height: 14),
@@ -102,7 +129,9 @@ class _ProfessorSettingsScreenState extends State<ProfessorSettingsScreen> {
                               controller: _emailController,
                               decoration: InputDecoration(
                                 labelText: 'University Email',
-                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
                               ),
                             ),
                             const SizedBox(height: 14),
@@ -111,7 +140,9 @@ class _ProfessorSettingsScreenState extends State<ProfessorSettingsScreen> {
                               controller: _deptController,
                               decoration: InputDecoration(
                                 labelText: 'Department / College',
-                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
                               ),
                             ),
                             const SizedBox(height: 14),
@@ -120,7 +151,9 @@ class _ProfessorSettingsScreenState extends State<ProfessorSettingsScreen> {
                               controller: _officeController,
                               decoration: InputDecoration(
                                 labelText: 'Faculty Office / Consultation Room',
-                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
                               ),
                             ),
                           ],
@@ -143,46 +176,109 @@ class _ProfessorSettingsScreenState extends State<ProfessorSettingsScreen> {
                             children: [
                               Row(
                                 children: const [
-                                  Icon(Icons.notifications_outlined, color: Color(0xFF1E40AF), size: 20),
+                                  Icon(
+                                    Icons.notifications_outlined,
+                                    color: Color(0xFF1E40AF),
+                                    size: 20,
+                                  ),
                                   SizedBox(width: 8),
-                                  Text('Notifications & Automated Grouping Alerts', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
+                                  Text(
+                                    'Notifications & Automated Grouping Alerts',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: Color(0xFF0F172A),
+                                    ),
+                                  ),
                                 ],
                               ),
                               const SizedBox(height: 16),
 
                               SwitchListTile(
-                                title: const Text('Deadline Reminders', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
-                                subtitle: const Text('Notify when group formation cutoff is 24 hours away and unassigned students remain.', style: TextStyle(fontSize: 12, color: Color(0xFF64748B))),
+                                title: const Text(
+                                  'Deadline Reminders',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                subtitle: const Text(
+                                  'Notify when group formation cutoff is 24 hours away and unassigned students remain.',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Color(0xFF64748B),
+                                  ),
+                                ),
                                 value: _notifyDeadline,
                                 activeThumbColor: const Color(0xFF1E40AF),
-                                onChanged: (val) => setState(() => _notifyDeadline = val),
+                                onChanged: (val) =>
+                                    setState(() => _notifyDeadline = val),
                               ),
                               const Divider(height: 1),
 
                               SwitchListTile(
-                                title: const Text('Student Group Swap Requests', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
-                                subtitle: const Text('Receive notifications when a student requests to switch squads.', style: TextStyle(fontSize: 12, color: Color(0xFF64748B))),
+                                title: const Text(
+                                  'Student Group Swap Requests',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                subtitle: const Text(
+                                  'Receive notifications when a student requests to switch squads.',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Color(0xFF64748B),
+                                  ),
+                                ),
                                 value: _notifySwapRequests,
                                 activeThumbColor: const Color(0xFF1E40AF),
-                                onChanged: (val) => setState(() => _notifySwapRequests = val),
+                                onChanged: (val) =>
+                                    setState(() => _notifySwapRequests = val),
                               ),
                               const Divider(height: 1),
 
                               SwitchListTile(
-                                title: const Text('Custom Skill Requests', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
-                                subtitle: const Text('Notify when students submit custom skills for syllabus approval in Step 2.', style: TextStyle(fontSize: 12, color: Color(0xFF64748B))),
+                                title: const Text(
+                                  'Custom Skill Requests',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                subtitle: const Text(
+                                  'Notify when students submit custom skills for syllabus approval in Step 2.',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Color(0xFF64748B),
+                                  ),
+                                ),
                                 value: _notifyCustomSkills,
                                 activeThumbColor: const Color(0xFF1E40AF),
-                                onChanged: (val) => setState(() => _notifyCustomSkills = val),
+                                onChanged: (val) =>
+                                    setState(() => _notifyCustomSkills = val),
                               ),
                               const Divider(height: 1),
 
                               SwitchListTile(
-                                title: const Text('Auto-lock Teams on Cutoff', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
-                                subtitle: const Text('Automatically finalize groups when creation deadline passes.', style: TextStyle(fontSize: 12, color: Color(0xFF64748B))),
+                                title: const Text(
+                                  'Auto-lock Teams on Cutoff',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                subtitle: const Text(
+                                  'Automatically finalize groups when creation deadline passes.',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Color(0xFF64748B),
+                                  ),
+                                ),
                                 value: _autoLockOnDeadline,
                                 activeThumbColor: const Color(0xFF1E40AF),
-                                onChanged: (val) => setState(() => _autoLockOnDeadline = val),
+                                onChanged: (val) =>
+                                    setState(() => _autoLockOnDeadline = val),
                               ),
                             ],
                           ),
@@ -198,10 +294,18 @@ class _ProfessorSettingsScreenState extends State<ProfessorSettingsScreen> {
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFF1E40AF),
                             foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 24,
+                              vertical: 14,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
                           ),
-                          child: const Text('Save Settings', style: TextStyle(fontWeight: FontWeight.bold)),
+                          child: const Text(
+                            'Save Settings',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
                         ),
                       ),
                       const SizedBox(height: 32),

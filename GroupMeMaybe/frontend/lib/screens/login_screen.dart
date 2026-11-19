@@ -136,7 +136,11 @@ class _LoginScreenState extends State<LoginScreen> {
                               color: const Color(0xFF1E40AF),
                               borderRadius: BorderRadius.circular(8),
                             ),
-                            child: const Icon(Icons.hub, color: Colors.white, size: 20),
+                            child: const Icon(
+                              Icons.hub,
+                              color: Colors.white,
+                              size: 20,
+                            ),
                           ),
                           const SizedBox(width: 10),
                           const Text(
@@ -166,17 +170,17 @@ class _LoginScreenState extends State<LoginScreen> {
                     const Text(
                       'Enter your institutional credentials to continue.',
                       textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: Color(0xFF64748B),
-                      ),
+                      style: TextStyle(fontSize: 13, color: Color(0xFF64748B)),
                     ),
                     const SizedBox(height: 24),
 
                     // Error Alert Banner
                     if (_errorMessage != null) ...[
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 10,
+                        ),
                         decoration: BoxDecoration(
                           color: const Color(0xFFFEF2F2),
                           borderRadius: BorderRadius.circular(8),
@@ -184,12 +188,19 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                         child: Row(
                           children: [
-                            const Icon(Icons.error_outline, color: Color(0xFFDC2626), size: 18),
+                            const Icon(
+                              Icons.error_outline,
+                              color: Color(0xFFDC2626),
+                              size: 18,
+                            ),
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
                                 _errorMessage!,
-                                style: const TextStyle(color: Color(0xFFDC2626), fontSize: 13),
+                                style: const TextStyle(
+                                  color: Color(0xFFDC2626),
+                                  fontSize: 13,
+                                ),
                               ),
                             ),
                           ],
@@ -213,20 +224,37 @@ class _LoginScreenState extends State<LoginScreen> {
                       keyboardType: TextInputType.emailAddress,
                       decoration: InputDecoration(
                         hintText: 'e.g. carlos@student.edu',
-                        hintStyle: const TextStyle(fontSize: 13, color: Color(0xFF94A3B8)),
-                        prefixIcon: const Icon(Icons.email_outlined, size: 18, color: Color(0xFF64748B)),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        hintStyle: const TextStyle(
+                          fontSize: 13,
+                          color: Color(0xFF94A3B8),
+                        ),
+                        prefixIcon: const Icon(
+                          Icons.email_outlined,
+                          size: 18,
+                          color: Color(0xFF64748B),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 12,
+                        ),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
-                          borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
+                          borderSide: const BorderSide(
+                            color: Color(0xFFCBD5E1),
+                          ),
                         ),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
-                          borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
+                          borderSide: const BorderSide(
+                            color: Color(0xFFCBD5E1),
+                          ),
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
-                          borderSide: const BorderSide(color: Color(0xFF1E40AF), width: 1.5),
+                          borderSide: const BorderSide(
+                            color: Color(0xFF1E40AF),
+                            width: 1.5,
+                          ),
                         ),
                       ),
                       validator: (value) {
@@ -256,30 +284,51 @@ class _LoginScreenState extends State<LoginScreen> {
                       obscureText: _obscurePassword,
                       decoration: InputDecoration(
                         hintText: 'Enter your password',
-                        hintStyle: const TextStyle(fontSize: 13, color: Color(0xFF94A3B8)),
-                        prefixIcon: const Icon(Icons.lock_outline, size: 18, color: Color(0xFF64748B)),
+                        hintStyle: const TextStyle(
+                          fontSize: 13,
+                          color: Color(0xFF94A3B8),
+                        ),
+                        prefixIcon: const Icon(
+                          Icons.lock_outline,
+                          size: 18,
+                          color: Color(0xFF64748B),
+                        ),
                         suffixIcon: IconButton(
                           icon: Icon(
-                            _obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                            _obscurePassword
+                                ? Icons.visibility_outlined
+                                : Icons.visibility_off_outlined,
                             size: 18,
                             color: const Color(0xFF64748B),
                           ),
                           onPressed: () {
-                            setState(() => _obscurePassword = !_obscurePassword);
+                            setState(
+                              () => _obscurePassword = !_obscurePassword,
+                            );
                           },
                         ),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 12,
+                        ),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
-                          borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
+                          borderSide: const BorderSide(
+                            color: Color(0xFFCBD5E1),
+                          ),
                         ),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
-                          borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
+                          borderSide: const BorderSide(
+                            color: Color(0xFFCBD5E1),
+                          ),
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
-                          borderSide: const BorderSide(color: Color(0xFF1E40AF), width: 1.5),
+                          borderSide: const BorderSide(
+                            color: Color(0xFF1E40AF),
+                            width: 1.5,
+                          ),
                         ),
                       ),
                       validator: (value) {
@@ -300,7 +349,8 @@ class _LoginScreenState extends State<LoginScreen> {
                       children: [
                         Flexible(
                           child: InkWell(
-                            onTap: () => setState(() => _rememberMe = !_rememberMe),
+                            onTap: () =>
+                                setState(() => _rememberMe = !_rememberMe),
                             borderRadius: BorderRadius.circular(4),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
@@ -311,9 +361,13 @@ class _LoginScreenState extends State<LoginScreen> {
                                   child: Checkbox(
                                     value: _rememberMe,
                                     activeColor: const Color(0xFF1E40AF),
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
                                     onChanged: (val) {
-                                      setState(() => _rememberMe = val ?? false);
+                                      setState(
+                                        () => _rememberMe = val ?? false,
+                                      );
                                     },
                                   ),
                                 ),
@@ -321,7 +375,10 @@ class _LoginScreenState extends State<LoginScreen> {
                                 const Flexible(
                                   child: Text(
                                     'Remember me',
-                                    style: TextStyle(fontSize: 12, color: Color(0xFF475569)),
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Color(0xFF475569),
+                                    ),
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
@@ -338,7 +395,9 @@ class _LoginScreenState extends State<LoginScreen> {
                           onPressed: () {
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
-                                content: Text('Please contact your administrator to reset credentials.'),
+                                content: Text(
+                                  'Please contact your administrator to reset credentials.',
+                                ),
                                 behavior: SnackBarBehavior.floating,
                               ),
                             );
@@ -365,7 +424,9 @@ class _LoginScreenState extends State<LoginScreen> {
                           backgroundColor: const Color(0xFF1E40AF),
                           foregroundColor: Colors.white,
                           elevation: 0,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
                         ),
                         child: _isLoading
                             ? const SizedBox(
@@ -378,7 +439,10 @@ class _LoginScreenState extends State<LoginScreen> {
                               )
                             : const Text(
                                 'Sign In',
-                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                ),
                               ),
                       ),
                     ),
@@ -409,16 +473,32 @@ class _LoginScreenState extends State<LoginScreen> {
                     OutlinedButton.icon(
                       onPressed: _isLoading
                           ? null
-                          : () => _fillAndLogin('prof.aivhan@university.edu', 'password123'),
-                      icon: const Icon(Icons.co_present, size: 16, color: Color(0xFF4338CA)),
+                          : () => _fillAndLogin(
+                              'prof.aivhan@university.edu',
+                              'password123',
+                            ),
+                      icon: const Icon(
+                        Icons.co_present,
+                        size: 16,
+                        color: Color(0xFF4338CA),
+                      ),
                       label: const Text(
                         'Demo Professor (Prof. Aivhan)',
-                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF1E293B)),
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF1E293B),
+                        ),
                       ),
                       style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 10,
+                          horizontal: 12,
+                        ),
                         side: const BorderSide(color: Color(0xFFCBD5E1)),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -426,16 +506,32 @@ class _LoginScreenState extends State<LoginScreen> {
                     OutlinedButton.icon(
                       onPressed: _isLoading
                           ? null
-                          : () => _fillAndLogin('carlos.mendoza@student.edu', 'password123'),
-                      icon: const Icon(Icons.school, size: 16, color: Color(0xFF1D4ED8)),
+                          : () => _fillAndLogin(
+                              'carlos.mendoza@student.edu',
+                              'password123',
+                            ),
+                      icon: const Icon(
+                        Icons.school,
+                        size: 16,
+                        color: Color(0xFF1D4ED8),
+                      ),
                       label: const Text(
                         'Demo Student (Carlos Mendoza)',
-                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF1E293B)),
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF1E293B),
+                        ),
                       ),
                       style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 10,
+                          horizontal: 12,
+                        ),
                         side: const BorderSide(color: Color(0xFFCBD5E1)),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
                       ),
                     ),
                     const SizedBox(height: 24),
@@ -447,13 +543,18 @@ class _LoginScreenState extends State<LoginScreen> {
                       children: [
                         const Text(
                           "Don't have an account?",
-                          style: TextStyle(fontSize: 13, color: Color(0xFF64748B)),
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Color(0xFF64748B),
+                          ),
                         ),
                         TextButton(
                           onPressed: () {
                             Navigator.pushReplacement(
                               context,
-                              MaterialPageRoute(builder: (_) => const SignupScreen()),
+                              MaterialPageRoute(
+                                builder: (_) => const SignupScreen(),
+                              ),
                             );
                           },
                           child: const Text(

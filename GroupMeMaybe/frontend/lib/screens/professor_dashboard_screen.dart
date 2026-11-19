@@ -2,14 +2,11 @@ import 'package:flutter/material.dart';
 
 import '../models/custom_skill_request.dart';
 import '../services/skill_approval_service.dart';
+import 'professor_evaluation_screen.dart';
 import 'widgets/professor_sidebar.dart';
 
 // Helper model for student completion statuses
-enum ProfileCompletionStatus {
-  complete,
-  incomplete,
-  uninitialized,
-}
+enum ProfileCompletionStatus { complete, incomplete, uninitialized }
 
 class StudentRosterItem {
   final String id;
@@ -97,12 +94,14 @@ class ProfessorDashboardScreen extends StatefulWidget {
   const ProfessorDashboardScreen({super.key});
 
   @override
-  State<ProfessorDashboardScreen> createState() => _ProfessorDashboardScreenState();
+  State<ProfessorDashboardScreen> createState() =>
+      _ProfessorDashboardScreenState();
 }
 
 class _ProfessorDashboardScreenState extends State<ProfessorDashboardScreen> {
   final SkillApprovalService _skillService = SkillApprovalService();
-  final TextEditingController _studentSearchController = TextEditingController();
+  final TextEditingController _studentSearchController =
+      TextEditingController();
 
   // Completion filter: 'all', 'complete', 'incomplete', 'uninitialized'
   String _selectedCompletionFilter = 'all';
@@ -330,14 +329,17 @@ class _ProfessorDashboardScreenState extends State<ProfessorDashboardScreen> {
         email: '${student.name.toLowerCase().replaceAll(' ', '.')}@student.edu',
       );
 
-      final updatedMembers = List<StudentRosterItem>.from(targetTeam.members)..add(newMember);
+      final updatedMembers = List<StudentRosterItem>.from(targetTeam.members)
+        ..add(newMember);
 
       _teams[teamIndex] = TeamOverviewItem(
         id: targetTeam.id,
         name: targetTeam.name,
         course: targetTeam.course,
         activityName: targetTeam.activityName,
-        status: updatedMembers.length >= targetTeam.maxMembers ? 'Full (${targetTeam.maxMembers}/${targetTeam.maxMembers})' : 'Formed (${updatedMembers.length}/${targetTeam.maxMembers})',
+        status: updatedMembers.length >= targetTeam.maxMembers
+            ? 'Full (${targetTeam.maxMembers}/${targetTeam.maxMembers})'
+            : 'Formed (${updatedMembers.length}/${targetTeam.maxMembers})',
         maxMembers: targetTeam.maxMembers,
         members: updatedMembers,
       );
@@ -348,7 +350,9 @@ class _ProfessorDashboardScreenState extends State<ProfessorDashboardScreen> {
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Successfully assigned ${student.name} to ${targetTeam.name}!'),
+        content: Text(
+          'Successfully assigned ${student.name} to ${targetTeam.name}!',
+        ),
         backgroundColor: const Color(0xFF16A34A),
         behavior: SnackBarBehavior.floating,
       ),
@@ -365,15 +369,33 @@ class _ProfessorDashboardScreenState extends State<ProfessorDashboardScreen> {
             CircleAvatar(
               radius: 20,
               backgroundColor: const Color(0xFF1E40AF),
-              child: Text(s.name[0], style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              child: Text(
+                s.name[0],
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(s.name, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                  Text('${s.studentId} • ${s.block}', style: const TextStyle(fontSize: 12, color: Color(0xFF64748B))),
+                  Text(
+                    s.name,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  Text(
+                    '${s.studentId} • ${s.block}',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Color(0xFF64748B),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -387,24 +409,73 @@ class _ProfessorDashboardScreenState extends State<ProfessorDashboardScreen> {
             children: [
               _buildProfileRow('Profile Status', _buildStatusBadge(s.status)),
               const Divider(height: 18),
-              _buildProfileRow('Primary Role', Text(s.primaryRole ?? 'Not specified', style: const TextStyle(fontWeight: FontWeight.bold))),
+              _buildProfileRow(
+                'Primary Role',
+                Text(
+                  s.primaryRole ?? 'Not specified',
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ),
               const Divider(height: 18),
-              _buildProfileRow('Proficiency Rating', Text(s.skillLevel ?? 'Unrated', style: const TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF7E22CE)))),
+              _buildProfileRow(
+                'Proficiency Rating',
+                Text(
+                  s.skillLevel ?? 'Unrated',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF7E22CE),
+                  ),
+                ),
+              ),
               const Divider(height: 18),
-              _buildProfileRow('Institutional Email', Text(s.email, style: const TextStyle(fontSize: 13, color: Color(0xFF2563EB)))),
+              _buildProfileRow(
+                'Institutional Email',
+                Text(
+                  s.email,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: Color(0xFF2563EB),
+                  ),
+                ),
+              ),
               const SizedBox(height: 12),
-              const Text('Skills & Technologies:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF475569))),
+              const Text(
+                'Skills & Technologies:',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF475569),
+                ),
+              ),
               const SizedBox(height: 6),
               Wrap(
                 spacing: 6,
                 runSpacing: 6,
                 children: s.topSkills.isEmpty
-                    ? [const Text('No skills provided yet.', style: TextStyle(fontSize: 12, color: Colors.grey))]
+                    ? [
+                        const Text(
+                          'No skills provided yet.',
+                          style: TextStyle(fontSize: 12, color: Colors.grey),
+                        ),
+                      ]
                     : s.topSkills.map((sk) {
                         return Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(color: const Color(0xFFEFF6FF), borderRadius: BorderRadius.circular(6)),
-                          child: Text(sk, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF1D4ED8))),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFEFF6FF),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            sk,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF1D4ED8),
+                            ),
+                          ),
                         );
                       }).toList(),
               ),
@@ -414,7 +485,10 @@ class _ProfessorDashboardScreenState extends State<ProfessorDashboardScreen> {
         actions: [
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx),
-            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1E40AF), foregroundColor: Colors.white),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF1E40AF),
+              foregroundColor: Colors.white,
+            ),
             child: const Text('Close'),
           ),
         ],
@@ -426,7 +500,10 @@ class _ProfessorDashboardScreenState extends State<ProfessorDashboardScreen> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: const TextStyle(fontSize: 13, color: Color(0xFF64748B))),
+        Text(
+          label,
+          style: const TextStyle(fontSize: 13, color: Color(0xFF64748B)),
+        ),
         value,
       ],
     );
@@ -437,35 +514,77 @@ class _ProfessorDashboardScreenState extends State<ProfessorDashboardScreen> {
       case ProfileCompletionStatus.complete:
         return Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-          decoration: BoxDecoration(color: const Color(0xFFECFDF5), borderRadius: BorderRadius.circular(6)),
-          child: const Text('COMPLETE', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF047857))),
+          decoration: BoxDecoration(
+            color: const Color(0xFFECFDF5),
+            borderRadius: BorderRadius.circular(6),
+          ),
+          child: const Text(
+            'COMPLETE',
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF047857),
+            ),
+          ),
         );
       case ProfileCompletionStatus.incomplete:
         return Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-          decoration: BoxDecoration(color: const Color(0xFFFFFBEB), borderRadius: BorderRadius.circular(6)),
-          child: const Text('INCOMPLETE (DRAFT)', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFFD97706))),
+          decoration: BoxDecoration(
+            color: const Color(0xFFFFFBEB),
+            borderRadius: BorderRadius.circular(6),
+          ),
+          child: const Text(
+            'INCOMPLETE (DRAFT)',
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFFD97706),
+            ),
+          ),
         );
       case ProfileCompletionStatus.uninitialized:
         return Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-          decoration: BoxDecoration(color: const Color(0xFFF1F5F9), borderRadius: BorderRadius.circular(6)),
-          child: const Text('UNINITIALIZED', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF64748B))),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF1F5F9),
+            borderRadius: BorderRadius.circular(6),
+          ),
+          child: const Text(
+            'UNINITIALIZED',
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF64748B),
+            ),
+          ),
         );
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final completeCount = _allStudents.where((s) => s.status == ProfileCompletionStatus.complete).length;
-    final incompleteCount = _allStudents.where((s) => s.status == ProfileCompletionStatus.incomplete).length;
-    final uninitCount = _allStudents.where((s) => s.status == ProfileCompletionStatus.uninitialized).length;
+    final completeCount = _allStudents
+        .where((s) => s.status == ProfileCompletionStatus.complete)
+        .length;
+    final incompleteCount = _allStudents
+        .where((s) => s.status == ProfileCompletionStatus.incomplete)
+        .length;
+    final uninitCount = _allStudents
+        .where((s) => s.status == ProfileCompletionStatus.uninitialized)
+        .length;
 
     // Filtered students
     final filteredStudents = _allStudents.where((s) {
-      if (_selectedCompletionFilter == 'complete' && s.status != ProfileCompletionStatus.complete) return false;
-      if (_selectedCompletionFilter == 'incomplete' && s.status != ProfileCompletionStatus.incomplete) return false;
-      if (_selectedCompletionFilter == 'uninitialized' && s.status != ProfileCompletionStatus.uninitialized) return false;
+      if (_selectedCompletionFilter == 'complete' &&
+          s.status != ProfileCompletionStatus.complete)
+        return false;
+      if (_selectedCompletionFilter == 'incomplete' &&
+          s.status != ProfileCompletionStatus.incomplete)
+        return false;
+      if (_selectedCompletionFilter == 'uninitialized' &&
+          s.status != ProfileCompletionStatus.uninitialized)
+        return false;
 
       final query = _studentSearchController.text.trim().toLowerCase();
       if (query.isNotEmpty) {
@@ -482,7 +601,9 @@ class _ProfessorDashboardScreenState extends State<ProfessorDashboardScreen> {
       body: Row(
         children: [
           // Unified Professor Sidebar
-          const ProfessorSidebar(currentDestination: ProfessorNavDestination.dashboard),
+          const ProfessorSidebar(
+            currentDestination: ProfessorNavDestination.dashboard,
+          ),
 
           // Main Dashboard Content
           Expanded(
@@ -505,7 +626,11 @@ class _ProfessorDashboardScreenState extends State<ProfessorDashboardScreen> {
                       ],
 
                       // Profile Completion Status Cards
-                      _buildCompletionStatusMetrics(completeCount, incompleteCount, uninitCount),
+                      _buildCompletionStatusMetrics(
+                        completeCount,
+                        incompleteCount,
+                        uninitCount,
+                      ),
                       const SizedBox(height: 24),
 
                       // Manage Unassigned Students Past Deadline Section
@@ -544,7 +669,13 @@ class _ProfessorDashboardScreenState extends State<ProfessorDashboardScreen> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: const Color(0xFFE2E8F0)),
-        boxShadow: const [BoxShadow(color: Color(0x06000000), blurRadius: 10, offset: Offset(0, 2))],
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x06000000),
+            blurRadius: 10,
+            offset: Offset(0, 2),
+          ),
+        ],
       ),
       child: LayoutBuilder(
         builder: (context, constraints) {
@@ -554,7 +685,14 @@ class _ProfessorDashboardScreenState extends State<ProfessorDashboardScreen> {
               const CircleAvatar(
                 radius: 26,
                 backgroundColor: Color(0xFF1E40AF),
-                child: Text('A', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)),
+                child: Text(
+                  'A',
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
               ),
               const SizedBox(width: 16),
               Expanded(
@@ -568,12 +706,29 @@ class _ProfessorDashboardScreenState extends State<ProfessorDashboardScreen> {
                       children: [
                         const Text(
                           'Welcome, Prof. Aivhan!',
-                          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF0F172A),
+                          ),
                         ),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                          decoration: BoxDecoration(color: const Color(0xFFEFF6FF), borderRadius: BorderRadius.circular(6)),
-                          child: const Text('Faculty Administrator', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF1D4ED8))),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFEFF6FF),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: const Text(
+                            'Faculty Administrator',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF1D4ED8),
+                            ),
+                          ),
                         ),
                       ],
                     ),
@@ -588,11 +743,34 @@ class _ProfessorDashboardScreenState extends State<ProfessorDashboardScreen> {
             ],
           );
 
+          final reviewButton = ElevatedButton.icon(
+            key: const Key('review_evaluations_button'),
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => const ProfessorEvaluationScreen(),
+                ),
+              );
+            },
+            icon: const Icon(Icons.rate_review_outlined, size: 16),
+            label: const Text('Review Requests & Evaluations'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF1E40AF),
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+          );
+
           if (isNarrow) {
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 avatarAndInfo,
+                const SizedBox(height: 16),
+                reviewButton,
               ],
             );
           }
@@ -601,6 +779,8 @@ class _ProfessorDashboardScreenState extends State<ProfessorDashboardScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Expanded(child: avatarAndInfo),
+              const SizedBox(width: 16),
+              reviewButton,
             ],
           );
         },
@@ -622,8 +802,15 @@ class _ProfessorDashboardScreenState extends State<ProfessorDashboardScreen> {
         children: [
           Container(
             padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(color: const Color(0xFFFEF3C7), borderRadius: BorderRadius.circular(8)),
-            child: const Icon(Icons.warning_amber_rounded, color: Color(0xFFD97706), size: 24),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFEF3C7),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: const Icon(
+              Icons.warning_amber_rounded,
+              color: Color(0xFFD97706),
+              size: 24,
+            ),
           ),
           const SizedBox(width: 14),
           Expanded(
@@ -632,12 +819,20 @@ class _ProfessorDashboardScreenState extends State<ProfessorDashboardScreen> {
               children: [
                 Text(
                   '${_unassignedStudents.length} Students Unassigned Past Group Formation Deadline',
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF92400E)),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                    color: Color(0xFF92400E),
+                  ),
                 ),
                 const SizedBox(height: 4),
                 const Text(
                   'The capstone grouping cutoff has passed. As professor, you can review system-recommended groups below and assign these students to ensure balanced team sizes and skill distribution.',
-                  style: TextStyle(fontSize: 13, color: Color(0xFFB45309), height: 1.4),
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Color(0xFFB45309),
+                    height: 1.4,
+                  ),
                 ),
               ],
             ),
@@ -648,7 +843,11 @@ class _ProfessorDashboardScreenState extends State<ProfessorDashboardScreen> {
   }
 
   // Student Profile Completion Status Metrics
-  Widget _buildCompletionStatusMetrics(int complete, int incomplete, int uninit) {
+  Widget _buildCompletionStatusMetrics(
+    int complete,
+    int incomplete,
+    int uninit,
+  ) {
     final total = complete + incomplete + uninit;
     final completePct = total > 0 ? (complete / total * 100).toInt() : 0;
     final incompletePct = total > 0 ? (incomplete / total * 100).toInt() : 0;
@@ -681,16 +880,47 @@ class _ProfessorDashboardScreenState extends State<ProfessorDashboardScreen> {
             color: const Color(0xFF64748B),
             bg: const Color(0xFFF1F5F9),
           ),
+          _buildMetricCard(
+            title: 'Evaluation & Requests',
+            count: 'Review Pending',
+            subtitle: 'Modification requests & reviews',
+            icon: Icons.fact_check_outlined,
+            color: const Color(0xFF1E40AF),
+            bg: const Color(0xFFEFF6FF),
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => const ProfessorEvaluationScreen(),
+                ),
+              );
+            },
+          ),
         ];
 
-        if (constraints.maxWidth < 800) {
+        if (constraints.maxWidth < 950) {
           return Column(
-            children: cards.map((c) => Padding(padding: const EdgeInsets.only(bottom: 12), child: c)).toList(),
+            children: cards
+                .map(
+                  (c) => Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: c,
+                  ),
+                )
+                .toList(),
           );
         }
 
         return Row(
-          children: cards.map((c) => Expanded(child: Padding(padding: const EdgeInsets.symmetric(horizontal: 6), child: c))).toList(),
+          children: cards
+              .map(
+                (c) => Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    child: c,
+                  ),
+                ),
+              )
+              .toList(),
         );
       },
     );
@@ -703,8 +933,9 @@ class _ProfessorDashboardScreenState extends State<ProfessorDashboardScreen> {
     required IconData icon,
     required Color color,
     required Color bg,
+    VoidCallback? onTap,
   }) {
-    return Container(
+    final content = Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -715,7 +946,10 @@ class _ProfessorDashboardScreenState extends State<ProfessorDashboardScreen> {
         children: [
           Container(
             padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(10)),
+            decoration: BoxDecoration(
+              color: bg,
+              borderRadius: BorderRadius.circular(10),
+            ),
             child: Icon(icon, color: color, size: 22),
           ),
           const SizedBox(width: 14),
@@ -723,17 +957,54 @@ class _ProfessorDashboardScreenState extends State<ProfessorDashboardScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF64748B))),
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF64748B),
+                  ),
+                ),
                 const SizedBox(height: 2),
-                Text(count, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: color)),
+                Text(
+                  count,
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: color,
+                  ),
+                ),
                 const SizedBox(height: 2),
-                Text(subtitle, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11, color: Color(0xFF94A3B8))),
+                Text(
+                  subtitle,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: Color(0xFF94A3B8),
+                  ),
+                ),
               ],
             ),
           ),
+          if (onTap != null)
+            const Icon(
+              Icons.arrow_forward_ios,
+              size: 14,
+              color: Color(0xFF94A3B8),
+            ),
         ],
       ),
     );
+
+    if (onTap != null) {
+      return InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: content,
+      );
+    }
+    return content;
   }
 
   // Manage Unassigned Students Past Deadline Section
@@ -744,7 +1015,13 @@ class _ProfessorDashboardScreenState extends State<ProfessorDashboardScreen> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: const Color(0xFFFDE68A)),
-        boxShadow: const [BoxShadow(color: Color(0x06000000), blurRadius: 8, offset: Offset(0, 2))],
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x06000000),
+            blurRadius: 8,
+            offset: Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -758,20 +1035,35 @@ class _ProfessorDashboardScreenState extends State<ProfessorDashboardScreen> {
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: const [
-                  Icon(Icons.person_add_alt_1, color: Color(0xFFD97706), size: 20),
+                  Icon(
+                    Icons.person_add_alt_1,
+                    color: Color(0xFFD97706),
+                    size: 20,
+                  ),
                   SizedBox(width: 8),
                   Text(
                     'Manage Unassigned Students (Past Deadline)',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF0F172A),
+                    ),
                   ),
                 ],
               ),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(color: const Color(0xFFFEF3C7), borderRadius: BorderRadius.circular(6)),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFEF3C7),
+                  borderRadius: BorderRadius.circular(6),
+                ),
                 child: Text(
                   '${_unassignedStudents.length} Action Needed',
-                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFFB45309)),
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFFB45309),
+                  ),
                 ),
               ),
             ],
@@ -813,43 +1105,82 @@ class _ProfessorDashboardScreenState extends State<ProfessorDashboardScreen> {
                             CircleAvatar(
                               radius: 16,
                               backgroundColor: const Color(0xFF1E40AF),
-                              child: Text(student.name[0], style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                              child: Text(
+                                student.name[0],
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13,
+                                ),
+                              ),
                             ),
                             const SizedBox(width: 10),
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(student.name, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
-                                Text('${student.studentId} • ${student.block} • ${student.preferredRole} (${student.skillLevel})',
-                                    style: const TextStyle(fontSize: 12, color: Color(0xFF64748B))),
+                                Text(
+                                  student.name,
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFF0F172A),
+                                  ),
+                                ),
+                                Text(
+                                  '${student.studentId} • ${student.block} • ${student.preferredRole} (${student.skillLevel})',
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    color: Color(0xFF64748B),
+                                  ),
+                                ),
                               ],
                             ),
                           ],
                         ),
                         // Quick dropdown to assign to ANY team
                         PopupMenuButton<String>(
-                          onSelected: (teamId) => _assignStudentToGroup(student, teamId),
+                          onSelected: (teamId) =>
+                              _assignStudentToGroup(student, teamId),
                           itemBuilder: (context) => _teams
                               .map(
                                 (t) => PopupMenuItem(
                                   value: t.id,
-                                  child: Text('Assign to: ${t.name} (${t.status})', style: const TextStyle(fontSize: 13)),
+                                  child: Text(
+                                    'Assign to: ${t.name} (${t.status})',
+                                    style: const TextStyle(fontSize: 13),
+                                  ),
                                 ),
                               )
                               .toList(),
                           child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 6,
+                            ),
                             decoration: BoxDecoration(
                               color: Colors.white,
                               borderRadius: BorderRadius.circular(6),
-                              border: Border.all(color: const Color(0xFFCBD5E1)),
+                              border: Border.all(
+                                color: const Color(0xFFCBD5E1),
+                              ),
                             ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: const [
-                                Text('Other Teams', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF475569))),
+                                Text(
+                                  'Other Teams',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: Color(0xFF475569),
+                                  ),
+                                ),
                                 SizedBox(width: 4),
-                                Icon(Icons.arrow_drop_down, size: 16, color: Color(0xFF475569)),
+                                Icon(
+                                  Icons.arrow_drop_down,
+                                  size: 16,
+                                  color: Color(0xFF475569),
+                                ),
                               ],
                             ),
                           ),
@@ -857,7 +1188,14 @@ class _ProfessorDashboardScreenState extends State<ProfessorDashboardScreen> {
                       ],
                     ),
                     const SizedBox(height: 12),
-                    const Text('Top Recommended Groups:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF334155))),
+                    const Text(
+                      'Top Recommended Groups:',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF334155),
+                      ),
+                    ),
                     const SizedBox(height: 6),
 
                     // Recommended groups cards
@@ -866,7 +1204,10 @@ class _ProfessorDashboardScreenState extends State<ProfessorDashboardScreen> {
                       runSpacing: 8,
                       children: student.recommendedGroups.map((rec) {
                         return Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
                           decoration: BoxDecoration(
                             color: Colors.white,
                             borderRadius: BorderRadius.circular(8),
@@ -876,23 +1217,54 @@ class _ProfessorDashboardScreenState extends State<ProfessorDashboardScreen> {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                decoration: BoxDecoration(color: const Color(0xFFEFF6FF), borderRadius: BorderRadius.circular(4)),
-                                child: Text('${rec.matchPercentage}% MATCH', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF1D4ED8))),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                  vertical: 2,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFEFF6FF),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Text(
+                                  '${rec.matchPercentage}% MATCH',
+                                  style: const TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFF1D4ED8),
+                                  ),
+                                ),
                               ),
                               const SizedBox(width: 8),
-                              Text(rec.teamName, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
+                              Text(
+                                rec.teamName,
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF0F172A),
+                                ),
+                              ),
                               const SizedBox(width: 10),
                               ElevatedButton(
-                                onPressed: () => _assignStudentToGroup(student, rec.teamId),
+                                onPressed: () =>
+                                    _assignStudentToGroup(student, rec.teamId),
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: const Color(0xFF1E40AF),
                                   foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 4,
+                                  ),
                                   minimumSize: Size.zero,
-                                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                  tapTargetSize:
+                                      MaterialTapTargetSize.shrinkWrap,
                                 ),
-                                child: const Text('Assign to Group', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                                child: const Text(
+                                  'Assign to Group',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
                               ),
                             ],
                           ),
@@ -922,7 +1294,11 @@ class _ProfessorDashboardScreenState extends State<ProfessorDashboardScreen> {
           children: const [
             Text(
               'Formed Teams & Squad Member Profiles',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF0F172A),
+              ),
             ),
             Text(
               'Click any student avatar to view full profile details and skill stack',
@@ -934,7 +1310,9 @@ class _ProfessorDashboardScreenState extends State<ProfessorDashboardScreen> {
 
         LayoutBuilder(
           builder: (context, constraints) {
-            final crossAxisCount = constraints.maxWidth >= 900 ? 3 : (constraints.maxWidth >= 600 ? 2 : 1);
+            final crossAxisCount = constraints.maxWidth >= 900
+                ? 3
+                : (constraints.maxWidth >= 600 ? 2 : 1);
             return GridView.builder(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
@@ -953,7 +1331,13 @@ class _ProfessorDashboardScreenState extends State<ProfessorDashboardScreen> {
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(color: const Color(0xFFE2E8F0)),
-                    boxShadow: const [BoxShadow(color: Color(0x06000000), blurRadius: 6, offset: Offset(0, 2))],
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Color(0x06000000),
+                        blurRadius: 6,
+                        offset: Offset(0, 2),
+                      ),
+                    ],
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -964,14 +1348,23 @@ class _ProfessorDashboardScreenState extends State<ProfessorDashboardScreen> {
                           Expanded(
                             child: Text(
                               team.name,
-                              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+                              style: const TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF0F172A),
+                              ),
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
                             decoration: BoxDecoration(
-                              color: team.members.length >= team.maxMembers ? const Color(0xFFECFDF5) : const Color(0xFFEFF6FF),
+                              color: team.members.length >= team.maxMembers
+                                  ? const Color(0xFFECFDF5)
+                                  : const Color(0xFFEFF6FF),
                               borderRadius: BorderRadius.circular(4),
                             ),
                             child: Text(
@@ -979,20 +1372,46 @@ class _ProfessorDashboardScreenState extends State<ProfessorDashboardScreen> {
                               style: TextStyle(
                                 fontSize: 10,
                                 fontWeight: FontWeight.bold,
-                                color: team.members.length >= team.maxMembers ? const Color(0xFF047857) : const Color(0xFF1D4ED8),
+                                color: team.members.length >= team.maxMembers
+                                    ? const Color(0xFF047857)
+                                    : const Color(0xFF1D4ED8),
                               ),
                             ),
                           ),
                         ],
                       ),
                       const SizedBox(height: 4),
-                      Text(team.course, style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)), maxLines: 1, overflow: TextOverflow.ellipsis),
-                      Text(team.activityName, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF2563EB)), maxLines: 1, overflow: TextOverflow.ellipsis),
+                      Text(
+                        team.course,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: Color(0xFF64748B),
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      Text(
+                        team.activityName,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF2563EB),
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                       const SizedBox(height: 12),
                       const Divider(color: Color(0xFFF1F5F9), height: 1),
                       const SizedBox(height: 8),
 
-                      const Text('Team Members:', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF475569))),
+                      const Text(
+                        'Team Members:',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF475569),
+                        ),
+                      ),
                       const SizedBox(height: 6),
                       Expanded(
                         child: ListView.separated(
@@ -1005,7 +1424,10 @@ class _ProfessorDashboardScreenState extends State<ProfessorDashboardScreen> {
                               onTap: () => _showStudentProfileDialog(m),
                               borderRadius: BorderRadius.circular(6),
                               child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                  vertical: 4,
+                                ),
                                 decoration: BoxDecoration(
                                   color: const Color(0xFFF8FAFC),
                                   borderRadius: BorderRadius.circular(6),
@@ -1015,13 +1437,34 @@ class _ProfessorDashboardScreenState extends State<ProfessorDashboardScreen> {
                                     CircleAvatar(
                                       radius: 10,
                                       backgroundColor: const Color(0xFF1E40AF),
-                                      child: Text(m.name[0], style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold)),
+                                      child: Text(
+                                        m.name[0],
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 9,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
                                     ),
                                     const SizedBox(width: 8),
                                     Expanded(
-                                      child: Text(m.name, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF0F172A)), overflow: TextOverflow.ellipsis),
+                                      child: Text(
+                                        m.name,
+                                        style: const TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600,
+                                          color: Color(0xFF0F172A),
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
                                     ),
-                                    Text(m.primaryRole ?? 'Member', style: const TextStyle(fontSize: 10, color: Color(0xFF64748B))),
+                                    Text(
+                                      m.primaryRole ?? 'Member',
+                                      style: const TextStyle(
+                                        fontSize: 10,
+                                        color: Color(0xFF64748B),
+                                      ),
+                                    ),
                                   ],
                                 ),
                               ),
@@ -1060,7 +1503,11 @@ class _ProfessorDashboardScreenState extends State<ProfessorDashboardScreen> {
             children: [
               const Text(
                 'Student Profile Completion Statuses',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF0F172A),
+                ),
               ),
 
               // Filter Tabs (All, Complete, Incomplete, Uninitialized)
@@ -1081,15 +1528,30 @@ class _ProfessorDashboardScreenState extends State<ProfessorDashboardScreen> {
           TextField(
             controller: _studentSearchController,
             decoration: InputDecoration(
-              hintText: 'Search by student name, ID number, or section block...',
-              prefixIcon: const Icon(Icons.search, size: 18, color: Color(0xFF64748B)),
+              hintText:
+                  'Search by student name, ID number, or section block...',
+              prefixIcon: const Icon(
+                Icons.search,
+                size: 18,
+                color: Color(0xFF64748B),
+              ),
               suffixIcon: _studentSearchController.text.isNotEmpty
-                  ? IconButton(icon: const Icon(Icons.clear, size: 16), onPressed: () => setState(() => _studentSearchController.clear()))
+                  ? IconButton(
+                      icon: const Icon(Icons.clear, size: 16),
+                      onPressed: () =>
+                          setState(() => _studentSearchController.clear()),
+                    )
                   : null,
               filled: true,
               fillColor: const Color(0xFFF8FAFC),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Color(0xFFCBD5E1))),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 14,
+                vertical: 10,
+              ),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
+              ),
             ),
             onChanged: (_) => setState(() {}),
           ),
@@ -1100,7 +1562,8 @@ class _ProfessorDashboardScreenState extends State<ProfessorDashboardScreen> {
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             itemCount: students.length,
-            separatorBuilder: (_, _) => const Divider(color: Color(0xFFF1F5F9), height: 1),
+            separatorBuilder: (_, _) =>
+                const Divider(color: Color(0xFFF1F5F9), height: 1),
             itemBuilder: (context, index) {
               final s = students[index];
               return InkWell(
@@ -1112,22 +1575,46 @@ class _ProfessorDashboardScreenState extends State<ProfessorDashboardScreen> {
                       CircleAvatar(
                         radius: 16,
                         backgroundColor: const Color(0xFF1E40AF),
-                        child: Text(s.name[0], style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
+                        child: Text(
+                          s.name[0],
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                          ),
+                        ),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(s.name, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
-                            Text('${s.studentId} • ${s.block} • ${s.email}', style: const TextStyle(fontSize: 11, color: Color(0xFF64748B))),
+                            Text(
+                              s.name,
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF0F172A),
+                              ),
+                            ),
+                            Text(
+                              '${s.studentId} • ${s.block} • ${s.email}',
+                              style: const TextStyle(
+                                fontSize: 11,
+                                color: Color(0xFF64748B),
+                              ),
+                            ),
                           ],
                         ),
                       ),
                       const SizedBox(width: 8),
                       _buildStatusBadge(s.status),
                       const SizedBox(width: 8),
-                      const Icon(Icons.chevron_right, size: 18, color: Color(0xFF94A3B8)),
+                      const Icon(
+                        Icons.chevron_right,
+                        size: 18,
+                        color: Color(0xFF94A3B8),
+                      ),
                     ],
                   ),
                 ),
@@ -1142,11 +1629,19 @@ class _ProfessorDashboardScreenState extends State<ProfessorDashboardScreen> {
   Widget _buildCompletionFilterChip(String label, String value) {
     final isSelected = _selectedCompletionFilter == value;
     return ChoiceChip(
-      label: Text(label, style: TextStyle(fontSize: 11, fontWeight: isSelected ? FontWeight.bold : FontWeight.normal)),
+      label: Text(
+        label,
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+        ),
+      ),
       selected: isSelected,
       onSelected: (_) => setState(() => _selectedCompletionFilter = value),
       selectedColor: const Color(0xFF1E40AF),
-      labelStyle: TextStyle(color: isSelected ? Colors.white : const Color(0xFF334155)),
+      labelStyle: TextStyle(
+        color: isSelected ? Colors.white : const Color(0xFF334155),
+      ),
       backgroundColor: const Color(0xFFF1F5F9),
       side: BorderSide.none,
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 0),
@@ -1155,7 +1650,9 @@ class _ProfessorDashboardScreenState extends State<ProfessorDashboardScreen> {
 
   // Custom Requested Skills Approval Queue Section
   Widget _buildCustomSkillsApprovalSection() {
-    final requests = _skillService.getRequestsByStatus(_selectedSkillStatusFilter);
+    final requests = _skillService.getRequestsByStatus(
+      _selectedSkillStatusFilter,
+    );
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -1178,7 +1675,11 @@ class _ProfessorDashboardScreenState extends State<ProfessorDashboardScreen> {
                 children: const [
                   Text(
                     'Custom Requested Skills Approval Queue',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF0F172A),
+                    ),
                   ),
                   SizedBox(height: 2),
                   Text(
@@ -1193,10 +1694,22 @@ class _ProfessorDashboardScreenState extends State<ProfessorDashboardScreen> {
                 spacing: 6,
                 children: [
                   _buildSkillStatusFilterChip('All', null),
-                  _buildSkillStatusFilterChip('Pending', SkillApprovalStatus.pending),
-                  _buildSkillStatusFilterChip('Under Review', SkillApprovalStatus.underReview),
-                  _buildSkillStatusFilterChip('Approved', SkillApprovalStatus.approved),
-                  _buildSkillStatusFilterChip('Rejected', SkillApprovalStatus.rejected),
+                  _buildSkillStatusFilterChip(
+                    'Pending',
+                    SkillApprovalStatus.pending,
+                  ),
+                  _buildSkillStatusFilterChip(
+                    'Under Review',
+                    SkillApprovalStatus.underReview,
+                  ),
+                  _buildSkillStatusFilterChip(
+                    'Approved',
+                    SkillApprovalStatus.approved,
+                  ),
+                  _buildSkillStatusFilterChip(
+                    'Rejected',
+                    SkillApprovalStatus.rejected,
+                  ),
                 ],
               ),
             ],
@@ -1207,14 +1720,18 @@ class _ProfessorDashboardScreenState extends State<ProfessorDashboardScreen> {
             Container(
               padding: const EdgeInsets.all(28),
               alignment: Alignment.center,
-              child: const Text('No custom skill requests found in this category.', style: TextStyle(fontSize: 13, color: Color(0xFF94A3B8))),
+              child: const Text(
+                'No custom skill requests found in this category.',
+                style: TextStyle(fontSize: 13, color: Color(0xFF94A3B8)),
+              ),
             )
           else
             ListView.separated(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               itemCount: requests.length,
-              separatorBuilder: (_, _) => const Divider(color: Color(0xFFF1F5F9), height: 1),
+              separatorBuilder: (_, _) =>
+                  const Divider(color: Color(0xFFF1F5F9), height: 1),
               itemBuilder: (context, index) {
                 final req = requests[index];
                 return LayoutBuilder(
@@ -1224,8 +1741,15 @@ class _ProfessorDashboardScreenState extends State<ProfessorDashboardScreen> {
                       children: [
                         Container(
                           padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(color: const Color(0xFFEFF6FF), borderRadius: BorderRadius.circular(8)),
-                          child: const Icon(Icons.code, size: 20, color: Color(0xFF1E40AF)),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFEFF6FF),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Icon(
+                            Icons.code,
+                            size: 20,
+                            color: Color(0xFF1E40AF),
+                          ),
                         ),
                         const SizedBox(width: 14),
                         Expanded(
@@ -1237,19 +1761,52 @@ class _ProfessorDashboardScreenState extends State<ProfessorDashboardScreen> {
                                 spacing: 8,
                                 runSpacing: 4,
                                 children: [
-                                  Text(req.skillName, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
+                                  Text(
+                                    req.skillName,
+                                    style: const TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.bold,
+                                      color: Color(0xFF0F172A),
+                                    ),
+                                  ),
                                   Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                    decoration: BoxDecoration(color: const Color(0xFFF1F5F9), borderRadius: BorderRadius.circular(4)),
-                                    child: Text(req.domain, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: Color(0xFF475569))),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 6,
+                                      vertical: 2,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFF1F5F9),
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: Text(
+                                      req.domain,
+                                      style: const TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w600,
+                                        color: Color(0xFF475569),
+                                      ),
+                                    ),
                                   ),
                                 ],
                               ),
                               const SizedBox(height: 2),
-                              Text('Requested by ${req.studentName} (${req.studentId} • ${req.block})', style: const TextStyle(fontSize: 11, color: Color(0xFF64748B))),
+                              Text(
+                                'Requested by ${req.studentName} (${req.studentId} • ${req.block})',
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  color: Color(0xFF64748B),
+                                ),
+                              ),
                               if (req.remarks != null) ...[
                                 const SizedBox(height: 2),
-                                Text('Remarks: ${req.remarks}', style: const TextStyle(fontSize: 11, fontStyle: FontStyle.italic, color: Color(0xFF475569))),
+                                Text(
+                                  'Remarks: ${req.remarks}',
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    fontStyle: FontStyle.italic,
+                                    color: Color(0xFF475569),
+                                  ),
+                                ),
                               ],
                             ],
                           ),
@@ -1263,13 +1820,20 @@ class _ProfessorDashboardScreenState extends State<ProfessorDashboardScreen> {
                       runSpacing: 4,
                       children: [
                         _buildSkillStatusBadge(req.status),
-                        if (req.status == SkillApprovalStatus.pending || req.status == SkillApprovalStatus.underReview) ...[
+                        if (req.status == SkillApprovalStatus.pending ||
+                            req.status == SkillApprovalStatus.underReview) ...[
                           OutlinedButton(
                             onPressed: () {
-                              _skillService.updateStatus(req.id, SkillApprovalStatus.approved, remarks: 'Verified syllabus alignment.');
+                              _skillService.updateStatus(
+                                req.id,
+                                SkillApprovalStatus.approved,
+                                remarks: 'Verified syllabus alignment.',
+                              );
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
-                                  content: Text('Approved "${req.skillName}". Added to official skill catalog!'),
+                                  content: Text(
+                                    'Approved "${req.skillName}". Added to official skill catalog!',
+                                  ),
                                   backgroundColor: const Color(0xFF16A34A),
                                   behavior: SnackBarBehavior.floating,
                                 ),
@@ -1278,35 +1842,66 @@ class _ProfessorDashboardScreenState extends State<ProfessorDashboardScreen> {
                             style: OutlinedButton.styleFrom(
                               foregroundColor: const Color(0xFF16A34A),
                               side: const BorderSide(color: Color(0xFF86EFAC)),
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 6,
+                              ),
                               minimumSize: Size.zero,
                             ),
-                            child: const Text('Approve', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                            child: const Text(
+                              'Approve',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                           ),
                           if (req.status != SkillApprovalStatus.underReview)
                             OutlinedButton(
                               onPressed: () {
-                                _skillService.updateStatus(req.id, SkillApprovalStatus.underReview, remarks: 'Reviewing domain applicability.');
+                                _skillService.updateStatus(
+                                  req.id,
+                                  SkillApprovalStatus.underReview,
+                                  remarks: 'Reviewing domain applicability.',
+                                );
                               },
                               style: OutlinedButton.styleFrom(
                                 foregroundColor: const Color(0xFF2563EB),
-                                side: const BorderSide(color: Color(0xFFBFDBFE)),
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                                side: const BorderSide(
+                                  color: Color(0xFFBFDBFE),
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 6,
+                                ),
                                 minimumSize: Size.zero,
                               ),
-                              child: const Text('Review', style: TextStyle(fontSize: 11)),
+                              child: const Text(
+                                'Review',
+                                style: TextStyle(fontSize: 11),
+                              ),
                             ),
                           OutlinedButton(
                             onPressed: () {
-                              _skillService.updateStatus(req.id, SkillApprovalStatus.rejected, remarks: 'Out of scope for current curriculum.');
+                              _skillService.updateStatus(
+                                req.id,
+                                SkillApprovalStatus.rejected,
+                                remarks: 'Out of scope for current curriculum.',
+                              );
                             },
                             style: OutlinedButton.styleFrom(
                               foregroundColor: const Color(0xFFDC2626),
                               side: const BorderSide(color: Color(0xFFFECACA)),
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 6,
+                              ),
                               minimumSize: Size.zero,
                             ),
-                            child: const Text('Reject', style: TextStyle(fontSize: 11)),
+                            child: const Text(
+                              'Reject',
+                              style: TextStyle(fontSize: 11),
+                            ),
                           ),
                         ],
                       ],
@@ -1345,14 +1940,25 @@ class _ProfessorDashboardScreenState extends State<ProfessorDashboardScreen> {
     );
   }
 
-  Widget _buildSkillStatusFilterChip(String label, SkillApprovalStatus? status) {
+  Widget _buildSkillStatusFilterChip(
+    String label,
+    SkillApprovalStatus? status,
+  ) {
     final isSelected = _selectedSkillStatusFilter == status;
     return ChoiceChip(
-      label: Text(label, style: TextStyle(fontSize: 11, fontWeight: isSelected ? FontWeight.bold : FontWeight.normal)),
+      label: Text(
+        label,
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+        ),
+      ),
       selected: isSelected,
       onSelected: (_) => setState(() => _selectedSkillStatusFilter = status),
       selectedColor: const Color(0xFF1E40AF),
-      labelStyle: TextStyle(color: isSelected ? Colors.white : const Color(0xFF334155)),
+      labelStyle: TextStyle(
+        color: isSelected ? Colors.white : const Color(0xFF334155),
+      ),
       backgroundColor: const Color(0xFFF1F5F9),
       side: BorderSide.none,
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 0),
@@ -1382,8 +1988,14 @@ class _ProfessorDashboardScreenState extends State<ProfessorDashboardScreen> {
     }
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(6)),
-      child: Text(status.label, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: fg)),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Text(
+        status.label,
+        style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: fg),
+      ),
     );
   }
 }

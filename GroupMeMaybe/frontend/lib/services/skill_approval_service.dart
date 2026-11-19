@@ -1,8 +1,10 @@
 import 'package:flutter/foundation.dart';
+
 import '../models/custom_skill_request.dart';
 
 class SkillApprovalService extends ChangeNotifier {
-  static final SkillApprovalService _instance = SkillApprovalService._internal();
+  static final SkillApprovalService _instance =
+      SkillApprovalService._internal();
   factory SkillApprovalService() => _instance;
 
   SkillApprovalService._internal() {
@@ -37,7 +39,8 @@ class SkillApprovalService extends ChangeNotifier {
         domain: 'Frontend Development',
         submittedAt: DateTime.now().subtract(const Duration(hours: 12)),
         status: SkillApprovalStatus.underReview,
-        remarks: 'Checking syllabus alignment with interactive graphics module.',
+        remarks:
+            'Checking syllabus alignment with interactive graphics module.',
       ),
       CustomSkillRequest(
         id: 'csr-03',
@@ -94,7 +97,11 @@ class SkillApprovalService extends ChangeNotifier {
     notifyListeners();
   }
 
-  void updateStatus(String requestId, SkillApprovalStatus newStatus, {String? remarks}) {
+  void updateStatus(
+    String requestId,
+    SkillApprovalStatus newStatus, {
+    String? remarks,
+  }) {
     final index = _requests.indexWhere((r) => r.id == requestId);
     if (index != -1) {
       final req = _requests[index];

@@ -16,7 +16,9 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
   final _middleNameController = TextEditingController(text: 'Alvarez');
   final _lastNameController = TextEditingController(text: 'Mendoza');
   final _studentIdController = TextEditingController(text: '2023-10492');
-  final _emailController = TextEditingController(text: 'carlos.mendoza@student.edu');
+  final _emailController = TextEditingController(
+    text: 'carlos.mendoza@student.edu',
+  );
   String _selectedBlock = 'BSIT 2A';
 
   // Step 2: Technical Skills
@@ -127,41 +129,71 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
 
   static const Map<String, List<String>> _toolCategories = {
     'programming': [
-      'Python', 'Java', 'JavaScript', 'TypeScript', 'PHP', 'C', 'C++', 'C#', 'Kotlin', 'Dart'
+      'Python',
+      'Java',
+      'JavaScript',
+      'TypeScript',
+      'PHP',
+      'C',
+      'C++',
+      'C#',
+      'Kotlin',
+      'Dart',
     ],
-    'version_control': [
-      'Git', 'GitHub', 'GitLab', 'Trello', 'Jira', 'Notion'
-    ],
+    'version_control': ['Git', 'GitHub', 'GitLab', 'Trello', 'Jira', 'Notion'],
     'frontend': [
-      'HTML', 'CSS', 'React', 'Vue.js', 'Angular', 'Bootstrap', 'Tailwind CSS'
+      'HTML',
+      'CSS',
+      'React',
+      'Vue.js',
+      'Angular',
+      'Bootstrap',
+      'Tailwind CSS',
     ],
     'backend': [
-      'Node.js', 'Express.js', 'Laravel', 'Django', 'Flask', 'Spring Boot', 'ASP.NET Core'
+      'Node.js',
+      'Express.js',
+      'Laravel',
+      'Django',
+      'Flask',
+      'Spring Boot',
+      'ASP.NET Core',
     ],
-    'mobile': [
-      'Flutter', 'React Native', 'Android Studio', 'Jetpack Compose'
-    ],
+    'mobile': ['Flutter', 'React Native', 'Android Studio', 'Jetpack Compose'],
     'database': [
-      'MySQL', 'PostgreSQL', 'SQLite', 'MongoDB', 'Firebase', 'Supabase'
+      'MySQL',
+      'PostgreSQL',
+      'SQLite',
+      'MongoDB',
+      'Firebase',
+      'Supabase',
     ],
-    'ui_ux': [
-      'Figma', 'Adobe XD', 'Canva', 'Adobe Photoshop'
-    ],
-    'api': [
-      'Postman', 'Swagger', 'Insomnia'
-    ],
+    'ui_ux': ['Figma', 'Adobe XD', 'Canva', 'Adobe Photoshop'],
+    'api': ['Postman', 'Swagger', 'Insomnia'],
     'cloud': [
-      'Google Cloud', 'AWS', 'Microsoft Azure', 'Vercel', 'Netlify', 'Docker'
+      'Google Cloud',
+      'AWS',
+      'Microsoft Azure',
+      'Vercel',
+      'Netlify',
+      'Docker',
     ],
     'ai_data': [
-      'Jupyter Notebook', 'Pandas', 'NumPy', 'TensorFlow', 'PyTorch', 'Power BI'
+      'Jupyter Notebook',
+      'Pandas',
+      'NumPy',
+      'TensorFlow',
+      'PyTorch',
+      'Power BI',
     ],
     'docs': [
-      'Microsoft Word', 'Excel', 'PowerPoint', 'Google Docs', 'Google Sheets'
+      'Microsoft Word',
+      'Excel',
+      'PowerPoint',
+      'Google Docs',
+      'Google Sheets',
     ],
-    'security': [
-      'Cisco Packet Tracer', 'Wireshark', 'Nmap', 'Kali Linux'
-    ],
+    'security': ['Cisco Packet Tracer', 'Wireshark', 'Nmap', 'Kali Linux'],
   };
 
   @override
@@ -201,8 +233,11 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
 
   double get _completionProgress {
     double progress = 0.0;
-    if (_firstNameController.text.isNotEmpty && _lastNameController.text.isNotEmpty) progress += 0.20;
-    if (_studentIdController.text.isNotEmpty && _selectedBlock.isNotEmpty) progress += 0.20;
+    if (_firstNameController.text.isNotEmpty &&
+        _lastNameController.text.isNotEmpty)
+      progress += 0.20;
+    if (_studentIdController.text.isNotEmpty && _selectedBlock.isNotEmpty)
+      progress += 0.20;
     if (_selectedSkills.isNotEmpty) progress += 0.20;
     if (_rolePriority1.isNotEmpty) progress += 0.15;
     if (_selectedTools.isNotEmpty) progress += 0.15;
@@ -228,8 +263,10 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
       if (skill.contains('database')) categories.add('database');
       if (skill.contains('ui/ux')) categories.add('ui_ux');
       if (skill.contains('api')) categories.add('api');
-      if (skill.contains('networking') || skill.contains('cybersecurity')) categories.add('security');
-      if (skill.contains('artificial') || skill.contains('data')) categories.add('ai_data');
+      if (skill.contains('networking') || skill.contains('cybersecurity'))
+        categories.add('security');
+      if (skill.contains('artificial') || skill.contains('data'))
+        categories.add('ai_data');
       if (skill.contains('documentation')) categories.add('docs');
     }
 
@@ -270,7 +307,9 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
         setState(() => _isSaving = false);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Please complete the highlighted sections to save your full profile.'),
+            content: Text(
+              'Please complete the highlighted sections to save your full profile.',
+            ),
             backgroundColor: Color(0xFFDC2626),
             behavior: SnackBarBehavior.floating,
           ),
@@ -291,11 +330,11 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          isDraft
-              ? 'Draft saved successfully!'
-              : 'Profile complete! You are now visible in team matching recommendations.',
+          isDraft ? 'Draft saved successfully!' : 'Profile complete! You are now visible in team matching recommendations.',
         ),
-        backgroundColor: isDraft ? const Color(0xFF2563EB) : const Color(0xFF16A34A),
+        backgroundColor: isDraft
+            ? const Color(0xFF2563EB)
+            : const Color(0xFF16A34A),
         behavior: SnackBarBehavior.floating,
       ),
     );
@@ -311,7 +350,10 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
           children: const [
             Icon(Icons.lightbulb_outline, color: Color(0xFFD97706)),
             SizedBox(width: 8),
-            Text('Request Custom Skill', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            Text(
+              'Request Custom Skill',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
           ],
         ),
         content: Column(
@@ -320,7 +362,11 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
           children: [
             const Text(
               'Custom skills must be verified and approved by your professor before they appear on your official team matching card.',
-              style: TextStyle(fontSize: 13, color: Color(0xFF64748B), height: 1.4),
+              style: TextStyle(
+                fontSize: 13,
+                color: Color(0xFF64748B),
+                height: 1.4,
+              ),
             ),
             const SizedBox(height: 16),
             TextField(
@@ -328,7 +374,9 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
               decoration: InputDecoration(
                 labelText: 'Skill Name',
                 hintText: 'e.g. Solidity, Unreal Engine, Kubernetes',
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
               ),
             ),
           ],
@@ -347,7 +395,9 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
               final newSkill = customSkillController.text.trim();
               if (newSkill.isNotEmpty) {
                 SkillApprovalService().submitRequest(
-                  studentName: '${_firstNameController.text.trim()} ${_lastNameController.text.trim()}'.trim(),
+                  studentName:
+                      '${_firstNameController.text.trim()} ${_lastNameController.text.trim()}'
+                          .trim(),
                   studentId: _studentIdController.text.trim(),
                   block: _selectedBlock,
                   skillName: newSkill,
@@ -362,7 +412,9 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
                 Navigator.pop(ctx);
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: Text('Custom skill "$newSkill" submitted for professor approval.'),
+                    content: Text(
+                      'Custom skill "$newSkill" submitted for professor approval.',
+                    ),
                     backgroundColor: const Color(0xFF16A34A),
                     behavior: SnackBarBehavior.floating,
                   ),
@@ -383,7 +435,9 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
       body: Row(
         children: [
           // Unified Sidebar
-          const StudentSidebar(currentDestination: StudentNavDestination.settings),
+          const StudentSidebar(
+            currentDestination: StudentNavDestination.settings,
+          ),
 
           // Main Scrollable Form Area
           Expanded(
@@ -490,7 +544,8 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
                       _buildSectionCard(
                         id: 'info',
                         title: '1. Personal & Academic Information',
-                        subtitle: 'Basic student credentials and section assignment',
+                        subtitle:
+                            'Basic student credentials and section assignment',
                         icon: Icons.person_outline,
                         child: Column(
                           children: [
@@ -545,7 +600,8 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
                                 Expanded(
                                   flex: 2,
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       const Text(
                                         'Class Block / Section',
@@ -560,12 +616,35 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
                                         isExpanded: true,
                                         initialValue: _selectedBlock,
                                         decoration: InputDecoration(
-                                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                                          contentPadding:
+                                              const EdgeInsets.symmetric(
+                                                horizontal: 12,
+                                                vertical: 10,
+                                              ),
+                                          border: OutlineInputBorder(
+                                            borderRadius: BorderRadius.circular(
+                                              8,
+                                            ),
+                                          ),
                                         ),
-                                        items: _blocks.map((b) => DropdownMenuItem(value: b, child: Text(b, style: const TextStyle(fontSize: 13)))).toList(),
+                                        items: _blocks
+                                            .map(
+                                              (b) => DropdownMenuItem(
+                                                value: b,
+                                                child: Text(
+                                                  b,
+                                                  style: const TextStyle(
+                                                    fontSize: 13,
+                                                  ),
+                                                ),
+                                              ),
+                                            )
+                                            .toList(),
                                         onChanged: (val) {
-                                          if (val != null) setState(() => _selectedBlock = val);
+                                          if (val != null)
+                                            setState(
+                                              () => _selectedBlock = val,
+                                            );
                                         },
                                       ),
                                     ],
@@ -592,18 +671,42 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
                                 Expanded(
                                   child: DropdownButtonFormField<String>(
                                     isExpanded: true,
-                                    hint: const Text('Select a technical skill to add...', style: TextStyle(fontSize: 13)),
+                                    hint: const Text(
+                                      'Select a technical skill to add...',
+                                      style: TextStyle(fontSize: 13),
+                                    ),
                                     decoration: InputDecoration(
-                                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                                      contentPadding:
+                                          const EdgeInsets.symmetric(
+                                            horizontal: 14,
+                                            vertical: 10,
+                                          ),
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
                                     ),
                                     items: _combinedTechnicalSkills
-                                        .where((s) => !_selectedSkills.contains(s))
-                                        .map((s) => DropdownMenuItem(value: s, child: Text(s, style: const TextStyle(fontSize: 13), overflow: TextOverflow.ellipsis)))
+                                        .where(
+                                          (s) => !_selectedSkills.contains(s),
+                                        )
+                                        .map(
+                                          (s) => DropdownMenuItem(
+                                            value: s,
+                                            child: Text(
+                                              s,
+                                              style: const TextStyle(
+                                                fontSize: 13,
+                                              ),
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ),
+                                        )
                                         .toList(),
                                     onChanged: (val) {
                                       if (val != null) {
-                                        setState(() => _selectedSkills.add(val));
+                                        setState(
+                                          () => _selectedSkills.add(val),
+                                        );
                                       }
                                     },
                                   ),
@@ -615,8 +718,13 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
                                   label: const Text('Request Custom Skill'),
                                   style: OutlinedButton.styleFrom(
                                     foregroundColor: const Color(0xFF1E40AF),
-                                    side: const BorderSide(color: Color(0xFFBFDBFE)),
-                                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                    side: const BorderSide(
+                                      color: Color(0xFFBFDBFE),
+                                    ),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 14,
+                                      vertical: 12,
+                                    ),
                                   ),
                                 ),
                               ],
@@ -632,7 +740,9 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
                                   color: const Color(0xFFDBEAFE),
                                   textColor: const Color(0xFF1E40AF),
                                   onRemove: () {
-                                    setState(() => _selectedSkills.remove(skill));
+                                    setState(
+                                      () => _selectedSkills.remove(skill),
+                                    );
                                   },
                                 );
                               }).toList(),
@@ -654,11 +764,13 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
                               return Column(
                                 children: [
                                   _buildPriorityRoleDropdown(
-                                    priorityLabel: '1st Priority (Primary Role)',
+                                    priorityLabel:
+                                        '1st Priority (Primary Role)',
                                     badgeColor: const Color(0xFF16A34A),
                                     value: _rolePriority1,
                                     onChanged: (val) {
-                                      if (val != null) setState(() => _rolePriority1 = val);
+                                      if (val != null)
+                                        setState(() => _rolePriority1 = val);
                                     },
                                   ),
                                   const SizedBox(height: 14),
@@ -666,7 +778,8 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
                                     priorityLabel: '2nd Priority (Secondary)',
                                     badgeColor: const Color(0xFF2563EB),
                                     value: _rolePriority2,
-                                    onChanged: (val) => setState(() => _rolePriority2 = val),
+                                    onChanged: (val) =>
+                                        setState(() => _rolePriority2 = val),
                                     isOptional: true,
                                   ),
                                   const SizedBox(height: 14),
@@ -674,7 +787,8 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
                                     priorityLabel: '3rd Priority (Tertiary)',
                                     badgeColor: const Color(0xFF6B7280),
                                     value: _rolePriority3,
-                                    onChanged: (val) => setState(() => _rolePriority3 = val),
+                                    onChanged: (val) =>
+                                        setState(() => _rolePriority3 = val),
                                     isOptional: true,
                                   ),
                                 ],
@@ -684,11 +798,13 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
                               children: [
                                 Expanded(
                                   child: _buildPriorityRoleDropdown(
-                                    priorityLabel: '1st Priority (Primary Role)',
+                                    priorityLabel:
+                                        '1st Priority (Primary Role)',
                                     badgeColor: const Color(0xFF16A34A),
                                     value: _rolePriority1,
                                     onChanged: (val) {
-                                      if (val != null) setState(() => _rolePriority1 = val);
+                                      if (val != null)
+                                        setState(() => _rolePriority1 = val);
                                     },
                                   ),
                                 ),
@@ -698,7 +814,8 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
                                     priorityLabel: '2nd Priority (Secondary)',
                                     badgeColor: const Color(0xFF2563EB),
                                     value: _rolePriority2,
-                                    onChanged: (val) => setState(() => _rolePriority2 = val),
+                                    onChanged: (val) =>
+                                        setState(() => _rolePriority2 = val),
                                     isOptional: true,
                                   ),
                                 ),
@@ -708,7 +825,8 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
                                     priorityLabel: '3rd Priority (Tertiary)',
                                     badgeColor: const Color(0xFF6B7280),
                                     value: _rolePriority3,
-                                    onChanged: (val) => setState(() => _rolePriority3 = val),
+                                    onChanged: (val) =>
+                                        setState(() => _rolePriority3 = val),
                                     isOptional: true,
                                   ),
                                 ),
@@ -742,8 +860,12 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
                               Wrap(
                                 spacing: 8,
                                 runSpacing: 8,
-                                children: _toolCategories[category]!.map((tool) {
-                                  final isSelected = _selectedTools.contains(tool);
+                                children: _toolCategories[category]!.map((
+                                  tool,
+                                ) {
+                                  final isSelected = _selectedTools.contains(
+                                    tool,
+                                  );
                                   return FilterChip(
                                     label: Text(tool),
                                     selected: isSelected,
@@ -751,7 +873,9 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
                                     checkmarkColor: const Color(0xFF1D4ED8),
                                     backgroundColor: Colors.white,
                                     side: BorderSide(
-                                      color: isSelected ? const Color(0xFF3B82F6) : const Color(0xFFCBD5E1),
+                                      color: isSelected
+                                          ? const Color(0xFF3B82F6)
+                                          : const Color(0xFFCBD5E1),
                                     ),
                                     onSelected: (selected) {
                                       setState(() {
@@ -785,15 +909,22 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
                               spacing: 8,
                               runSpacing: 8,
                               children: _allInterests.map((interest) {
-                                final isSelected = _selectedInterests.contains(interest);
+                                final isSelected = _selectedInterests.contains(
+                                  interest,
+                                );
                                 return FilterChip(
-                                  label: Text(interest, style: const TextStyle(fontSize: 12)),
+                                  label: Text(
+                                    interest,
+                                    style: const TextStyle(fontSize: 12),
+                                  ),
                                   selected: isSelected,
                                   selectedColor: const Color(0xFFECFDF5),
                                   checkmarkColor: const Color(0xFF059669),
                                   backgroundColor: Colors.white,
                                   side: BorderSide(
-                                    color: isSelected ? const Color(0xFF10B981) : const Color(0xFFCBD5E1),
+                                    color: isSelected
+                                        ? const Color(0xFF10B981)
+                                        : const Color(0xFFCBD5E1),
                                   ),
                                   onSelected: (selected) {
                                     setState(() {
@@ -810,7 +941,11 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
                             const SizedBox(height: 18),
                             const Text(
                               'Previous Project Experience',
-                              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF334155)),
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF334155),
+                              ),
                             ),
                             const SizedBox(height: 6),
                             TextField(
@@ -818,7 +953,9 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
                               maxLines: 3,
                               decoration: InputDecoration(
                                 hintText: 'Share a brief summary of projects or coursework you have worked on...',
-                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
                               ),
                             ),
                           ],
@@ -837,60 +974,106 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
                           children: [
                             const Text(
                               'Available Days',
-                              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF334155)),
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF334155),
+                              ),
                             ),
                             const SizedBox(height: 8),
                             Wrap(
                               spacing: 8,
-                              children: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day) {
-                                final isSelected = _selectedDays.contains(day);
-                                return ChoiceChip(
-                                  label: Text(day),
-                                  selected: isSelected,
-                                  selectedColor: const Color(0xFF1E40AF),
-                                  labelStyle: TextStyle(
-                                    color: isSelected ? Colors.white : const Color(0xFF334155),
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                  onSelected: (selected) {
-                                    setState(() {
-                                      if (selected) {
-                                        _selectedDays.add(day);
-                                      } else {
-                                        _selectedDays.remove(day);
-                                      }
-                                    });
-                                  },
-                                );
-                              }).toList(),
+                              children:
+                                  [
+                                    'Mon',
+                                    'Tue',
+                                    'Wed',
+                                    'Thu',
+                                    'Fri',
+                                    'Sat',
+                                    'Sun',
+                                  ].map((day) {
+                                    final isSelected = _selectedDays.contains(
+                                      day,
+                                    );
+                                    return ChoiceChip(
+                                      label: Text(day),
+                                      selected: isSelected,
+                                      selectedColor: const Color(0xFF1E40AF),
+                                      labelStyle: TextStyle(
+                                        color: isSelected
+                                            ? Colors.white
+                                            : const Color(0xFF334155),
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                      onSelected: (selected) {
+                                        setState(() {
+                                          if (selected) {
+                                            _selectedDays.add(day);
+                                          } else {
+                                            _selectedDays.remove(day);
+                                          }
+                                        });
+                                      },
+                                    );
+                                  }).toList(),
                             ),
                             const SizedBox(height: 16),
                             Row(
                               children: [
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       const Text(
                                         'Preferred Meeting Time',
-                                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF334155)),
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600,
+                                          color: Color(0xFF334155),
+                                        ),
                                       ),
                                       const SizedBox(height: 6),
                                       DropdownButtonFormField<String>(
                                         isExpanded: true,
                                         initialValue: _selectedMeetingTime,
                                         decoration: InputDecoration(
-                                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                                          contentPadding:
+                                              const EdgeInsets.symmetric(
+                                                horizontal: 12,
+                                                vertical: 10,
+                                              ),
+                                          border: OutlineInputBorder(
+                                            borderRadius: BorderRadius.circular(
+                                              8,
+                                            ),
+                                          ),
                                         ),
-                                        items: [
-                                          'Morning (8AM - 12PM)',
-                                          'Afternoon (1PM - 5PM)',
-                                          'Evening (after 5PM)',
-                                          'Weekends',
-                                        ].map((t) => DropdownMenuItem(value: t, child: Text(t, style: const TextStyle(fontSize: 13)))).toList(),
+                                        items:
+                                            [
+                                                  'Morning (8AM - 12PM)',
+                                                  'Afternoon (1PM - 5PM)',
+                                                  'Evening (after 5PM)',
+                                                  'Weekends',
+                                                ]
+                                                .map(
+                                                  (t) => DropdownMenuItem(
+                                                    value: t,
+                                                    child: Text(
+                                                      t,
+                                                      style: const TextStyle(
+                                                        fontSize: 13,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                )
+                                                .toList(),
                                         onChanged: (val) {
-                                          if (val != null) setState(() => _selectedMeetingTime = val);
+                                          if (val != null)
+                                            setState(
+                                              () => _selectedMeetingTime = val,
+                                            );
                                         },
                                       ),
                                     ],
@@ -899,25 +1082,51 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
                                 const SizedBox(width: 14),
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       const Text(
                                         'Preferred Collaboration Mode',
-                                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF334155)),
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600,
+                                          color: Color(0xFF334155),
+                                        ),
                                       ),
                                       const SizedBox(height: 6),
                                       DropdownButtonFormField<String>(
                                         isExpanded: true,
                                         initialValue: _collaborationMode,
                                         decoration: InputDecoration(
-                                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                                          contentPadding:
+                                              const EdgeInsets.symmetric(
+                                                horizontal: 12,
+                                                vertical: 10,
+                                              ),
+                                          border: OutlineInputBorder(
+                                            borderRadius: BorderRadius.circular(
+                                              8,
+                                            ),
+                                          ),
                                         ),
                                         items: ['On-campus', 'Online', 'Hybrid']
-                                            .map((m) => DropdownMenuItem(value: m, child: Text(m, style: const TextStyle(fontSize: 13))))
+                                            .map(
+                                              (m) => DropdownMenuItem(
+                                                value: m,
+                                                child: Text(
+                                                  m,
+                                                  style: const TextStyle(
+                                                    fontSize: 13,
+                                                  ),
+                                                ),
+                                              ),
+                                            )
                                             .toList(),
                                         onChanged: (val) {
-                                          if (val != null) setState(() => _collaborationMode = val);
+                                          if (val != null)
+                                            setState(
+                                              () => _collaborationMode = val,
+                                            );
                                         },
                                       ),
                                     ],
@@ -945,24 +1154,48 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
                               runSpacing: 10,
                               children: [
                                 OutlinedButton(
-                                  onPressed: _isSaving ? null : () => _validateAndSave(isDraft: true),
+                                  onPressed: _isSaving
+                                      ? null
+                                      : () => _validateAndSave(isDraft: true),
                                   style: OutlinedButton.styleFrom(
-                                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-                                    side: const BorderSide(color: Color(0xFFCBD5E1)),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 20,
+                                      vertical: 14,
+                                    ),
+                                    side: const BorderSide(
+                                      color: Color(0xFFCBD5E1),
+                                    ),
                                   ),
                                   child: const Text('Save as Draft'),
                                 ),
                                 ElevatedButton.icon(
-                                  onPressed: _isSaving ? null : () => _validateAndSave(isDraft: false),
+                                  onPressed: _isSaving
+                                      ? null
+                                      : () => _validateAndSave(isDraft: false),
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: const Color(0xFF1E40AF),
                                     foregroundColor: Colors.white,
-                                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 24,
+                                      vertical: 14,
+                                    ),
                                   ),
                                   icon: _isSaving
-                                      ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                                      ? const SizedBox(
+                                          width: 16,
+                                          height: 16,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            color: Colors.white,
+                                          ),
+                                        )
                                       : const Icon(Icons.check, size: 18),
-                                  label: const Text('Save Profile', style: TextStyle(fontWeight: FontWeight.bold)),
+                                  label: const Text(
+                                    'Save Profile',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
                                 ),
                               ],
                             );
@@ -973,12 +1206,19 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
                                 children: [
                                   Row(
                                     children: const [
-                                      Icon(Icons.info_outline, color: Color(0xFF2563EB), size: 20),
+                                      Icon(
+                                        Icons.info_outline,
+                                        color: Color(0xFF2563EB),
+                                        size: 20,
+                                      ),
                                       SizedBox(width: 10),
                                       Expanded(
                                         child: Text(
                                           'Saving your complete profile publishes your preferences so you appear in recommendations and can join or form groups.',
-                                          style: TextStyle(fontSize: 13, color: Color(0xFF475569)),
+                                          style: TextStyle(
+                                            fontSize: 13,
+                                            color: Color(0xFF475569),
+                                          ),
                                         ),
                                       ),
                                     ],
@@ -991,12 +1231,19 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
 
                             return Row(
                               children: [
-                                const Icon(Icons.info_outline, color: Color(0xFF2563EB), size: 20),
+                                const Icon(
+                                  Icons.info_outline,
+                                  color: Color(0xFF2563EB),
+                                  size: 20,
+                                ),
                                 const SizedBox(width: 10),
                                 const Expanded(
                                   child: Text(
                                     'Saving your complete profile publishes your preferences so you appear in recommendations and can join or form groups.',
-                                    style: TextStyle(fontSize: 13, color: Color(0xFF475569)),
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      color: Color(0xFF475569),
+                                    ),
                                   ),
                                 ),
                                 const SizedBox(width: 16),
@@ -1053,13 +1300,17 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: hasError ? const Color(0xFFFEE2E2) : const Color(0xFFEFF6FF),
+                  color: hasError
+                      ? const Color(0xFFFEE2E2)
+                      : const Color(0xFFEFF6FF),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Icon(
                   icon,
                   size: 20,
-                  color: hasError ? const Color(0xFFDC2626) : const Color(0xFF1E40AF),
+                  color: hasError
+                      ? const Color(0xFFDC2626)
+                      : const Color(0xFF1E40AF),
                 ),
               ),
               const SizedBox(width: 12),
@@ -1072,14 +1323,18 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
-                        color: hasError ? const Color(0xFF991B1B) : const Color(0xFF0F172A),
+                        color: hasError
+                            ? const Color(0xFF991B1B)
+                            : const Color(0xFF0F172A),
                       ),
                     ),
                     Text(
                       subtitle,
                       style: TextStyle(
                         fontSize: 12,
-                        color: hasError ? const Color(0xFFB91C1C) : const Color(0xFF64748B),
+                        color: hasError
+                            ? const Color(0xFFB91C1C)
+                            : const Color(0xFF64748B),
                       ),
                     ),
                   ],
@@ -1087,14 +1342,21 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
               ),
               if (hasError)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: const Color(0xFFFEE2E2),
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: const Text(
                     'Required',
-                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFFDC2626)),
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFFDC2626),
+                    ),
                   ),
                 ),
             ],
@@ -1118,7 +1380,11 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
       children: [
         Text(
           label,
-          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF334155)),
+          style: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: Color(0xFF334155),
+          ),
         ),
         const SizedBox(height: 6),
         TextField(
@@ -1126,7 +1392,10 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
           decoration: InputDecoration(
             hintText: hint,
             hintStyle: const TextStyle(fontSize: 13, color: Color(0xFF94A3B8)),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 12,
+              vertical: 10,
+            ),
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
           ),
         ),
@@ -1152,7 +1421,11 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
         children: [
           Text(
             label,
-            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: textColor),
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: textColor,
+            ),
           ),
           const SizedBox(width: 4),
           InkWell(
@@ -1180,7 +1453,10 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
             Container(
               width: 8,
               height: 8,
-              decoration: BoxDecoration(color: badgeColor, shape: BoxShape.circle),
+              decoration: BoxDecoration(
+                color: badgeColor,
+                shape: BoxShape.circle,
+              ),
             ),
             const SizedBox(width: 6),
             Expanded(
@@ -1188,7 +1464,11 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
                 priorityLabel,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF334155)),
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF334155),
+                ),
               ),
             ),
           ],
@@ -1198,14 +1478,35 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
           isExpanded: true,
           initialValue: value,
           decoration: InputDecoration(
-            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 12,
+              vertical: 10,
+            ),
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
           ),
-          hint: Text(isOptional ? 'None' : 'Select role...', style: const TextStyle(fontSize: 13)),
+          hint: Text(
+            isOptional ? 'None' : 'Select role...',
+            style: const TextStyle(fontSize: 13),
+          ),
           items: [
             if (isOptional)
-              const DropdownMenuItem<String>(value: null, child: Text('None', style: TextStyle(fontSize: 13, color: Colors.grey))),
-            ..._allProjectRoles.map((r) => DropdownMenuItem(value: r, child: Text(r, style: const TextStyle(fontSize: 13), overflow: TextOverflow.ellipsis))),
+              const DropdownMenuItem<String>(
+                value: null,
+                child: Text(
+                  'None',
+                  style: TextStyle(fontSize: 13, color: Colors.grey),
+                ),
+              ),
+            ..._allProjectRoles.map(
+              (r) => DropdownMenuItem(
+                value: r,
+                child: Text(
+                  r,
+                  style: const TextStyle(fontSize: 13),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ),
           ],
           onChanged: onChanged,
         ),
@@ -1250,8 +1551,18 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('System Skill Level', style: TextStyle(fontSize: 10, color: Color(0xFF64748B))),
-              Text(level, style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: text)),
+              const Text(
+                'System Skill Level',
+                style: TextStyle(fontSize: 10, color: Color(0xFF64748B)),
+              ),
+              Text(
+                level,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                  color: text,
+                ),
+              ),
             ],
           ),
         ],
@@ -1261,19 +1572,32 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
 
   String _categoryTitle(String cat) {
     switch (cat) {
-      case 'programming': return '💻 PROGRAMMING LANGUAGES';
-      case 'version_control': return '🔄 VERSION CONTROL & COLLABORATION';
-      case 'frontend': return '🌐 FRONTEND TECHNOLOGIES';
-      case 'backend': return '⚙️ BACKEND FRAMEWORKS';
-      case 'mobile': return '📱 MOBILE APP FRAMEWORKS';
-      case 'database': return '🗄️ DATABASE MANAGEMENT';
-      case 'ui_ux': return '🎨 UI / UX DESIGN TOOLS';
-      case 'api': return '🔌 API TESTING & TOOLS';
-      case 'cloud': return '☁️ CLOUD & DEPLOYMENT';
-      case 'ai_data': return '📊 DATA ANALYSIS & AI';
-      case 'docs': return '📄 DOCUMENTATION & PRODUCTIVITY';
-      case 'security': return '🛡️ NETWORKING & CYBERSECURITY';
-      default: return cat.toUpperCase();
+      case 'programming':
+        return '💻 PROGRAMMING LANGUAGES';
+      case 'version_control':
+        return '🔄 VERSION CONTROL & COLLABORATION';
+      case 'frontend':
+        return '🌐 FRONTEND TECHNOLOGIES';
+      case 'backend':
+        return '⚙️ BACKEND FRAMEWORKS';
+      case 'mobile':
+        return '📱 MOBILE APP FRAMEWORKS';
+      case 'database':
+        return '🗄️ DATABASE MANAGEMENT';
+      case 'ui_ux':
+        return '🎨 UI / UX DESIGN TOOLS';
+      case 'api':
+        return '🔌 API TESTING & TOOLS';
+      case 'cloud':
+        return '☁️ CLOUD & DEPLOYMENT';
+      case 'ai_data':
+        return '📊 DATA ANALYSIS & AI';
+      case 'docs':
+        return '📄 DOCUMENTATION & PRODUCTIVITY';
+      case 'security':
+        return '🛡️ NETWORKING & CYBERSECURITY';
+      default:
+        return cat.toUpperCase();
     }
   }
 }

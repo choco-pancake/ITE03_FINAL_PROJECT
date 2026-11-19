@@ -1,17 +1,12 @@
-enum SkillApprovalStatus {
-  pending,
-  underReview,
-  approved,
-  rejected,
-}
+enum SkillApprovalStatus { pending, underReview, approved, rejected }
 
 extension SkillApprovalStatusX on SkillApprovalStatus {
   String get label => switch (this) {
-        SkillApprovalStatus.pending => 'Pending',
-        SkillApprovalStatus.underReview => 'Under Review',
-        SkillApprovalStatus.approved => 'Approved',
-        SkillApprovalStatus.rejected => 'Rejected',
-      };
+    SkillApprovalStatus.pending => 'Pending',
+    SkillApprovalStatus.underReview => 'Under Review',
+    SkillApprovalStatus.approved => 'Approved',
+    SkillApprovalStatus.rejected => 'Rejected',
+  };
 }
 
 class CustomSkillRequest {
@@ -37,10 +32,7 @@ class CustomSkillRequest {
     this.remarks,
   });
 
-  CustomSkillRequest copyWith({
-    SkillApprovalStatus? status,
-    String? remarks,
-  }) {
+  CustomSkillRequest copyWith({SkillApprovalStatus? status, String? remarks}) {
     return CustomSkillRequest(
       id: id,
       studentName: studentName,

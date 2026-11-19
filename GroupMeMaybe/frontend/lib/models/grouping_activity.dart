@@ -51,11 +51,13 @@ class GroupingActivity {
       numberOfGroups: json['number_of_groups'] is int
           ? json['number_of_groups'] as int
           : int.tryParse(json['number_of_groups']?.toString() ?? '6') ?? 6,
-      requiredSkills: (json['required_skills'] as List?)
+      requiredSkills:
+          (json['required_skills'] as List?)
               ?.map((e) => e.toString())
               .toList() ??
           [],
-      preferredSkills: (json['preferred_skills'] as List?)
+      preferredSkills:
+          (json['preferred_skills'] as List?)
               ?.map((e) => e.toString())
               .toList() ??
           [],
@@ -66,13 +68,11 @@ class GroupingActivity {
           : int.tryParse(json['min_common_hours']?.toString() ?? '5') ?? 5,
       groupingDeadline: json['grouping_deadline'] != null
           ? DateTime.tryParse(json['grouping_deadline'].toString()) ??
-              DateTime.now()
+                DateTime.now()
           : DateTime.now(),
-      studentModificationDeadline:
-          json['student_modification_deadline'] != null
-              ? DateTime.tryParse(
-                  json['student_modification_deadline'].toString())
-              : null,
+      studentModificationDeadline: json['student_modification_deadline'] != null
+          ? DateTime.tryParse(json['student_modification_deadline'].toString())
+          : null,
       status: json['status'] as String? ?? 'open',
       studentsCount: json['students_count'] is int
           ? json['students_count'] as int
@@ -82,26 +82,26 @@ class GroupingActivity {
   }
 
   Map<String, dynamic> toJson() => {
-        if (id != null) 'id': id,
-        if (academicClassId != null) 'academic_class_id': academicClassId,
-        'class_name': className,
-        'title': title,
-        'description': description,
-        'grouping_method': groupingMethod,
-        'group_capacity': groupCapacity,
-        'number_of_groups': numberOfGroups,
-        'required_skills': requiredSkills,
-        'preferred_skills': preferredSkills,
-        'min_proficiency_level': minProficiencyLevel,
-        'min_common_hours': minCommonHours,
-        'grouping_deadline': groupingDeadline.toIso8601String(),
-        if (studentModificationDeadline != null)
-          'student_modification_deadline':
-              studentModificationDeadline!.toIso8601String(),
-        'status': status,
-        'students_count': studentsCount,
-        if (formedTeams != null) 'formed_teams': formedTeams,
-      };
+    if (id != null) 'id': id,
+    if (academicClassId != null) 'academic_class_id': academicClassId,
+    'class_name': className,
+    'title': title,
+    'description': description,
+    'grouping_method': groupingMethod,
+    'group_capacity': groupCapacity,
+    'number_of_groups': numberOfGroups,
+    'required_skills': requiredSkills,
+    'preferred_skills': preferredSkills,
+    'min_proficiency_level': minProficiencyLevel,
+    'min_common_hours': minCommonHours,
+    'grouping_deadline': groupingDeadline.toIso8601String(),
+    if (studentModificationDeadline != null)
+      'student_modification_deadline': studentModificationDeadline!
+          .toIso8601String(),
+    'status': status,
+    'students_count': studentsCount,
+    if (formedTeams != null) 'formed_teams': formedTeams,
+  };
 
   GroupingActivity copyWith({
     int? id,

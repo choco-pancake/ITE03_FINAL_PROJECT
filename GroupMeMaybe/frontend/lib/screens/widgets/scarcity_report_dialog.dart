@@ -48,8 +48,9 @@ class _ScarcityReportDialogState extends State<ScarcityReportDialog> {
     });
 
     try {
-      final report =
-          await _activityService.getScarcityReport(widget.activity.id!);
+      final report = await _activityService.getScarcityReport(
+        widget.activity.id!,
+      );
       if (mounted) {
         setState(() {
           _report = report;
@@ -82,8 +83,10 @@ class _ScarcityReportDialogState extends State<ScarcityReportDialog> {
         setState(() => _isAutoForming = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(result['message'] as String? ??
-                'Successfully auto-formed unassigned students!'),
+            content: Text(
+              result['message'] as String? ??
+                  'Successfully auto-formed unassigned students!',
+            ),
             backgroundColor: const Color(0xFF059669),
           ),
         );
@@ -158,8 +161,11 @@ class _ScarcityReportDialogState extends State<ScarcityReportDialog> {
                       color: const Color(0xFFEFF6FF),
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: const Icon(Icons.analytics_outlined,
-                        color: Color(0xFF1E40AF), size: 26),
+                    child: const Icon(
+                      Icons.analytics_outlined,
+                      color: Color(0xFF1E40AF),
+                      size: 26,
+                    ),
                   ),
                   const SizedBox(width: 14),
                   Expanded(
@@ -200,21 +206,23 @@ class _ScarcityReportDialogState extends State<ScarcityReportDialog> {
                 child: _isLoading
                     ? const Center(child: CircularProgressIndicator())
                     : _errorMessage != null
-                        ? Center(
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text('Error: $_errorMessage',
-                                    style: const TextStyle(color: Colors.red)),
-                                const SizedBox(height: 12),
-                                ElevatedButton(
-                                  onPressed: _loadReport,
-                                  child: const Text('Retry'),
-                                ),
-                              ],
+                    ? Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              'Error: $_errorMessage',
+                              style: const TextStyle(color: Colors.red),
                             ),
-                          )
-                        : _buildReportContent(_report!),
+                            const SizedBox(height: 12),
+                            ElevatedButton(
+                              onPressed: _loadReport,
+                              child: const Text('Retry'),
+                            ),
+                          ],
+                        ),
+                      )
+                    : _buildReportContent(_report!),
               ),
 
               const SizedBox(height: 14),
@@ -242,7 +250,8 @@ class _ScarcityReportDialogState extends State<ScarcityReportDialog> {
                       const SizedBox(width: 12),
                       Builder(
                         builder: (context) {
-                          final isAllAssigned = (_report?.unassignedStudentsCount ?? 1) == 0;
+                          final isAllAssigned =
+                              (_report?.unassignedStudentsCount ?? 1) == 0;
                           return ElevatedButton.icon(
                             style: ElevatedButton.styleFrom(
                               backgroundColor: isAllAssigned
@@ -250,18 +259,29 @@ class _ScarcityReportDialogState extends State<ScarcityReportDialog> {
                                   : const Color(0xFF1E40AF),
                               foregroundColor: Colors.white,
                             ),
-                            onPressed: (_isAutoForming || isAllAssigned) ? null : _triggerAutoForm,
+                            onPressed: (_isAutoForming || isAllAssigned)
+                                ? null
+                                : _triggerAutoForm,
                             icon: _isAutoForming
                                 ? const SizedBox(
                                     width: 16,
                                     height: 16,
                                     child: CircularProgressIndicator(
-                                        strokeWidth: 2, color: Colors.white),
+                                      strokeWidth: 2,
+                                      color: Colors.white,
+                                    ),
                                   )
-                                : Icon(isAllAssigned ? Icons.check_circle : Icons.auto_awesome, size: 18),
-                            label: Text(isAllAssigned
-                                ? 'Assignments Finalized (0 Unassigned)'
-                                : 'Auto-Form Unassigned Students'),
+                                : Icon(
+                                    isAllAssigned
+                                        ? Icons.check_circle
+                                        : Icons.auto_awesome,
+                                    size: 18,
+                                  ),
+                            label: Text(
+                              isAllAssigned
+                                  ? 'Assignments Finalized (0 Unassigned)'
+                                  : 'Auto-Form Unassigned Students',
+                            ),
                           );
                         },
                       ),
@@ -326,8 +346,11 @@ class _ScarcityReportDialogState extends State<ScarcityReportDialog> {
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.warning_amber_rounded,
-                          color: Colors.amber.shade900, size: 22),
+                      Icon(
+                        Icons.warning_amber_rounded,
+                        color: Colors.amber.shade900,
+                        size: 22,
+                      ),
                       const SizedBox(width: 8),
                       Text(
                         'Scarce Skills Identified',
@@ -353,12 +376,17 @@ class _ScarcityReportDialogState extends State<ScarcityReportDialog> {
                     runSpacing: 6,
                     children: report.scarceSkills.map((s) {
                       return Chip(
-                        avatar: const Icon(Icons.error_outline,
-                            size: 16, color: Colors.red),
+                        avatar: const Icon(
+                          Icons.error_outline,
+                          size: 16,
+                          color: Colors.red,
+                        ),
                         label: Text(
                           '${s.skill}: ${s.count} students (Needs ${s.needed}, deficit -${s.deficit})',
                           style: const TextStyle(
-                              fontSize: 12, fontWeight: FontWeight.bold),
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                         backgroundColor: Colors.white,
                         side: BorderSide(color: Colors.red.shade300),
@@ -388,8 +416,11 @@ class _ScarcityReportDialogState extends State<ScarcityReportDialog> {
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.check_circle_rounded,
-                      color: Color(0xFF059669), size: 24),
+                  const Icon(
+                    Icons.check_circle_rounded,
+                    color: Color(0xFF059669),
+                    size: 24,
+                  ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
@@ -460,7 +491,9 @@ class _ScarcityReportDialogState extends State<ScarcityReportDialog> {
                           const SizedBox(width: 8),
                           Container(
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 6, vertical: 2),
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
                             decoration: BoxDecoration(
                               color: item.isRequired
                                   ? const Color(0xFFEFF6FF)
@@ -487,12 +520,15 @@ class _ScarcityReportDialogState extends State<ScarcityReportDialog> {
                             const SizedBox(width: 6),
                             Container(
                               padding: const EdgeInsets.symmetric(
-                                  horizontal: 6, vertical: 2),
+                                horizontal: 6,
+                                vertical: 2,
+                              ),
                               decoration: BoxDecoration(
                                 color: const Color(0xFFFEF2F2),
                                 borderRadius: BorderRadius.circular(4),
                                 border: Border.all(
-                                    color: const Color(0xFFFECACA)),
+                                  color: const Color(0xFFFECACA),
+                                ),
                               ),
                               child: const Text(
                                 'SCARCE',
@@ -567,7 +603,9 @@ class _ScarcityReportDialogState extends State<ScarcityReportDialog> {
                             borderRadius: BorderRadius.circular(8),
                           ),
                           contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 10, vertical: 10),
+                            horizontal: 10,
+                            vertical: 10,
+                          ),
                         ),
                       ),
                     ),
@@ -664,7 +702,9 @@ class _ScarcityReportDialogState extends State<ScarcityReportDialog> {
                 Text(
                   value,
                   style: const TextStyle(
-                      fontSize: 14, fontWeight: FontWeight.bold),
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ],
             ),

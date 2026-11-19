@@ -84,7 +84,11 @@ class ActivityCard extends StatelessWidget {
                       const SizedBox(height: 4),
                       Row(
                         children: [
-                          Icon(Icons.school, size: 15, color: Colors.blueGrey.shade400),
+                          Icon(
+                            Icons.school,
+                            size: 15,
+                            color: Colors.blueGrey.shade400,
+                          ),
                           const SizedBox(width: 5),
                           Text(
                             activity.className,
@@ -101,11 +105,16 @@ class ActivityCard extends StatelessWidget {
                 ),
                 // Status Badge
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: statusColor.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: statusColor.withValues(alpha: 0.4)),
+                    border: Border.all(
+                      color: statusColor.withValues(alpha: 0.4),
+                    ),
                   ),
                   child: Text(
                     activity.status.toUpperCase(),
@@ -169,7 +178,9 @@ class ActivityCard extends StatelessWidget {
                           return Container(
                             margin: const EdgeInsets.only(right: 6),
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 2),
+                              horizontal: 8,
+                              vertical: 2,
+                            ),
                             decoration: BoxDecoration(
                               color: Colors.blue.shade50,
                               borderRadius: BorderRadius.circular(6),
@@ -213,7 +224,9 @@ class ActivityCard extends StatelessWidget {
                           return Container(
                             margin: const EdgeInsets.only(right: 6),
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 2),
+                              horizontal: 8,
+                              vertical: 2,
+                            ),
                             decoration: BoxDecoration(
                               color: Colors.teal.shade50,
                               borderRadius: BorderRadius.circular(6),
@@ -251,14 +264,15 @@ class ActivityCard extends StatelessWidget {
                 ),
                 if (activity.studentModificationDeadline != null) ...[
                   const SizedBox(width: 14),
-                  Icon(Icons.edit_calendar, size: 14, color: Colors.indigo.shade400),
+                  Icon(
+                    Icons.edit_calendar,
+                    size: 14,
+                    color: Colors.indigo.shade400,
+                  ),
                   const SizedBox(width: 4),
                   Text(
                     'Mod Cutoff: ${_formatDate(activity.studentModificationDeadline!)}',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey.shade600,
-                    ),
+                    style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
                   ),
                 ],
               ],
@@ -275,7 +289,10 @@ class ActivityCard extends StatelessWidget {
                   TextButton.icon(
                     onPressed: onScarcityReport,
                     icon: const Icon(Icons.analytics_outlined, size: 16),
-                    label: const Text('Scarcity', style: TextStyle(fontSize: 12)),
+                    label: const Text(
+                      'Scarcity',
+                      style: TextStyle(fontSize: 12),
+                    ),
                     style: TextButton.styleFrom(
                       foregroundColor: Colors.indigo.shade700,
                     ),
@@ -285,7 +302,10 @@ class ActivityCard extends StatelessWidget {
                 TextButton.icon(
                   onPressed: onViewDetails,
                   icon: const Icon(Icons.visibility_outlined, size: 16),
-                  label: const Text('View Details', style: TextStyle(fontSize: 12)),
+                  label: const Text(
+                    'View Details',
+                    style: TextStyle(fontSize: 12),
+                  ),
                   style: TextButton.styleFrom(
                     foregroundColor: Colors.blue.shade700,
                   ),
@@ -346,5 +366,3 @@ class ActivityCard extends StatelessWidget {
     );
   }
 }
-
-

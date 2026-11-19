@@ -1,4 +1,5 @@
 import 'dart:convert';
+
 import 'package:http/http.dart' as http;
 
 import '../models/academic_class.dart';
@@ -40,7 +41,9 @@ class ActivityService {
       return data.map((json) => GroupingActivity.fromJson(json)).toList();
     }
 
-    throw Exception('Failed to load activities (${response.statusCode}): ${response.body}');
+    throw Exception(
+      'Failed to load activities (${response.statusCode}): ${response.body}',
+    );
   }
 
   /// Get dashboard activity summary counts
@@ -81,11 +84,16 @@ class ActivityService {
       return GroupingActivity.fromJson(jsonDecode(response.body));
     }
 
-    throw Exception('Failed to create activity (${response.statusCode}): ${response.body}');
+    throw Exception(
+      'Failed to create activity (${response.statusCode}): ${response.body}',
+    );
   }
 
   /// Update an existing activity
-  Future<GroupingActivity> updateActivity(int id, GroupingActivity activity) async {
+  Future<GroupingActivity> updateActivity(
+    int id,
+    GroupingActivity activity,
+  ) async {
     final uri = Uri.parse('${ApiService.baseUrl}/activities/$id');
     final response = await http.put(
       uri,
@@ -97,7 +105,9 @@ class ActivityService {
       return GroupingActivity.fromJson(jsonDecode(response.body));
     }
 
-    throw Exception('Failed to update activity (${response.statusCode}): ${response.body}');
+    throw Exception(
+      'Failed to update activity (${response.statusCode}): ${response.body}',
+    );
   }
 
   /// Delete an activity
@@ -125,7 +135,9 @@ class ActivityService {
 
   /// Get skill distribution and scarcity analysis for an activity
   Future<ScarcityReport> getScarcityReport(int activityId) async {
-    final uri = Uri.parse('${ApiService.baseUrl}/activities/$activityId/scarcity');
+    final uri = Uri.parse(
+      '${ApiService.baseUrl}/activities/$activityId/scarcity',
+    );
     final response = await http.get(uri, headers: _headers);
 
     if (response.statusCode == 200) {
@@ -140,7 +152,9 @@ class ActivityService {
     int activityId, {
     String strategy = 'fill_incomplete',
   }) async {
-    final uri = Uri.parse('${ApiService.baseUrl}/activities/$activityId/auto-form');
+    final uri = Uri.parse(
+      '${ApiService.baseUrl}/activities/$activityId/auto-form',
+    );
     final response = await http.post(
       uri,
       headers: _headers,
@@ -151,7 +165,9 @@ class ActivityService {
       return jsonDecode(response.body) as Map<String, dynamic>;
     }
 
-    throw Exception('Failed to auto-form unassigned students (${response.statusCode})');
+    throw Exception(
+      'Failed to auto-form unassigned students (${response.statusCode})',
+    );
   }
 
   /// Add skill directly to activity
@@ -160,7 +176,9 @@ class ActivityService {
     String skill,
     String type,
   ) async {
-    final uri = Uri.parse('${ApiService.baseUrl}/activities/$activityId/add-skill');
+    final uri = Uri.parse(
+      '${ApiService.baseUrl}/activities/$activityId/add-skill',
+    );
     final response = await http.post(
       uri,
       headers: _headers,
@@ -210,7 +228,9 @@ class ActivityService {
       return jsonDecode(response.body) as Map<String, dynamic>;
     }
 
-    throw Exception('Failed to create team (${response.statusCode}): ${response.body}');
+    throw Exception(
+      'Failed to create team (${response.statusCode}): ${response.body}',
+    );
   }
 
   /// Invite a student to join a team
@@ -221,7 +241,9 @@ class ActivityService {
     String? studentEmail,
     String? role,
   }) async {
-    final uri = Uri.parse('${ApiService.baseUrl}/activities/$activityId/teams/invite');
+    final uri = Uri.parse(
+      '${ApiService.baseUrl}/activities/$activityId/teams/invite',
+    );
     final response = await http.post(
       uri,
       headers: _headers,
@@ -234,7 +256,9 @@ class ActivityService {
     );
 
     if (response.statusCode != 200) {
-      throw Exception('Failed to invite student (${response.statusCode}): ${response.body}');
+      throw Exception(
+        'Failed to invite student (${response.statusCode}): ${response.body}',
+      );
     }
   }
 }

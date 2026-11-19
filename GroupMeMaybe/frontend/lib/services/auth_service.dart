@@ -1,4 +1,5 @@
 import 'dart:convert';
+
 import 'package:http/http.dart' as http;
 
 class AuthUser {
@@ -21,20 +22,20 @@ class AuthUser {
   bool get isStudent => !isProfessor;
 
   factory AuthUser.fromJson(Map<String, dynamic> json) => AuthUser(
-        id: json['id'],
-        name: json['name'] ?? '',
-        email: json['email'] ?? '',
-        role: json['role'] ?? 'student',
-        departmentOrSection: json['department_or_section'],
-      );
+    id: json['id'],
+    name: json['name'] ?? '',
+    email: json['email'] ?? '',
+    role: json['role'] ?? 'student',
+    departmentOrSection: json['department_or_section'],
+  );
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'name': name,
-        'email': email,
-        'role': role,
-        'department_or_section': departmentOrSection,
-      };
+    'id': id,
+    'name': name,
+    'email': email,
+    'role': role,
+    'department_or_section': departmentOrSection,
+  };
 }
 
 class AuthService {
@@ -53,10 +54,7 @@ class AuthService {
       final res = await http.post(
         Uri.parse('$baseUrl/login'),
         headers: _headers,
-        body: jsonEncode({
-          'email': email.trim(),
-          'password': password,
-        }),
+        body: jsonEncode({'email': email.trim(), 'password': password}),
       );
 
       if (res.statusCode == 200) {
@@ -68,7 +66,9 @@ class AuthService {
       }
 
       final errorBody = jsonDecode(res.body);
-      throw Exception(errorBody['message'] ?? 'Login failed (${res.statusCode})');
+      throw Exception(
+        errorBody['message'] ?? 'Login failed (${res.statusCode})',
+      );
     } catch (e) {
       // Demo fallback if backend is offline or during client presentation
       if (email.contains('aivhan') || email.contains('prof')) {
@@ -131,7 +131,8 @@ class AuthService {
 
       final errorBody = jsonDecode(res.body);
       throw Exception(
-          errorBody['message'] ?? 'Registration failed (${res.statusCode})');
+        errorBody['message'] ?? 'Registration failed (${res.statusCode})',
+      );
     } catch (e) {
       // Local fallback for smooth presentation testing
       final fallback = AuthUser(
@@ -152,10 +153,7 @@ class AuthService {
       if (authToken != null) {
         await http.post(
           Uri.parse('$baseUrl/logout'),
-          headers: {
-            ..._headers,
-            'Authorization': 'Bearer $authToken',
-          },
+          headers: {..._headers, 'Authorization': 'Bearer $authToken'},
         );
       }
     } catch (_) {}

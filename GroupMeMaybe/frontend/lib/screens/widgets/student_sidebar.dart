@@ -6,20 +6,12 @@ import '../student_dashboard_screen.dart';
 import '../student_groups_screen.dart';
 import '../student_settings_screen.dart';
 
-enum StudentNavDestination {
-  dashboard,
-  classes,
-  groups,
-  settings,
-}
+enum StudentNavDestination { dashboard, classes, groups, settings }
 
 class StudentSidebar extends StatelessWidget {
   final StudentNavDestination currentDestination;
 
-  const StudentSidebar({
-    super.key,
-    required this.currentDestination,
-  });
+  const StudentSidebar({super.key, required this.currentDestination});
 
   @override
   Widget build(BuildContext context) {
@@ -27,9 +19,7 @@ class StudentSidebar extends StatelessWidget {
       width: 220,
       decoration: const BoxDecoration(
         color: Color(0xFF0F172A),
-        border: Border(
-          right: BorderSide(color: Color(0xFF1E293B), width: 1),
-        ),
+        border: Border(right: BorderSide(color: Color(0xFF1E293B), width: 1)),
       ),
       child: Column(
         children: [
@@ -74,7 +64,9 @@ class StudentSidebar extends StatelessWidget {
               if (currentDestination != StudentNavDestination.dashboard) {
                 Navigator.pushReplacement(
                   context,
-                  MaterialPageRoute(builder: (_) => const StudentDashboardScreen()),
+                  MaterialPageRoute(
+                    builder: (_) => const StudentDashboardScreen(),
+                  ),
                 );
               }
             },
@@ -88,7 +80,9 @@ class StudentSidebar extends StatelessWidget {
               if (currentDestination != StudentNavDestination.classes) {
                 Navigator.pushReplacement(
                   context,
-                  MaterialPageRoute(builder: (_) => const StudentClassesScreen()),
+                  MaterialPageRoute(
+                    builder: (_) => const StudentClassesScreen(),
+                  ),
                 );
               }
             },
@@ -102,7 +96,9 @@ class StudentSidebar extends StatelessWidget {
               if (currentDestination != StudentNavDestination.groups) {
                 Navigator.pushReplacement(
                   context,
-                  MaterialPageRoute(builder: (_) => const StudentGroupsScreen()),
+                  MaterialPageRoute(
+                    builder: (_) => const StudentGroupsScreen(),
+                  ),
                 );
               }
             },
@@ -116,7 +112,9 @@ class StudentSidebar extends StatelessWidget {
               if (currentDestination != StudentNavDestination.settings) {
                 Navigator.pushReplacement(
                   context,
-                  MaterialPageRoute(builder: (_) => const StudentSettingsScreen()),
+                  MaterialPageRoute(
+                    builder: (_) => const StudentSettingsScreen(),
+                  ),
                 );
               }
             },
@@ -154,7 +152,8 @@ class StudentSidebar extends StatelessWidget {
     required VoidCallback onTap,
     Color? color,
   }) {
-    final itemColor = color ?? (isSelected ? Colors.white : const Color(0xFF94A3B8));
+    final itemColor =
+        color ?? (isSelected ? Colors.white : const Color(0xFF94A3B8));
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
       child: InkWell(
@@ -166,7 +165,9 @@ class StudentSidebar extends StatelessWidget {
             color: isSelected ? const Color(0xFF1E293B) : Colors.transparent,
             borderRadius: BorderRadius.circular(8),
             border: isSelected
-                ? const Border(left: BorderSide(color: Color(0xFF3B82F6), width: 3))
+                ? const Border(
+                    left: BorderSide(color: Color(0xFF3B82F6), width: 3),
+                  )
                 : null,
           ),
           child: Row(

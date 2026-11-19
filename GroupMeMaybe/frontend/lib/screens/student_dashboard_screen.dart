@@ -65,7 +65,10 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
           children: const [
             Icon(Icons.swap_horiz, color: Color(0xFF1E40AF)),
             SizedBox(width: 8),
-            Text('Request Group Switch', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            Text(
+              'Request Group Switch',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
           ],
         ),
         content: Column(
@@ -81,31 +84,73 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
               ),
               child: const Text(
                 'Note: Because profiles and teams are locked once confirmed, your switch request will be routed to your Project Manager and Professor for approval.',
-                style: TextStyle(fontSize: 12, color: Color(0xFF1E40AF), height: 1.4),
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Color(0xFF1E40AF),
+                  height: 1.4,
+                ),
               ),
             ),
             const SizedBox(height: 16),
-            const Text('Activity', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF475569))),
-            Text(activity.title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF0F172A))),
+            const Text(
+              'Activity',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF475569),
+              ),
+            ),
+            Text(
+              activity.title,
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF0F172A),
+              ),
+            ),
             const SizedBox(height: 14),
-            const Text('Requested Target Team', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF475569))),
+            const Text(
+              'Requested Target Team',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF475569),
+              ),
+            ),
             const SizedBox(height: 6),
             DropdownButtonFormField<String>(
               isExpanded: true,
               initialValue: targetTeam,
               decoration: InputDecoration(
-                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 10,
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
               ),
               items: ['Team Beta', 'Team Gamma', 'Team Delta']
-                  .map((t) => DropdownMenuItem(value: t, child: Text(t, style: const TextStyle(fontSize: 13))))
+                  .map(
+                    (t) => DropdownMenuItem(
+                      value: t,
+                      child: Text(t, style: const TextStyle(fontSize: 13)),
+                    ),
+                  )
                   .toList(),
               onChanged: (val) {
                 if (val != null) targetTeam = val;
               },
             ),
             const SizedBox(height: 14),
-            const Text('Reason for Transfer Request', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF475569))),
+            const Text(
+              'Reason for Transfer Request',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF475569),
+              ),
+            ),
             const SizedBox(height: 6),
             TextField(
               controller: reasonController,
@@ -113,7 +158,9 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
               decoration: InputDecoration(
                 hintText: 'e.g. Schedule misalignment, complementary skill request...',
                 hintStyle: const TextStyle(fontSize: 12),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
               ),
             ),
           ],
@@ -132,7 +179,9 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
               Navigator.pop(ctx);
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text('Switch request for "$targetTeam" submitted to Project Manager and Professor.'),
+                  content: Text(
+                    'Switch request for "$targetTeam" submitted to Project Manager and Professor.',
+                  ),
                   backgroundColor: const Color(0xFF16A34A),
                   behavior: SnackBarBehavior.floating,
                 ),
@@ -152,7 +201,9 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
       body: Row(
         children: [
           // Unified Sidebar
-          const StudentSidebar(currentDestination: StudentNavDestination.dashboard),
+          const StudentSidebar(
+            currentDestination: StudentNavDestination.dashboard,
+          ),
 
           // Main Content
           Expanded(
@@ -161,7 +212,10 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                 : RefreshIndicator(
                     onRefresh: _loadDashboardData,
                     child: SingleChildScrollView(
-                      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 28),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 32,
+                        vertical: 28,
+                      ),
                       child: Center(
                         child: ConstrainedBox(
                           constraints: const BoxConstraints(maxWidth: 1100),
@@ -186,11 +240,20 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                                   final isWide = constraints.maxWidth >= 780;
                                   return isWide
                                       ? Row(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
                                           children: [
-                                            Expanded(flex: 3, child: _buildActiveProjectsSection()),
+                                            Expanded(
+                                              flex: 3,
+                                              child:
+                                                  _buildActiveProjectsSection(),
+                                            ),
                                             const SizedBox(width: 24),
-                                            Expanded(flex: 2, child: _buildEnrolledClassesSummary()),
+                                            Expanded(
+                                              flex: 2,
+                                              child:
+                                                  _buildEnrolledClassesSummary(),
+                                            ),
                                           ],
                                         )
                                       : Column(
@@ -241,7 +304,11 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                 backgroundColor: const Color(0xFF1E40AF),
                 child: Text(
                   _studentName.isNotEmpty ? _studentName[0] : 'S',
-                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
                 ),
               ),
               const SizedBox(width: 16),
@@ -263,14 +330,21 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                           ),
                         ),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 2,
+                          ),
                           decoration: BoxDecoration(
                             color: const Color(0xFFEFF6FF),
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: Text(
                             _studentBlock,
-                            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF1D4ED8)),
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF1D4ED8),
+                            ),
                           ),
                         ),
                       ],
@@ -283,17 +357,27 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                       children: [
                         Text(
                           '$_primaryRole • ',
-                          style: const TextStyle(fontSize: 13, color: Color(0xFF64748B)),
+                          style: const TextStyle(
+                            fontSize: 13,
+                            color: Color(0xFF64748B),
+                          ),
                         ),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
                           decoration: BoxDecoration(
                             color: const Color(0xFFF3E8FF),
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: Text(
                             '$_skillLevel Level',
-                            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF7E22CE)),
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF7E22CE),
+                            ),
                           ),
                         ),
                       ],
@@ -308,7 +392,9 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
             onPressed: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (_) => const StudentSettingsScreen()),
+                MaterialPageRoute(
+                  builder: (_) => const StudentSettingsScreen(),
+                ),
               );
             },
             icon: const Icon(Icons.tune, size: 16),
@@ -360,7 +446,11 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
               color: const Color(0xFFFEF3C7),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: const Icon(Icons.notification_important, color: Color(0xFFD97706), size: 22),
+            child: const Icon(
+              Icons.notification_important,
+              color: Color(0xFFD97706),
+              size: 22,
+            ),
           ),
           const SizedBox(width: 14),
           Expanded(
@@ -378,7 +468,11 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                 SizedBox(height: 4),
                 Text(
                   'The grouping deadline for "Automated Integration Testing Activity" closes tomorrow at 11:59 PM. If you are not in a confirmed team by the deadline, your professor will automatically assign you to a group.',
-                  style: TextStyle(fontSize: 12, color: Color(0xFFB45309), height: 1.4),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Color(0xFFB45309),
+                    height: 1.4,
+                  ),
                 ),
               ],
             ),
@@ -397,7 +491,10 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                 MaterialPageRoute(builder: (_) => const StudentGroupsScreen()),
               );
             },
-            child: const Text('Find Group Now', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+            child: const Text(
+              'Find Group Now',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+            ),
           ),
         ],
       ),
@@ -453,12 +550,14 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
 
         return Row(
           children: cards
-              .map((c) => Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 6),
-                      child: c,
-                    ),
-                  ))
+              .map(
+                (c) => Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 6),
+                    child: c,
+                  ),
+                ),
+              )
               .toList(),
         );
       },
@@ -483,7 +582,10 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
         children: [
           Container(
             padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(10)),
+            decoration: BoxDecoration(
+              color: bg,
+              borderRadius: BorderRadius.circular(10),
+            ),
             child: Icon(icon, color: color, size: 22),
           ),
           const SizedBox(width: 12),
@@ -496,14 +598,21 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                   title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Color(0xFF64748B),
+                  ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   value,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF0F172A),
+                  ),
                 ),
               ],
             ),
@@ -526,18 +635,26 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
           children: [
             const Text(
               'My Projects & Assigned Teams',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF0F172A),
+              ),
             ),
             TextButton.icon(
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const StudentGroupsScreen()),
+                  MaterialPageRoute(
+                    builder: (_) => const StudentGroupsScreen(),
+                  ),
                 );
               },
               icon: const Icon(Icons.arrow_forward, size: 16),
               label: const Text('Open Groups Workspace'),
-              style: TextButton.styleFrom(foregroundColor: const Color(0xFF1E40AF)),
+              style: TextButton.styleFrom(
+                foregroundColor: const Color(0xFF1E40AF),
+              ),
             ),
           ],
         ),
@@ -552,7 +669,10 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
               border: Border.all(color: const Color(0xFFE2E8F0)),
             ),
             child: const Center(
-              child: Text('No active activities right now.', style: TextStyle(color: Colors.grey)),
+              child: Text(
+                'No active activities right now.',
+                style: TextStyle(color: Colors.grey),
+              ),
             ),
           )
         else
@@ -565,7 +685,9 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
   }
 
   Widget _buildActivityProjectCard(GroupingActivity activity) {
-    final isTeamFormed = activity.status.toLowerCase().contains('lock') || activity.status.toLowerCase().contains('open');
+    final isTeamFormed =
+        activity.status.toLowerCase().contains('lock') ||
+        activity.status.toLowerCase().contains('open');
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -574,7 +696,11 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: const Color(0xFFE2E8F0)),
         boxShadow: const [
-          BoxShadow(color: Color(0x06000000), blurRadius: 8, offset: Offset(0, 2)),
+          BoxShadow(
+            color: Color(0x06000000),
+            blurRadius: 8,
+            offset: Offset(0, 2),
+          ),
         ],
       ),
       child: Column(
@@ -591,13 +717,19 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                 ),
                 child: Text(
                   activity.className,
-                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF1D4ED8)),
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF1D4ED8),
+                  ),
                 ),
               ),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  color: isTeamFormed ? const Color(0xFFECFDF5) : const Color(0xFFFFFBEB),
+                  color: isTeamFormed
+                      ? const Color(0xFFECFDF5)
+                      : const Color(0xFFFFFBEB),
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(
@@ -605,7 +737,9 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.bold,
-                    color: isTeamFormed ? const Color(0xFF047857) : const Color(0xFFD97706),
+                    color: isTeamFormed
+                        ? const Color(0xFF047857)
+                        : const Color(0xFFD97706),
                   ),
                 ),
               ),
@@ -614,30 +748,57 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
           const SizedBox(height: 10),
           Text(
             activity.title,
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF0F172A),
+            ),
           ),
           const SizedBox(height: 4),
           Text(
             activity.description ?? 'Project activity specifications, guidelines, and team requirements.',
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontSize: 13, color: Color(0xFF64748B), height: 1.4),
+            style: const TextStyle(
+              fontSize: 13,
+              color: Color(0xFF64748B),
+              height: 1.4,
+            ),
           ),
           const SizedBox(height: 16),
 
           // Teammates Preview Row
           const Text(
             'Formed Team Roster (Alpha Squad):',
-            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF475569)),
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF475569),
+            ),
           ),
           const SizedBox(height: 8),
           Wrap(
             spacing: 8,
             runSpacing: 8,
             children: [
-              _buildTeammateAvatar('Carlos Mendoza (You)', 'Frontend Developer', 'C', const Color(0xFF1E40AF)),
-              _buildTeammateAvatar('Bianca Cruz', 'UI/UX Designer', 'B', const Color(0xFF047857)),
-              _buildTeammateAvatar('Dani Garcia', 'QA & Docs', 'D', const Color(0xFF7E22CE)),
+              _buildTeammateAvatar(
+                'Carlos Mendoza (You)',
+                'Frontend Developer',
+                'C',
+                const Color(0xFF1E40AF),
+              ),
+              _buildTeammateAvatar(
+                'Bianca Cruz',
+                'UI/UX Designer',
+                'B',
+                const Color(0xFF047857),
+              ),
+              _buildTeammateAvatar(
+                'Dani Garcia',
+                'QA & Docs',
+                'D',
+                const Color(0xFF7E22CE),
+              ),
             ],
           ),
 
@@ -655,7 +816,10 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
               OutlinedButton.icon(
                 onPressed: () => _showSwitchGroupDialog(activity),
                 icon: const Icon(Icons.swap_horiz, size: 16),
-                label: const Text('Request Switch', style: TextStyle(fontSize: 12)),
+                label: const Text(
+                  'Request Switch',
+                  style: TextStyle(fontSize: 12),
+                ),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: const Color(0xFF475569),
                   side: const BorderSide(color: Color(0xFFCBD5E1)),
@@ -666,12 +830,16 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (_) => StudentGroupsScreen(initialActivityId: activity.id),
+                      builder: (_) =>
+                          StudentGroupsScreen(initialActivityId: activity.id),
                     ),
                   );
                 },
                 icon: const Icon(Icons.hub_outlined, size: 16),
-                label: const Text('Enter Team Workspace', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                label: const Text(
+                  'Enter Team Workspace',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF1E40AF),
                   foregroundColor: Colors.white,
@@ -684,7 +852,12 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
     );
   }
 
-  Widget _buildTeammateAvatar(String name, String role, String initial, Color color) {
+  Widget _buildTeammateAvatar(
+    String name,
+    String role,
+    String initial,
+    Color color,
+  ) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
@@ -698,14 +871,31 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
           CircleAvatar(
             radius: 12,
             backgroundColor: color,
-            child: Text(initial, style: const TextStyle(fontSize: 10, color: Colors.white, fontWeight: FontWeight.bold)),
+            child: Text(
+              initial,
+              style: const TextStyle(
+                fontSize: 10,
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ),
           const SizedBox(width: 8),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(name, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
-              Text(role, style: const TextStyle(fontSize: 10, color: Color(0xFF64748B))),
+              Text(
+                name,
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF0F172A),
+                ),
+              ),
+              Text(
+                role,
+                style: const TextStyle(fontSize: 10, color: Color(0xFF64748B)),
+              ),
             ],
           ),
         ],
@@ -726,13 +916,19 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
           children: [
             const Text(
               'Enrolled Courses',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF0F172A),
+              ),
             ),
             TextButton(
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const StudentClassesScreen()),
+                  MaterialPageRoute(
+                    builder: (_) => const StudentClassesScreen(),
+                  ),
                 );
               },
               child: const Text('View All'),
@@ -758,18 +954,29 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                     Expanded(
                       child: Text(
                         c.name,
-                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF0F172A),
+                        ),
                       ),
                     ),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
                       decoration: BoxDecoration(
                         color: const Color(0xFFF1F5F9),
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Text(
                         c.classCode,
-                        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF475569)),
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF475569),
+                        ),
                       ),
                     ),
                   ],
@@ -777,16 +984,27 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                 const SizedBox(height: 4),
                 Text(
                   'Section: ${c.section ?? "N/A"} • ${c.studentCount} Students',
-                  style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Color(0xFF64748B),
+                  ),
                 ),
                 const SizedBox(height: 10),
                 Row(
                   children: [
-                    const Icon(Icons.assignment_outlined, size: 14, color: Color(0xFF2563EB)),
+                    const Icon(
+                      Icons.assignment_outlined,
+                      size: 14,
+                      color: Color(0xFF2563EB),
+                    ),
                     const SizedBox(width: 4),
                     Text(
                       '${c.activitiesCount} Grouping Activities',
-                      style: const TextStyle(fontSize: 11, color: Color(0xFF2563EB), fontWeight: FontWeight.w600),
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: Color(0xFF2563EB),
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ],
                 ),
@@ -819,7 +1037,11 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                 Expanded(
                   child: Text(
                     'Got a class code from your professor? Enroll here',
-                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF1E40AF)),
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF1E40AF),
+                    ),
                   ),
                 ),
                 Icon(Icons.chevron_right, color: Color(0xFF1E40AF)),

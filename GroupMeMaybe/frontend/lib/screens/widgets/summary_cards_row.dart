@@ -65,12 +65,14 @@ class SummaryCardsRow extends StatelessWidget {
 
         return Row(
           children: items
-              .map((card) => Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 6.0),
-                      child: card,
-                    ),
-                  ))
+              .map(
+                (card) => Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 6.0),
+                    child: card,
+                  ),
+                ),
+              )
               .toList(),
         );
       },
@@ -149,5 +151,3 @@ class SummaryCardsRow extends StatelessWidget {
     );
   }
 }
-
-

@@ -40,10 +40,7 @@ class StudentCandidate {
 class StudentGroupsScreen extends StatefulWidget {
   final int? initialActivityId;
 
-  const StudentGroupsScreen({
-    super.key,
-    this.initialActivityId,
-  });
+  const StudentGroupsScreen({super.key, this.initialActivityId});
 
   @override
   State<StudentGroupsScreen> createState() => _StudentGroupsScreenState();
@@ -80,10 +77,6 @@ class _StudentGroupsScreenState extends State<StudentGroupsScreen> {
     _searchController.dispose();
     super.dispose();
   }
-
-
-
-
 
   Future<void> _loadActivities() async {
     setState(() {
@@ -146,9 +139,15 @@ class _StudentGroupsScreenState extends State<StudentGroupsScreen> {
               'teamName': teamMap['name']?.toString() ?? 'My Group',
               'isLeader': memberMap['is_leader'] == true,
               'isAutoAssigned': teamMap['is_auto_assigned'] == true,
-              'members': members.map((mem) => Map<String, String>.from(
-                (mem as Map).map((k, v) => MapEntry(k.toString(), v?.toString() ?? '')),
-              )).toList(),
+              'members': members
+                  .map(
+                    (mem) => Map<String, String>.from(
+                      (mem as Map).map(
+                        (k, v) => MapEntry(k.toString(), v?.toString() ?? ''),
+                      ),
+                    ),
+                  )
+                  .toList(),
             };
           }
         }
@@ -161,7 +160,8 @@ class _StudentGroupsScreenState extends State<StudentGroupsScreen> {
     }
 
     // 3. Fallback for completed auto activities
-    if (activity.status.toLowerCase() == 'completed' && activity.groupingMethod == 'auto') {
+    if (activity.status.toLowerCase() == 'completed' &&
+        activity.groupingMethod == 'auto') {
       final section = activity.className.split(' - ').lastOrNull ?? 'BSCS';
       return {
         'hasTeam': true,
@@ -171,7 +171,9 @@ class _StudentGroupsScreenState extends State<StudentGroupsScreen> {
         'members': [
           {
             'name': 'Alex Santos (You)',
-            'role': activity.requiredSkills.isNotEmpty ? activity.requiredSkills.first : 'Student Developer',
+            'role': activity.requiredSkills.isNotEmpty
+                ? activity.requiredSkills.first
+                : 'Student Developer',
             'block': section,
             'avatar': 'A',
           },
@@ -183,13 +185,17 @@ class _StudentGroupsScreenState extends State<StudentGroupsScreen> {
           },
           {
             'name': 'Chloe Mendoza',
-            'role': activity.requiredSkills.length > 1 ? activity.requiredSkills[1] : 'UI/UX Designer',
+            'role': activity.requiredSkills.length > 1
+                ? activity.requiredSkills[1]
+                : 'UI/UX Designer',
             'block': section,
             'avatar': 'C',
           },
           {
             'name': 'Marcus Vance',
-            'role': activity.requiredSkills.length > 2 ? activity.requiredSkills[2] : 'API Developer',
+            'role': activity.requiredSkills.length > 2
+                ? activity.requiredSkills[2]
+                : 'API Developer',
             'block': section,
             'avatar': 'M',
           },
@@ -213,13 +219,15 @@ class _StudentGroupsScreenState extends State<StudentGroupsScreen> {
         .map((m) => (m as Map)['name']?.toString() ?? '')
         .toSet();
 
-    final section = activity.className.split(' - ').lastOrNull ?? 'Class Member';
+    final section =
+        activity.className.split(' - ').lastOrNull ?? 'Class Member';
     final invitedSet = _invitedStudents[activity.id] ?? <String>{};
 
     if (_allProfiles.isNotEmpty) {
       final candidates = <StudentCandidate>[];
       for (final p in _allProfiles) {
-        if (p.email == 'alex.santos@student.edu' || p.name.contains('Alex Santos')) {
+        if (p.email == 'alex.santos@student.edu' ||
+            p.name.contains('Alex Santos')) {
           continue;
         }
 
@@ -235,7 +243,9 @@ class _StudentGroupsScreenState extends State<StudentGroupsScreen> {
           if (p.skills.contains(pref)) matchCount += 1;
         }
 
-        final maxPossible = (activity.requiredSkills.length * 2) + activity.preferredSkills.length;
+        final maxPossible =
+            (activity.requiredSkills.length * 2) +
+            activity.preferredSkills.length;
         double score = 70.0;
         if (maxPossible > 0) {
           score = 70.0 + ((matchCount / maxPossible) * 28.0);
@@ -243,26 +253,33 @@ class _StudentGroupsScreenState extends State<StudentGroupsScreen> {
         if (score > 98.0) score = 98.0;
 
         int commonHours = activity.minCommonHours;
-        if (p.availability.contains('afternoon') || p.availability.contains('PM')) {
+        if (p.availability.contains('afternoon') ||
+            p.availability.contains('PM')) {
           commonHours = (commonHours + 1).clamp(1, 10);
         }
 
-        candidates.add(StudentCandidate(
-          id: p.id ?? candidates.length + 1,
-          name: p.name,
-          block: section,
-          avatarUrl: p.name.isNotEmpty ? p.name.substring(0, 1).toUpperCase() : 'S',
-          skills: p.skills,
-          interests: p.interests,
-          availability: p.availability,
-          commonHours: commonHours,
-          compatibilityScore: double.parse(score.toStringAsFixed(1)),
-          preferredRole: p.preferredRole,
-          isInvited: invitedSet.contains(p.name),
-        ));
+        candidates.add(
+          StudentCandidate(
+            id: p.id ?? candidates.length + 1,
+            name: p.name,
+            block: section,
+            avatarUrl: p.name.isNotEmpty
+                ? p.name.substring(0, 1).toUpperCase()
+                : 'S',
+            skills: p.skills,
+            interests: p.interests,
+            availability: p.availability,
+            commonHours: commonHours,
+            compatibilityScore: double.parse(score.toStringAsFixed(1)),
+            preferredRole: p.preferredRole,
+            isInvited: invitedSet.contains(p.name),
+          ),
+        );
       }
 
-      candidates.sort((a, b) => b.compatibilityScore.compareTo(a.compatibilityScore));
+      candidates.sort(
+        (a, b) => b.compatibilityScore.compareTo(a.compatibilityScore),
+      );
       return candidates;
     }
 
@@ -299,7 +316,9 @@ class _StudentGroupsScreenState extends State<StudentGroupsScreen> {
   }
 
   List<StudentCandidate> _getSortedCandidates(GroupingActivity activity) {
-    final list = List<StudentCandidate>.from(_getCandidatesForActivity(activity));
+    final list = List<StudentCandidate>.from(
+      _getCandidatesForActivity(activity),
+    );
     if (_filterMode == 'skills') {
       list.sort((a, b) => b.compatibilityScore.compareTo(a.compatibilityScore));
     } else if (_filterMode == 'availability') {
@@ -310,19 +329,29 @@ class _StudentGroupsScreenState extends State<StudentGroupsScreen> {
 
   List<GroupingActivity> get _filteredActivities {
     return _activities.where((a) {
-      final matchesSearch = _searchController.text.trim().isEmpty ||
-          a.title.toLowerCase().contains(_searchController.text.trim().toLowerCase()) ||
-          a.className.toLowerCase().contains(_searchController.text.trim().toLowerCase());
+      final matchesSearch =
+          _searchController.text.trim().isEmpty ||
+          a.title.toLowerCase().contains(
+            _searchController.text.trim().toLowerCase(),
+          ) ||
+          a.className.toLowerCase().contains(
+            _searchController.text.trim().toLowerCase(),
+          );
 
-      final matchesStatus = _projectStatusFilter == 'all' ||
-          (_projectStatusFilter == 'active' && (a.status == 'open' || a.status == 'grouping in progress')) ||
+      final matchesStatus =
+          _projectStatusFilter == 'all' ||
+          (_projectStatusFilter == 'active' &&
+              (a.status == 'open' || a.status == 'grouping in progress')) ||
           a.status.toLowerCase() == _projectStatusFilter.toLowerCase();
 
       return matchesSearch && matchesStatus;
     }).toList();
   }
 
-  Future<void> _inviteTeammate(StudentCandidate candidate, GroupingActivity activity) async {
+  Future<void> _inviteTeammate(
+    StudentCandidate candidate,
+    GroupingActivity activity,
+  ) async {
     final teamState = _getTeamState(activity);
     final hasTeam = teamState['hasTeam'] == true;
     final members = (teamState['members'] as List?) ?? [];
@@ -331,7 +360,9 @@ class _StudentGroupsScreenState extends State<StudentGroupsScreen> {
     if (!hasTeam) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Please start or join a team first before inviting candidates!'),
+          content: Text(
+            'Please start or join a team first before inviting candidates!',
+          ),
           backgroundColor: Colors.orange,
         ),
       );
@@ -362,7 +393,9 @@ class _StudentGroupsScreenState extends State<StudentGroupsScreen> {
 
       setState(() {
         candidate.isInvited = true;
-        _invitedStudents.putIfAbsent(activity.id ?? 0, () => <String>{}).add(candidate.name);
+        _invitedStudents
+            .putIfAbsent(activity.id ?? 0, () => <String>{})
+            .add(candidate.name);
       });
 
       _loadActivities();
@@ -370,7 +403,9 @@ class _StudentGroupsScreenState extends State<StudentGroupsScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Invitation sent to ${candidate.name} ($slotsOpen slots remaining)!'),
+            content: Text(
+              'Invitation sent to ${candidate.name} ($slotsOpen slots remaining)!',
+            ),
             backgroundColor: const Color(0xFF059669),
           ),
         );
@@ -379,7 +414,9 @@ class _StudentGroupsScreenState extends State<StudentGroupsScreen> {
       if (mounted) {
         setState(() {
           candidate.isInvited = true;
-          _invitedStudents.putIfAbsent(activity.id ?? 0, () => <String>{}).add(candidate.name);
+          _invitedStudents
+              .putIfAbsent(activity.id ?? 0, () => <String>{})
+              .add(candidate.name);
         });
 
         ScaffoldMessenger.of(context).showSnackBar(
@@ -404,7 +441,11 @@ class _StudentGroupsScreenState extends State<StudentGroupsScreen> {
           children: [
             Text(
               'For ${activity.title} (${activity.className})',
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF1E40AF)),
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 13,
+                color: Color(0xFF1E40AF),
+              ),
             ),
             const SizedBox(height: 6),
             const Text(
@@ -434,7 +475,8 @@ class _StudentGroupsScreenState extends State<StudentGroupsScreen> {
             onPressed: () async {
               final newName = titleController.text.trim();
               final teamName = newName.isNotEmpty ? newName : 'My New Team';
-              final section = activity.className.split(' - ').lastOrNull ?? 'BSIT';
+              final section =
+                  activity.className.split(' - ').lastOrNull ?? 'BSIT';
 
               Navigator.of(ctx).pop();
 
@@ -494,7 +536,11 @@ class _StudentGroupsScreenState extends State<StudentGroupsScreen> {
           children: [
             Text(
               'Activity: ${activity.title}',
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF1E40AF)),
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 13,
+                color: Color(0xFF1E40AF),
+              ),
             ),
             const SizedBox(height: 6),
             const Text(
@@ -527,7 +573,9 @@ class _StudentGroupsScreenState extends State<StudentGroupsScreen> {
               Navigator.of(ctx).pop();
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
-                  content: Text('Switch request sent to Professor & Team Manager!'),
+                  content: Text(
+                    'Switch request sent to Professor & Team Manager!',
+                  ),
                   backgroundColor: Color(0xFF1E40AF),
                 ),
               );
@@ -539,7 +587,10 @@ class _StudentGroupsScreenState extends State<StudentGroupsScreen> {
     );
   }
 
-  void _showCandidateProfile(StudentCandidate candidate, GroupingActivity activity) {
+  void _showCandidateProfile(
+    StudentCandidate candidate,
+    GroupingActivity activity,
+  ) {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -550,7 +601,10 @@ class _StudentGroupsScreenState extends State<StudentGroupsScreen> {
               backgroundColor: const Color(0xFF1E40AF),
               child: Text(
                 candidate.avatarUrl,
-                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
             const SizedBox(width: 12),
@@ -591,7 +645,9 @@ class _StudentGroupsScreenState extends State<StudentGroupsScreen> {
                             value: candidate.compatibilityScore / 100,
                             strokeWidth: 4,
                             backgroundColor: Colors.teal.shade100,
-                            valueColor: AlwaysStoppedAnimation<Color>(Colors.teal.shade700),
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Colors.teal.shade700,
+                            ),
                           ),
                         ),
                         Text(
@@ -611,11 +667,17 @@ class _StudentGroupsScreenState extends State<StudentGroupsScreen> {
                         children: [
                           const Text(
                             'High Compatibility Match',
-                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
+                            ),
                           ),
                           Text(
                             '40% Skills • 30% Interests • 30% Availability',
-                            style: TextStyle(fontSize: 11, color: Colors.grey[700]),
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: Colors.grey[700],
+                            ),
                           ),
                         ],
                       ),
@@ -625,7 +687,10 @@ class _StudentGroupsScreenState extends State<StudentGroupsScreen> {
               ),
               const SizedBox(height: 14),
 
-              const Text('Skills:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+              const Text(
+                'Skills:',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+              ),
               const SizedBox(height: 6),
               Wrap(
                 spacing: 6,
@@ -633,15 +698,32 @@ class _StudentGroupsScreenState extends State<StudentGroupsScreen> {
                 children: candidate.skills.map((s) {
                   final isReq = activity.requiredSkills.contains(s);
                   return Chip(
-                    label: Text(s, style: TextStyle(fontSize: 11, color: isReq ? Colors.blue.shade900 : Colors.grey.shade800)),
-                    backgroundColor: isReq ? Colors.blue.shade50 : Colors.grey.shade100,
-                    side: BorderSide(color: isReq ? Colors.blue.shade300 : Colors.grey.shade300),
+                    label: Text(
+                      s,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: isReq
+                            ? Colors.blue.shade900
+                            : Colors.grey.shade800,
+                      ),
+                    ),
+                    backgroundColor: isReq
+                        ? Colors.blue.shade50
+                        : Colors.grey.shade100,
+                    side: BorderSide(
+                      color: isReq
+                          ? Colors.blue.shade300
+                          : Colors.grey.shade300,
+                    ),
                   );
                 }).toList(),
               ),
               const SizedBox(height: 12),
 
-              const Text('Interests:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+              const Text(
+                'Interests:',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+              ),
               const SizedBox(height: 6),
               Wrap(
                 spacing: 6,
@@ -658,7 +740,11 @@ class _StudentGroupsScreenState extends State<StudentGroupsScreen> {
 
               Row(
                 children: [
-                  const Icon(Icons.access_time, size: 16, color: Colors.blueGrey),
+                  const Icon(
+                    Icons.access_time,
+                    size: 16,
+                    color: Colors.blueGrey,
+                  ),
                   const SizedBox(width: 6),
                   Text(
                     'Availability: ${candidate.availability}',
@@ -709,22 +795,22 @@ class _StudentGroupsScreenState extends State<StudentGroupsScreen> {
                   child: _isLoading
                       ? const Center(child: CircularProgressIndicator())
                       : _errorMessage != null
-                          ? Center(
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Text('Error: $_errorMessage'),
-                                  const SizedBox(height: 10),
-                                  ElevatedButton(
-                                    onPressed: _loadActivities,
-                                    child: const Text('Retry'),
-                                  ),
-                                ],
+                      ? Center(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text('Error: $_errorMessage'),
+                              const SizedBox(height: 10),
+                              ElevatedButton(
+                                onPressed: _loadActivities,
+                                child: const Text('Retry'),
                               ),
-                            )
-                          : _selectedActivity == null
-                              ? _buildProjectCardsGallery()
-                              : _buildProjectDetailView(_selectedActivity!),
+                            ],
+                          ),
+                        )
+                      : _selectedActivity == null
+                      ? _buildProjectCardsGallery()
+                      : _buildProjectDetailView(_selectedActivity!),
                 ),
               ],
             ),
@@ -745,13 +831,16 @@ class _StudentGroupsScreenState extends State<StudentGroupsScreen> {
         children: [
           IconButton(
             icon: Icon(_isSidebarCollapsed ? Icons.menu_open : Icons.menu),
-            onPressed: () => setState(() => _isSidebarCollapsed = !_isSidebarCollapsed),
+            onPressed: () =>
+                setState(() => _isSidebarCollapsed = !_isSidebarCollapsed),
             tooltip: 'Toggle Sidebar',
           ),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
-              _selectedActivity == null ? 'Course Projects (Gallery)' : 'Project & Teams',
+              _selectedActivity == null
+                  ? 'Course Projects (Gallery)'
+                  : 'Project & Teams',
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(
                 fontSize: 16,
@@ -767,7 +856,9 @@ class _StudentGroupsScreenState extends State<StudentGroupsScreen> {
               onPressed: () => setState(() => _selectedActivity = null),
               icon: const Icon(Icons.grid_view, size: 16),
               label: const Text('Browse All Cards'),
-              style: TextButton.styleFrom(foregroundColor: const Color(0xFF1E40AF)),
+              style: TextButton.styleFrom(
+                foregroundColor: const Color(0xFF1E40AF),
+              ),
             ),
             const SizedBox(width: 8),
           ],
@@ -776,7 +867,14 @@ class _StudentGroupsScreenState extends State<StudentGroupsScreen> {
           const CircleAvatar(
             radius: 14,
             backgroundColor: Color(0xFF059669),
-            child: Text('A', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
+            child: Text(
+              'A',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 12,
+              ),
+            ),
           ),
           const SizedBox(width: 6),
           const Text(
@@ -813,7 +911,11 @@ class _StudentGroupsScreenState extends State<StudentGroupsScreen> {
                         color: const Color(0xFF1E40AF),
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: const Icon(Icons.hub, color: Colors.white, size: 20),
+                      child: const Icon(
+                        Icons.hub,
+                        color: Colors.white,
+                        size: 20,
+                      ),
                     ),
                   )
                 : Row(
@@ -824,14 +926,22 @@ class _StudentGroupsScreenState extends State<StudentGroupsScreen> {
                           color: const Color(0xFF1E40AF),
                           borderRadius: BorderRadius.circular(8),
                         ),
-                        child: const Icon(Icons.hub, color: Colors.white, size: 20),
+                        child: const Icon(
+                          Icons.hub,
+                          color: Colors.white,
+                          size: 20,
+                        ),
                       ),
                       const SizedBox(width: 10),
                       const Expanded(
                         child: Text(
                           'GroupMeMaybe',
                           overflow: TextOverflow.ellipsis,
-                          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
                         ),
                       ),
                     ],
@@ -843,13 +953,19 @@ class _StudentGroupsScreenState extends State<StudentGroupsScreen> {
             icon: Icons.dashboard_outlined,
             title: 'Dashboard',
             isSelected: false,
-            onTap: () => Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const StudentDashboardScreen())),
+            onTap: () => Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (_) => const StudentDashboardScreen()),
+            ),
           ),
           _buildSidebarItem(
             icon: Icons.school_outlined,
             title: 'Classes',
             isSelected: false,
-            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const StudentClassesScreen())),
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const StudentClassesScreen()),
+            ),
           ),
           _buildSidebarItem(
             icon: Icons.groups_outlined,
@@ -863,7 +979,10 @@ class _StudentGroupsScreenState extends State<StudentGroupsScreen> {
             icon: Icons.settings_outlined,
             title: 'Settings',
             isSelected: false,
-            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const StudentSettingsScreen())),
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const StudentSettingsScreen()),
+            ),
           ),
 
           const Spacer(),
@@ -873,7 +992,11 @@ class _StudentGroupsScreenState extends State<StudentGroupsScreen> {
             title: 'Log Out',
             isSelected: false,
             color: Colors.redAccent,
-            onTap: () => Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (_) => const LandingScreen()), (r) => false),
+            onTap: () => Navigator.pushAndRemoveUntil(
+              context,
+              MaterialPageRoute(builder: (_) => const LandingScreen()),
+              (r) => false,
+            ),
           ),
           const SizedBox(height: 12),
         ],
@@ -901,7 +1024,11 @@ class _StudentGroupsScreenState extends State<StudentGroupsScreen> {
                 child: Icon(
                   icon,
                   size: 20,
-                  color: color ?? (isSelected ? const Color(0xFF60A5FA) : Colors.grey.shade400),
+                  color:
+                      color ??
+                      (isSelected
+                          ? const Color(0xFF60A5FA)
+                          : Colors.grey.shade400),
                 ),
               )
             : Row(
@@ -909,7 +1036,11 @@ class _StudentGroupsScreenState extends State<StudentGroupsScreen> {
                   Icon(
                     icon,
                     size: 20,
-                    color: color ?? (isSelected ? const Color(0xFF60A5FA) : Colors.grey.shade400),
+                    color:
+                        color ??
+                        (isSelected
+                            ? const Color(0xFF60A5FA)
+                            : Colors.grey.shade400),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -918,8 +1049,12 @@ class _StudentGroupsScreenState extends State<StudentGroupsScreen> {
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         fontSize: 13,
-                        color: color ?? (isSelected ? Colors.white : Colors.grey.shade300),
-                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                        color:
+                            color ??
+                            (isSelected ? Colors.white : Colors.grey.shade300),
+                        fontWeight: isSelected
+                            ? FontWeight.bold
+                            : FontWeight.normal,
                       ),
                     ),
                   ),
@@ -957,7 +1092,10 @@ class _StudentGroupsScreenState extends State<StudentGroupsScreen> {
                     const SizedBox(height: 4),
                     Text(
                       'Select an active project below to view requirements, manage your team, and find recommended teammates.',
-                      style: TextStyle(fontSize: 13, color: Colors.blueGrey.shade600),
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.blueGrey.shade600,
+                      ),
                     ),
                   ],
                 ),
@@ -990,8 +1128,13 @@ class _StudentGroupsScreenState extends State<StudentGroupsScreen> {
                       isDense: true,
                       filled: true,
                       fillColor: const Color(0xFFF8FAFC),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 10,
+                      ),
                     ),
                     onChanged: (_) => setState(() {}),
                   ),
@@ -1004,7 +1147,8 @@ class _StudentGroupsScreenState extends State<StudentGroupsScreen> {
                     ButtonSegment(value: 'completed', label: Text('Completed')),
                   ],
                   selected: {_projectStatusFilter},
-                  onSelectionChanged: (set) => setState(() => _projectStatusFilter = set.first),
+                  onSelectionChanged: (set) =>
+                      setState(() => _projectStatusFilter = set.first),
                 ),
               ],
             ),
@@ -1102,7 +1246,11 @@ class _StudentGroupsScreenState extends State<StudentGroupsScreen> {
                         const SizedBox(height: 3),
                         Row(
                           children: [
-                            const Icon(Icons.school, size: 14, color: Colors.blueGrey),
+                            const Icon(
+                              Icons.school,
+                              size: 14,
+                              color: Colors.blueGrey,
+                            ),
                             const SizedBox(width: 4),
                             Text(
                               a.className,
@@ -1118,15 +1266,24 @@ class _StudentGroupsScreenState extends State<StudentGroupsScreen> {
                     ),
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 3,
+                    ),
                     decoration: BoxDecoration(
                       color: methodColor.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(6),
-                      border: Border.all(color: methodColor.withValues(alpha: 0.3)),
+                      border: Border.all(
+                        color: methodColor.withValues(alpha: 0.3),
+                      ),
                     ),
                     child: Text(
                       a.groupingMethod.toUpperCase(),
-                      style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: methodColor),
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        color: methodColor,
+                      ),
                     ),
                   ),
                 ],
@@ -1139,7 +1296,11 @@ class _StudentGroupsScreenState extends State<StudentGroupsScreen> {
                   a.description!,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 12, color: Colors.grey.shade700, height: 1.3),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey.shade700,
+                    height: 1.3,
+                  ),
                 ),
               const SizedBox(height: 12),
 
@@ -1148,9 +1309,21 @@ class _StudentGroupsScreenState extends State<StudentGroupsScreen> {
                 spacing: 8,
                 runSpacing: 6,
                 children: [
-                  _buildSpecBadge(icon: Icons.groups, label: 'Capacity', value: '${a.groupCapacity} / team'),
-                  _buildSpecBadge(icon: Icons.grid_view, label: 'Needed', value: '${a.numberOfGroups} groups'),
-                  _buildSpecBadge(icon: Icons.access_time, label: 'Min', value: '${a.minCommonHours} hrs/wk'),
+                  _buildSpecBadge(
+                    icon: Icons.groups,
+                    label: 'Capacity',
+                    value: '${a.groupCapacity} / team',
+                  ),
+                  _buildSpecBadge(
+                    icon: Icons.grid_view,
+                    label: 'Needed',
+                    value: '${a.numberOfGroups} groups',
+                  ),
+                  _buildSpecBadge(
+                    icon: Icons.access_time,
+                    label: 'Min',
+                    value: '${a.minCommonHours} hrs/wk',
+                  ),
                 ],
               ),
               const SizedBox(height: 10),
@@ -1162,13 +1335,23 @@ class _StudentGroupsScreenState extends State<StudentGroupsScreen> {
                   children: a.requiredSkills.map((s) {
                     return Container(
                       margin: const EdgeInsets.only(right: 6),
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.blue.shade50,
                         borderRadius: BorderRadius.circular(4),
                         border: Border.all(color: Colors.blue.shade200),
                       ),
-                      child: Text(s, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.blue.shade900)),
+                      child: Text(
+                        s,
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.blue.shade900,
+                        ),
+                      ),
                     );
                   }).toList(),
                 ),
@@ -1184,7 +1367,10 @@ class _StudentGroupsScreenState extends State<StudentGroupsScreen> {
                 children: [
                   hasTeam
                       ? Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 3,
+                          ),
                           decoration: BoxDecoration(
                             color: const Color(0xFFECFDF5),
                             borderRadius: BorderRadius.circular(6),
@@ -1194,11 +1380,18 @@ class _StudentGroupsScreenState extends State<StudentGroupsScreen> {
                             teamState['isAutoAssigned'] == true
                                 ? 'Assigned Team: $teamName (${members.length}/${a.groupCapacity})'
                                 : 'Your Team: $teamName (${members.length}/${a.groupCapacity})',
-                            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF065F46)),
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF065F46),
+                            ),
                           ),
                         )
                       : Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 3,
+                          ),
                           decoration: BoxDecoration(
                             color: a.groupingMethod == 'auto'
                                 ? const Color(0xFFEFF6FF)
@@ -1227,7 +1420,10 @@ class _StudentGroupsScreenState extends State<StudentGroupsScreen> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF1E40AF),
                       foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 8,
+                      ),
                       minimumSize: Size.zero,
                     ),
                     onPressed: () {
@@ -1236,7 +1432,10 @@ class _StudentGroupsScreenState extends State<StudentGroupsScreen> {
                       });
                     },
                     icon: const Icon(Icons.arrow_forward, size: 14),
-                    label: const Text('View Teammates', style: TextStyle(fontSize: 11)),
+                    label: const Text(
+                      'View Teammates',
+                      style: TextStyle(fontSize: 11),
+                    ),
                   ),
                 ],
               ),
@@ -1262,13 +1461,20 @@ class _StudentGroupsScreenState extends State<StudentGroupsScreen> {
                 icon: const Icon(Icons.arrow_back, size: 16),
                 label: const Text('← Back to Project Cards'),
                 style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
                 ),
               ),
               const SizedBox(width: 12),
               Text(
                 'Browsing: ${activity.title}',
-                style: TextStyle(fontSize: 13, color: Colors.grey.shade600, fontWeight: FontWeight.w500),
+                style: TextStyle(
+                  fontSize: 13,
+                  color: Colors.grey.shade600,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
             ],
           ),
@@ -1303,7 +1509,11 @@ class _StudentGroupsScreenState extends State<StudentGroupsScreen> {
       ),
       child: Row(
         children: [
-          Icon(Icons.access_time_filled, color: Colors.amber.shade900, size: 22),
+          Icon(
+            Icons.access_time_filled,
+            color: Colors.amber.shade900,
+            size: 22,
+          ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -1365,7 +1575,11 @@ class _StudentGroupsScreenState extends State<StudentGroupsScreen> {
                     const SizedBox(height: 4),
                     Row(
                       children: [
-                        const Icon(Icons.school, size: 16, color: Colors.blueGrey),
+                        const Icon(
+                          Icons.school,
+                          size: 16,
+                          color: Colors.blueGrey,
+                        ),
                         const SizedBox(width: 6),
                         Text(
                           activity.className,
@@ -1387,20 +1601,31 @@ class _StudentGroupsScreenState extends State<StudentGroupsScreen> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF1E40AF),
                     foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 18,
+                      vertical: 12,
+                    ),
                   ),
                   onPressed: () => _showCreateGroupDialog(activity),
                   icon: const Icon(Icons.group_add, size: 18),
-                  label: const Text('+ Create Group', style: TextStyle(fontWeight: FontWeight.bold)),
+                  label: const Text(
+                    '+ Create Group',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
                 ),
             ],
           ),
           const SizedBox(height: 12),
 
-          if (activity.description != null && activity.description!.isNotEmpty) ...[
+          if (activity.description != null &&
+              activity.description!.isNotEmpty) ...[
             Text(
               activity.description!,
-              style: TextStyle(fontSize: 13, color: Colors.grey.shade800, height: 1.4),
+              style: TextStyle(
+                fontSize: 13,
+                color: Colors.grey.shade800,
+                height: 1.4,
+              ),
             ),
             const SizedBox(height: 14),
           ],
@@ -1409,10 +1634,26 @@ class _StudentGroupsScreenState extends State<StudentGroupsScreen> {
             spacing: 12,
             runSpacing: 8,
             children: [
-              _buildSpecBadge(icon: Icons.groups, label: 'Team Size', value: '${activity.groupCapacity} members'),
-              _buildSpecBadge(icon: Icons.grid_view, label: 'Target Groups', value: '${activity.numberOfGroups} teams'),
-              _buildSpecBadge(icon: Icons.access_time, label: 'Min Common Hours', value: '${activity.minCommonHours} hrs / wk'),
-              _buildSpecBadge(icon: Icons.verified, label: 'Min Level', value: activity.minProficiencyLevel),
+              _buildSpecBadge(
+                icon: Icons.groups,
+                label: 'Team Size',
+                value: '${activity.groupCapacity} members',
+              ),
+              _buildSpecBadge(
+                icon: Icons.grid_view,
+                label: 'Target Groups',
+                value: '${activity.numberOfGroups} teams',
+              ),
+              _buildSpecBadge(
+                icon: Icons.access_time,
+                label: 'Min Common Hours',
+                value: '${activity.minCommonHours} hrs / wk',
+              ),
+              _buildSpecBadge(
+                icon: Icons.verified,
+                label: 'Min Level',
+                value: activity.minProficiencyLevel,
+              ),
             ],
           ),
           const SizedBox(height: 14),
@@ -1433,7 +1674,10 @@ class _StudentGroupsScreenState extends State<StudentGroupsScreen> {
                   runSpacing: 4,
                   children: activity.requiredSkills.map((s) {
                     return Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.blue.shade50,
                         borderRadius: BorderRadius.circular(6),
@@ -1485,7 +1729,11 @@ class _StudentGroupsScreenState extends State<StudentGroupsScreen> {
                   borderRadius: BorderRadius.circular(10),
                   border: Border.all(color: const Color(0xFFBFDBFE)),
                 ),
-                child: const Icon(Icons.auto_awesome, color: Color(0xFF1E40AF), size: 28),
+                child: const Icon(
+                  Icons.auto_awesome,
+                  color: Color(0xFF1E40AF),
+                  size: 28,
+                ),
               ),
               const SizedBox(width: 16),
               Expanded(
@@ -1496,11 +1744,18 @@ class _StudentGroupsScreenState extends State<StudentGroupsScreen> {
                       children: [
                         const Text(
                           'Automated Team Matching in Progress',
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF0F172A),
+                          ),
                         ),
                         const SizedBox(width: 10),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 2,
+                          ),
                           decoration: BoxDecoration(
                             color: const Color(0xFFDBEAFE),
                             borderRadius: BorderRadius.circular(12),
@@ -1508,7 +1763,11 @@ class _StudentGroupsScreenState extends State<StudentGroupsScreen> {
                           ),
                           child: const Text(
                             'Pending Instructor Release',
-                            style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF1E40AF)),
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF1E40AF),
+                            ),
                           ),
                         ),
                       ],
@@ -1516,7 +1775,10 @@ class _StudentGroupsScreenState extends State<StudentGroupsScreen> {
                     const SizedBox(height: 4),
                     Text(
                       'This project uses algorithmic team balancing based on required skills and availability. Your balanced team assignment will appear here automatically once finalized and published by the professor.',
-                      style: TextStyle(fontSize: 12, color: Colors.blueGrey.shade700),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.blueGrey.shade700,
+                      ),
                     ),
                   ],
                 ),
@@ -1541,7 +1803,11 @@ class _StudentGroupsScreenState extends State<StudentGroupsScreen> {
                 color: Colors.amber.shade50,
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: Icon(Icons.group_off_outlined, color: Colors.amber.shade800, size: 28),
+              child: Icon(
+                Icons.group_off_outlined,
+                color: Colors.amber.shade800,
+                size: 28,
+              ),
             ),
             const SizedBox(width: 16),
             Expanded(
@@ -1593,7 +1859,11 @@ class _StudentGroupsScreenState extends State<StudentGroupsScreen> {
                   color: const Color(0xFFECFDF5),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: const Icon(Icons.people, color: Color(0xFF059669), size: 22),
+                child: const Icon(
+                  Icons.people,
+                  color: Color(0xFF059669),
+                  size: 22,
+                ),
               ),
               const SizedBox(width: 12),
               Column(
@@ -1603,12 +1873,18 @@ class _StudentGroupsScreenState extends State<StudentGroupsScreen> {
                     children: [
                       Text(
                         teamName,
-                        style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+                        style: const TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                       const SizedBox(width: 8),
                       if (isLeader)
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 2,
+                          ),
                           decoration: BoxDecoration(
                             color: Colors.amber.shade100,
                             borderRadius: BorderRadius.circular(4),
@@ -1625,7 +1901,10 @@ class _StudentGroupsScreenState extends State<StudentGroupsScreen> {
                         )
                       else if (isAutoAssigned)
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 2,
+                          ),
                           decoration: BoxDecoration(
                             color: const Color(0xFFECFDF5),
                             borderRadius: BorderRadius.circular(4),
@@ -1676,7 +1955,11 @@ class _StudentGroupsScreenState extends State<StudentGroupsScreen> {
                         backgroundColor: const Color(0xFF1E40AF),
                         child: Text(
                           m['avatar']!,
-                          style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
                       const SizedBox(width: 8),
@@ -1687,12 +1970,18 @@ class _StudentGroupsScreenState extends State<StudentGroupsScreen> {
                             Text(
                               m['name']!,
                               overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                             Text(
                               m['role']!,
                               overflow: TextOverflow.ellipsis,
-                              style: TextStyle(fontSize: 10, color: Colors.grey.shade600),
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: Colors.grey.shade600,
+                              ),
                             ),
                           ],
                         ),
@@ -1748,20 +2037,20 @@ class _StudentGroupsScreenState extends State<StudentGroupsScreen> {
                       label: Text('Availability'),
                       icon: Icon(Icons.access_time, size: 14),
                     ),
-                    ButtonSegment(
-                      value: 'all',
-                      label: Text('All'),
-                    ),
+                    ButtonSegment(value: 'all', label: Text('All')),
                   ],
                   selected: {_filterMode},
-                  onSelectionChanged: (set) => setState(() => _filterMode = set.first),
+                  onSelectionChanged: (set) =>
+                      setState(() => _filterMode = set.first),
                 ),
                 const SizedBox(width: 10),
                 IconButton(
                   onPressed: () {
                     _loadActivities();
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Refreshed teammate recommendations.')),
+                      const SnackBar(
+                        content: Text('Refreshed teammate recommendations.'),
+                      ),
                     );
                   },
                   tooltip: 'Refresh Recommendations',
@@ -1803,7 +2092,11 @@ class _StudentGroupsScreenState extends State<StudentGroupsScreen> {
             backgroundColor: const Color(0xFF1E40AF),
             child: Text(
               c.avatarUrl,
-              style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
           const SizedBox(width: 16),
@@ -1816,24 +2109,38 @@ class _StudentGroupsScreenState extends State<StudentGroupsScreen> {
                   children: [
                     Text(
                       c.name,
-                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     const SizedBox(width: 8),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.grey.shade100,
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Text(
                         c.block,
-                        style: TextStyle(fontSize: 10, color: Colors.grey.shade700, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: Colors.grey.shade700,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                     const SizedBox(width: 8),
                     Text(
                       c.preferredRole,
-                      style: TextStyle(fontSize: 12, color: Colors.blueGrey.shade600, fontWeight: FontWeight.w500),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.blueGrey.shade600,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                   ],
                 ),
@@ -1845,18 +2152,31 @@ class _StudentGroupsScreenState extends State<StudentGroupsScreen> {
                   children: c.skills.map((s) {
                     final isReq = activity.requiredSkills.contains(s);
                     return Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
                       decoration: BoxDecoration(
-                        color: isReq ? const Color(0xFFEFF6FF) : const Color(0xFFF1F5F9),
+                        color: isReq
+                            ? const Color(0xFFEFF6FF)
+                            : const Color(0xFFF1F5F9),
                         borderRadius: BorderRadius.circular(4),
-                        border: Border.all(color: isReq ? const Color(0xFFBFDBFE) : Colors.transparent),
+                        border: Border.all(
+                          color: isReq
+                              ? const Color(0xFFBFDBFE)
+                              : Colors.transparent,
+                        ),
                       ),
                       child: Text(
                         s,
                         style: TextStyle(
                           fontSize: 10,
-                          fontWeight: isReq ? FontWeight.bold : FontWeight.normal,
-                          color: isReq ? const Color(0xFF1E40AF) : Colors.grey.shade800,
+                          fontWeight: isReq
+                              ? FontWeight.bold
+                              : FontWeight.normal,
+                          color: isReq
+                              ? const Color(0xFF1E40AF)
+                              : Colors.grey.shade800,
                         ),
                       ),
                     );
@@ -1866,11 +2186,18 @@ class _StudentGroupsScreenState extends State<StudentGroupsScreen> {
 
                 Row(
                   children: [
-                    const Icon(Icons.access_time, size: 14, color: Colors.green),
+                    const Icon(
+                      Icons.access_time,
+                      size: 14,
+                      color: Colors.green,
+                    ),
                     const SizedBox(width: 4),
                     Text(
                       '${c.commonHours} common free hours • ${c.availability}',
-                      style: TextStyle(fontSize: 11, color: Colors.grey.shade700),
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Colors.grey.shade700,
+                      ),
                     ),
                   ],
                 ),
@@ -1892,17 +2219,26 @@ class _StudentGroupsScreenState extends State<StudentGroupsScreen> {
                       value: c.compatibilityScore / 100,
                       strokeWidth: 4,
                       backgroundColor: Colors.teal.shade100,
-                      valueColor: AlwaysStoppedAnimation<Color>(Colors.teal.shade700),
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        Colors.teal.shade700,
+                      ),
                     ),
                   ),
                   Text(
                     '${c.compatibilityScore.toInt()}%',
-                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.teal.shade900),
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.teal.shade900,
+                    ),
                   ),
                 ],
               ),
               const SizedBox(height: 4),
-              const Text('Match', style: TextStyle(fontSize: 10, color: Colors.grey)),
+              const Text(
+                'Match',
+                style: TextStyle(fontSize: 10, color: Colors.grey),
+              ),
             ],
           ),
 
@@ -1912,16 +2248,25 @@ class _StudentGroupsScreenState extends State<StudentGroupsScreen> {
             children: [
               OutlinedButton(
                 style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
                   minimumSize: Size.zero,
                 ),
                 onPressed: () => _showCandidateProfile(c, activity),
-                child: const Text('View Profile', style: TextStyle(fontSize: 11)),
+                child: const Text(
+                  'View Profile',
+                  style: TextStyle(fontSize: 11),
+                ),
               ),
               const SizedBox(height: 6),
               if (activity.groupingMethod == 'auto')
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
                     color: const Color(0xFFEFF6FF),
                     borderRadius: BorderRadius.circular(6),
@@ -1930,23 +2275,44 @@ class _StudentGroupsScreenState extends State<StudentGroupsScreen> {
                   child: const Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.auto_awesome, size: 12, color: Color(0xFF1E40AF)),
+                      Icon(
+                        Icons.auto_awesome,
+                        size: 12,
+                        color: Color(0xFF1E40AF),
+                      ),
                       SizedBox(width: 4),
-                      Text('Auto Pool', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF1E40AF))),
+                      Text(
+                        'Auto Pool',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF1E40AF),
+                        ),
+                      ),
                     ],
                   ),
                 )
               else
                 ElevatedButton.icon(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: c.isInvited ? Colors.grey.shade400 : const Color(0xFF1E40AF),
+                    backgroundColor: c.isInvited
+                        ? Colors.grey.shade400
+                        : const Color(0xFF1E40AF),
                     foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
                     minimumSize: Size.zero,
                   ),
-                  onPressed: c.isInvited ? null : () => _inviteTeammate(c, activity),
+                  onPressed: c.isInvited
+                      ? null
+                      : () => _inviteTeammate(c, activity),
                   icon: Icon(c.isInvited ? Icons.check : Icons.add, size: 14),
-                  label: Text(c.isInvited ? 'Invited' : 'Invite to Team', style: const TextStyle(fontSize: 11)),
+                  label: Text(
+                    c.isInvited ? 'Invited' : 'Invite to Team',
+                    style: const TextStyle(fontSize: 11),
+                  ),
                 ),
             ],
           ),

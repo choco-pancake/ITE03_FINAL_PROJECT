@@ -1,4 +1,5 @@
 import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -90,7 +91,12 @@ class _ProfessorClassesScreenState extends State<ProfessorClassesScreen> {
   String _generateUniqueCode(String coursePrefix) {
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
     final random = Random();
-    final randomPart = String.fromCharCodes(Iterable.generate(4, (_) => chars.codeUnitAt(random.nextInt(chars.length))));
+    final randomPart = String.fromCharCodes(
+      Iterable.generate(
+        4,
+        (_) => chars.codeUnitAt(random.nextInt(chars.length)),
+      ),
+    );
     final prefix = coursePrefix.replaceAll(RegExp(r'[^A-Z]'), '');
     final cleanPrefix = prefix.length >= 2 ? prefix.substring(0, 2) : 'CL';
     return '$cleanPrefix$randomPart'.toUpperCase();
@@ -107,12 +113,17 @@ class _ProfessorClassesScreenState extends State<ProfessorClassesScreen> {
       builder: (ctx) => StatefulBuilder(
         builder: (context, setDialogState) {
           return AlertDialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
             title: Row(
               children: const [
                 Icon(Icons.add_circle_outline, color: Color(0xFF1E40AF)),
                 SizedBox(width: 8),
-                Text('Create Class & Generate Code', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                Text(
+                  'Create Class & Generate Code',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
               ],
             ),
             content: SizedBox(
@@ -131,7 +142,9 @@ class _ProfessorClassesScreenState extends State<ProfessorClassesScreen> {
                     decoration: InputDecoration(
                       labelText: 'Course Name',
                       hintText: 'e.g. ITE 04 - Software Engineering',
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
                     ),
                     onChanged: (val) {
                       setDialogState(() {
@@ -145,7 +158,9 @@ class _ProfessorClassesScreenState extends State<ProfessorClassesScreen> {
                     decoration: InputDecoration(
                       labelText: 'Section Block',
                       hintText: 'e.g. BSIT-3A',
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -154,8 +169,11 @@ class _ProfessorClassesScreenState extends State<ProfessorClassesScreen> {
                     maxLines: 2,
                     decoration: InputDecoration(
                       labelText: 'Course Description (Optional)',
-                      hintText: 'Syllabus, team match activity specifications...',
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                      hintText:
+                          'Syllabus, team match activity specifications...',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -174,17 +192,37 @@ class _ProfessorClassesScreenState extends State<ProfessorClassesScreen> {
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text('Generated Enrollment Code', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF1D4ED8))),
+                            const Text(
+                              'Generated Enrollment Code',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF1D4ED8),
+                              ),
+                            ),
                             const SizedBox(height: 2),
-                            Text(generatedCode, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, letterSpacing: 2, color: Color(0xFF0F172A))),
+                            Text(
+                              generatedCode,
+                              style: const TextStyle(
+                                fontSize: 22,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: 2,
+                                color: Color(0xFF0F172A),
+                              ),
+                            ),
                           ],
                         ),
                         IconButton(
-                          icon: const Icon(Icons.refresh, color: Color(0xFF1E40AF)),
+                          icon: const Icon(
+                            Icons.refresh,
+                            color: Color(0xFF1E40AF),
+                          ),
                           tooltip: 'Regenerate Code',
                           onPressed: () {
                             setDialogState(() {
-                              generatedCode = _generateUniqueCode(nameController.text);
+                              generatedCode = _generateUniqueCode(
+                                nameController.text,
+                              );
                             });
                           },
                         ),
@@ -195,9 +233,15 @@ class _ProfessorClassesScreenState extends State<ProfessorClassesScreen> {
               ),
             ),
             actions: [
-              TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Cancel'),
+              ),
               ElevatedButton(
-                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1E40AF), foregroundColor: Colors.white),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF1E40AF),
+                  foregroundColor: Colors.white,
+                ),
                 onPressed: () {
                   final name = nameController.text.trim();
                   if (name.isEmpty) return;
@@ -206,8 +250,12 @@ class _ProfessorClassesScreenState extends State<ProfessorClassesScreen> {
                     id: DateTime.now().millisecondsSinceEpoch,
                     name: name,
                     classCode: generatedCode,
-                    section: sectionController.text.trim().isNotEmpty ? sectionController.text.trim() : 'General',
-                    description: descriptionController.text.trim().isNotEmpty ? descriptionController.text.trim() : 'Course syllabus and project team requirements.',
+                    section: sectionController.text.trim().isNotEmpty
+                        ? sectionController.text.trim()
+                        : 'General',
+                    description: descriptionController.text.trim().isNotEmpty
+                        ? descriptionController.text.trim()
+                        : 'Course syllabus and project team requirements.',
                     studentCount: 0,
                     activitiesCount: 0,
                   );
@@ -219,7 +267,9 @@ class _ProfessorClassesScreenState extends State<ProfessorClassesScreen> {
                   Navigator.pop(ctx);
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text('Class "$name" created with enrollment code: $generatedCode'),
+                      content: Text(
+                        'Class "$name" created with enrollment code: $generatedCode',
+                      ),
                       backgroundColor: const Color(0xFF16A34A),
                       behavior: SnackBarBehavior.floating,
                     ),
@@ -252,7 +302,9 @@ class _ProfessorClassesScreenState extends State<ProfessorClassesScreen> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Rotated enrollment code for "${c.name}" to "$newCode"!'),
+          content: Text(
+            'Rotated enrollment code for "${c.name}" to "$newCode"!',
+          ),
           backgroundColor: const Color(0xFF16A34A),
           behavior: SnackBarBehavior.floating,
         ),
@@ -286,7 +338,9 @@ class _ProfessorClassesScreenState extends State<ProfessorClassesScreen> {
       body: Row(
         children: [
           // Unified Professor Sidebar
-          const ProfessorSidebar(currentDestination: ProfessorNavDestination.classes),
+          const ProfessorSidebar(
+            currentDestination: ProfessorNavDestination.classes,
+          ),
 
           // Main Classes Content
           Expanded(
@@ -295,7 +349,10 @@ class _ProfessorClassesScreenState extends State<ProfessorClassesScreen> {
                 : RefreshIndicator(
                     onRefresh: _loadClasses,
                     child: SingleChildScrollView(
-                      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 28),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 32,
+                        vertical: 28,
+                      ),
                       child: Center(
                         child: ConstrainedBox(
                           constraints: const BoxConstraints(maxWidth: 1100),
@@ -307,16 +364,24 @@ class _ProfessorClassesScreenState extends State<ProfessorClassesScreen> {
                                 builder: (context, constraints) {
                                   final isNarrow = constraints.maxWidth < 650;
                                   final titleColumn = Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: const [
                                       Text(
                                         'Course Sections & Class Codes',
-                                        style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800, color: Color(0xFF0F172A)),
+                                        style: TextStyle(
+                                          fontSize: 28,
+                                          fontWeight: FontWeight.w800,
+                                          color: Color(0xFF0F172A),
+                                        ),
                                       ),
                                       SizedBox(height: 4),
                                       Text(
                                         'Generate unique enrollment codes and manage student sections.',
-                                        style: TextStyle(fontSize: 14, color: Color(0xFF64748B)),
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          color: Color(0xFF64748B),
+                                        ),
                                       ),
                                     ],
                                   );
@@ -324,18 +389,29 @@ class _ProfessorClassesScreenState extends State<ProfessorClassesScreen> {
                                   final createBtn = ElevatedButton.icon(
                                     onPressed: _showCreateClassDialog,
                                     icon: const Icon(Icons.add, size: 18),
-                                    label: const Text('Create Class & Generate Code', style: TextStyle(fontWeight: FontWeight.bold)),
+                                    label: const Text(
+                                      'Create Class & Generate Code',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
                                     style: ElevatedButton.styleFrom(
                                       backgroundColor: const Color(0xFF1E40AF),
                                       foregroundColor: Colors.white,
-                                      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 18,
+                                        vertical: 12,
+                                      ),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
                                     ),
                                   );
 
                                   if (isNarrow) {
                                     return Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         titleColumn,
                                         const SizedBox(height: 14),
@@ -345,7 +421,8 @@ class _ProfessorClassesScreenState extends State<ProfessorClassesScreen> {
                                   }
 
                                   return Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
                                     children: [
                                       Expanded(child: titleColumn),
                                       const SizedBox(width: 16),
@@ -361,16 +438,43 @@ class _ProfessorClassesScreenState extends State<ProfessorClassesScreen> {
                                 controller: _searchController,
                                 decoration: InputDecoration(
                                   hintText: 'Search by course name, section, or 6-character class code...',
-                                  hintStyle: const TextStyle(fontSize: 13, color: Color(0xFF94A3B8)),
-                                  prefixIcon: const Icon(Icons.search, size: 20, color: Color(0xFF64748B)),
+                                  hintStyle: const TextStyle(
+                                    fontSize: 13,
+                                    color: Color(0xFF94A3B8),
+                                  ),
+                                  prefixIcon: const Icon(
+                                    Icons.search,
+                                    size: 20,
+                                    color: Color(0xFF64748B),
+                                  ),
                                   suffixIcon: _searchController.text.isNotEmpty
-                                      ? IconButton(icon: const Icon(Icons.clear, size: 18), onPressed: () => _searchController.clear())
+                                      ? IconButton(
+                                          icon: const Icon(
+                                            Icons.clear,
+                                            size: 18,
+                                          ),
+                                          onPressed: () =>
+                                              _searchController.clear(),
+                                        )
                                       : null,
                                   filled: true,
                                   fillColor: Colors.white,
-                                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
-                                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                                  contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                    vertical: 12,
+                                  ),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                    borderSide: const BorderSide(
+                                      color: Color(0xFFE2E8F0),
+                                    ),
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                    borderSide: const BorderSide(
+                                      color: Color(0xFFE2E8F0),
+                                    ),
+                                  ),
                                 ),
                               ),
                               const SizedBox(height: 24),
@@ -382,16 +486,35 @@ class _ProfessorClassesScreenState extends State<ProfessorClassesScreen> {
                                   decoration: BoxDecoration(
                                     color: Colors.white,
                                     borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                                    border: Border.all(
+                                      color: const Color(0xFFE2E8F0),
+                                    ),
                                   ),
                                   child: Center(
                                     child: Column(
                                       children: [
-                                        const Icon(Icons.school_outlined, size: 48, color: Color(0xFF94A3B8)),
+                                        const Icon(
+                                          Icons.school_outlined,
+                                          size: 48,
+                                          color: Color(0xFF94A3B8),
+                                        ),
                                         const SizedBox(height: 12),
-                                        const Text('No classes found.', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF334155))),
+                                        const Text(
+                                          'No classes found.',
+                                          style: TextStyle(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.bold,
+                                            color: Color(0xFF334155),
+                                          ),
+                                        ),
                                         const SizedBox(height: 6),
-                                        const Text('Try adjusting your search query or generate a new class code.', style: TextStyle(fontSize: 13, color: Color(0xFF64748B))),
+                                        const Text(
+                                          'Try adjusting your search query or generate a new class code.',
+                                          style: TextStyle(
+                                            fontSize: 13,
+                                            color: Color(0xFF64748B),
+                                          ),
+                                        ),
                                         const SizedBox(height: 16),
                                         OutlinedButton.icon(
                                           onPressed: _showCreateClassDialog,
@@ -405,16 +528,19 @@ class _ProfessorClassesScreenState extends State<ProfessorClassesScreen> {
                               else
                                 LayoutBuilder(
                                   builder: (context, constraints) {
-                                    final crossAxisCount = constraints.maxWidth >= 720 ? 2 : 1;
+                                    final crossAxisCount =
+                                        constraints.maxWidth >= 720 ? 2 : 1;
                                     return GridView.builder(
                                       shrinkWrap: true,
-                                      physics: const NeverScrollableScrollPhysics(),
-                                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                                        crossAxisCount: crossAxisCount,
-                                        crossAxisSpacing: 20,
-                                        mainAxisSpacing: 20,
-                                        mainAxisExtent: 240,
-                                      ),
+                                      physics:
+                                          const NeverScrollableScrollPhysics(),
+                                      gridDelegate:
+                                          SliverGridDelegateWithFixedCrossAxisCount(
+                                            crossAxisCount: crossAxisCount,
+                                            crossAxisSpacing: 20,
+                                            mainAxisSpacing: 20,
+                                            mainAxisExtent: 240,
+                                          ),
                                       itemCount: filtered.length,
                                       itemBuilder: (context, index) {
                                         final academicClass = filtered[index];
@@ -443,7 +569,13 @@ class _ProfessorClassesScreenState extends State<ProfessorClassesScreen> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: const Color(0xFFE2E8F0)),
-        boxShadow: const [BoxShadow(color: Color(0x06000000), blurRadius: 10, offset: Offset(0, 2))],
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x06000000),
+            blurRadius: 10,
+            offset: Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -459,7 +591,11 @@ class _ProfessorClassesScreenState extends State<ProfessorClassesScreen> {
                 ),
                 child: Text(
                   c.section ?? 'General',
-                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF1D4ED8)),
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF1D4ED8),
+                  ),
                 ),
               ),
 
@@ -468,7 +604,10 @@ class _ProfessorClassesScreenState extends State<ProfessorClassesScreen> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: const Color(0xFFF1F5F9),
                       borderRadius: BorderRadius.circular(6),
@@ -477,25 +616,42 @@ class _ProfessorClassesScreenState extends State<ProfessorClassesScreen> {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.key, size: 12, color: Color(0xFF475569)),
+                        const Icon(
+                          Icons.key,
+                          size: 12,
+                          color: Color(0xFF475569),
+                        ),
                         const SizedBox(width: 4),
                         Text(
                           c.classCode,
-                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w900, letterSpacing: 1, color: Color(0xFF0F172A)),
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 1,
+                            color: Color(0xFF0F172A),
+                          ),
                         ),
                       ],
                     ),
                   ),
                   const SizedBox(width: 4),
                   IconButton(
-                    icon: const Icon(Icons.copy, size: 14, color: Color(0xFF1E40AF)),
+                    icon: const Icon(
+                      Icons.copy,
+                      size: 14,
+                      color: Color(0xFF1E40AF),
+                    ),
                     tooltip: 'Copy Code',
                     constraints: const BoxConstraints(),
                     padding: const EdgeInsets.all(6),
                     onPressed: () => _copyToClipboard(c.classCode),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.rotate_right, size: 14, color: Color(0xFF64748B)),
+                    icon: const Icon(
+                      Icons.rotate_right,
+                      size: 14,
+                      color: Color(0xFF64748B),
+                    ),
                     tooltip: 'Regenerate Code',
                     constraints: const BoxConstraints(),
                     padding: const EdgeInsets.all(6),
@@ -511,7 +667,11 @@ class _ProfessorClassesScreenState extends State<ProfessorClassesScreen> {
             c.name,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+            style: const TextStyle(
+              fontSize: 17,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF0F172A),
+            ),
           ),
           const SizedBox(height: 4),
           Expanded(
@@ -519,7 +679,11 @@ class _ProfessorClassesScreenState extends State<ProfessorClassesScreen> {
               c.description ?? 'Course syllabus, project milestones, and team match activity specifications.',
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 12, color: Color(0xFF64748B), height: 1.4),
+              style: const TextStyle(
+                fontSize: 12,
+                color: Color(0xFF64748B),
+                height: 1.4,
+              ),
             ),
           ),
           const SizedBox(height: 12),
@@ -537,17 +701,38 @@ class _ProfessorClassesScreenState extends State<ProfessorClassesScreen> {
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.people_outline, size: 16, color: Color(0xFF64748B)),
+                        const Icon(
+                          Icons.people_outline,
+                          size: 16,
+                          color: Color(0xFF64748B),
+                        ),
                         const SizedBox(width: 4),
-                        Text('${c.studentCount} Students', style: const TextStyle(fontSize: 12, color: Color(0xFF475569))),
+                        Text(
+                          '${c.studentCount} Students',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Color(0xFF475569),
+                          ),
+                        ),
                       ],
                     ),
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.hub_outlined, size: 16, color: Color(0xFF2563EB)),
+                        const Icon(
+                          Icons.hub_outlined,
+                          size: 16,
+                          color: Color(0xFF2563EB),
+                        ),
                         const SizedBox(width: 4),
-                        Text('${c.activitiesCount} Activities', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF2563EB))),
+                        Text(
+                          '${c.activitiesCount} Activities',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF2563EB),
+                          ),
+                        ),
                       ],
                     ),
                   ],
@@ -557,10 +742,19 @@ class _ProfessorClassesScreenState extends State<ProfessorClassesScreen> {
                 onPressed: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (_) => const ProfileListScreen()),
+                    MaterialPageRoute(
+                      builder: (_) => const ProfileListScreen(),
+                    ),
                   );
                 },
-                child: const Text('View Groups', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF1E40AF))),
+                child: const Text(
+                  'View Groups',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF1E40AF),
+                  ),
+                ),
               ),
             ],
           ),

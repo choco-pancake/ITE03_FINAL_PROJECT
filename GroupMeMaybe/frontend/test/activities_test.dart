@@ -65,8 +65,9 @@ void main() {
   });
 
   group('Aivhan Module - Widgets Tests', () {
-    testWidgets('ActivityCard renders activity details and action buttons',
-        (tester) async {
+    testWidgets('ActivityCard renders activity details and action buttons', (
+      tester,
+    ) async {
       bool viewDetailsCalled = false;
       bool editCalled = false;
       bool deleteCalled = false;
@@ -117,8 +118,9 @@ void main() {
       expect(deleteCalled, isTrue);
     });
 
-    testWidgets('SummaryCardsRow renders counts and invokes filter callback',
-        (tester) async {
+    testWidgets('SummaryCardsRow renders counts and invokes filter callback', (
+      tester,
+    ) async {
       String? selectedFilter;
 
       const summary = ActivitySummary(

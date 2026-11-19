@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'widgets/professor_sidebar.dart';
+
 // Professor Evaluation: "Modification Requests"
 // File: lib/screens/professor_evaluation_screen.dart
 
@@ -21,18 +23,18 @@ enum _Status { pending, underReview, approved, rejected }
 
 extension _StatusX on _Status {
   String get label => switch (this) {
-        _Status.pending => 'Pending',
-        _Status.underReview => 'Under review',
-        _Status.approved => 'Approved',
-        _Status.rejected => 'Rejected',
-      };
+    _Status.pending => 'Pending',
+    _Status.underReview => 'Under review',
+    _Status.approved => 'Approved',
+    _Status.rejected => 'Rejected',
+  };
 
   Color get color => switch (this) {
-        _Status.pending => const Color(0xFFE0A800), // yellow
-        _Status.underReview => const Color(0xFF2563EB), // blue
-        _Status.approved => const Color(0xFF16A34A), // green
-        _Status.rejected => const Color(0xFFDC2626), // red
-      };
+    _Status.pending => const Color(0xFFE0A800), // yellow
+    _Status.underReview => const Color(0xFF2563EB), // blue
+    _Status.approved => const Color(0xFF16A34A), // green
+    _Status.rejected => const Color(0xFFDC2626), // red
+  };
 }
 
 class _HistoryEntry {
@@ -80,73 +82,83 @@ class _Request {
 
 String _fmtDate(DateTime d) {
   const m = [
-    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
   ];
   return '${m[d.month - 1]} ${d.day}, ${d.year}';
 }
 
 // Sample data: replace with your API / database call.
 List<_Request> _sampleRequests() => [
-      _Request(
-        studentName: 'Maria Santos',
-        studentId: '2023-0142',
-        program: 'BSIT 3',
-        title: 'Change of surname',
-        field: 'Last name',
-        currentValue: 'Santos',
-        requestedValue: 'Santos-Reyes',
-        submitted: DateTime(2026, 11, 3),
-        attachments: ['marriage_certificate.pdf'],
-      ),
-      _Request(
-        studentName: 'John Dela Cruz',
-        studentId: '2023-0388',
-        program: 'BSIT 3',
-        title: 'Correct midterm score',
-        field: 'Midterm exam score',
-        currentValue: '78',
-        requestedValue: '87',
-        submitted: DateTime(2026, 11, 5),
-        attachments: ['exam_paper_scan.jpg', 'recount_request.pdf'],
-        status: _Status.underReview,
-      ),
-      _Request(
-        studentName: 'Angela Ramos',
-        studentId: '2022-0911',
-        program: 'BSCS 4',
-        title: 'Update section',
-        field: 'Section',
-        currentValue: 'BSCS 4-B',
-        requestedValue: 'BSCS 4-A',
-        submitted: DateTime(2026, 10, 28),
-      ),
-      _Request(
-        studentName: 'Paolo Mendoza',
-        studentId: '2024-0057',
-        program: 'BSIT 2',
-        title: 'Correct birth date',
-        field: 'Date of birth',
-        currentValue: 'Mar 12, 2005',
-        requestedValue: 'Mar 21, 2005',
-        submitted: DateTime(2026, 10, 20),
-        attachments: ['birth_certificate.pdf'],
-        status: _Status.approved,
-        remarks: 'Verified against the PSA copy.',
-      ),
-      _Request(
-        studentName: 'Kyla Bautista',
-        studentId: '2023-0620',
-        program: 'BSIT 3',
-        title: 'Late activity score',
-        field: 'Activity 4 score',
-        currentValue: '0',
-        requestedValue: '90',
-        submitted: DateTime(2026, 10, 15),
-        status: _Status.rejected,
-        remarks: 'Submitted after the posted deadline.',
-      ),
-    ];
+  _Request(
+    studentName: 'Maria Santos',
+    studentId: '2023-0142',
+    program: 'BSIT 3',
+    title: 'Change of surname',
+    field: 'Last name',
+    currentValue: 'Santos',
+    requestedValue: 'Santos-Reyes',
+    submitted: DateTime(2026, 11, 3),
+    attachments: ['marriage_certificate.pdf'],
+  ),
+  _Request(
+    studentName: 'John Dela Cruz',
+    studentId: '2023-0388',
+    program: 'BSIT 3',
+    title: 'Correct midterm score',
+    field: 'Midterm exam score',
+    currentValue: '78',
+    requestedValue: '87',
+    submitted: DateTime(2026, 11, 5),
+    attachments: ['exam_paper_scan.jpg', 'recount_request.pdf'],
+    status: _Status.underReview,
+  ),
+  _Request(
+    studentName: 'Angela Ramos',
+    studentId: '2022-0911',
+    program: 'BSCS 4',
+    title: 'Update section',
+    field: 'Section',
+    currentValue: 'BSCS 4-B',
+    requestedValue: 'BSCS 4-A',
+    submitted: DateTime(2026, 10, 28),
+  ),
+  _Request(
+    studentName: 'Paolo Mendoza',
+    studentId: '2024-0057',
+    program: 'BSIT 2',
+    title: 'Correct birth date',
+    field: 'Date of birth',
+    currentValue: 'Mar 12, 2005',
+    requestedValue: 'Mar 21, 2005',
+    submitted: DateTime(2026, 10, 20),
+    attachments: ['birth_certificate.pdf'],
+    status: _Status.approved,
+    remarks: 'Verified against the PSA copy.',
+  ),
+  _Request(
+    studentName: 'Kyla Bautista',
+    studentId: '2023-0620',
+    program: 'BSIT 3',
+    title: 'Late activity score',
+    field: 'Activity 4 score',
+    currentValue: '0',
+    requestedValue: '90',
+    submitted: DateTime(2026, 10, 15),
+    status: _Status.rejected,
+    remarks: 'Submitted after the posted deadline.',
+  ),
+];
 
 // ───────────────────────── Shared widgets ─────────────────────────
 
@@ -156,12 +168,12 @@ class _Centered extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Align(
-        alignment: Alignment.topCenter,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 900),
-          child: child,
-        ),
-      );
+    alignment: Alignment.topCenter,
+    child: ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 900),
+      child: child,
+    ),
+  );
 }
 
 class _Panel extends StatelessWidget {
@@ -171,15 +183,15 @@ class _Panel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-        width: double.infinity,
-        padding: padding,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: _C.border),
-        ),
-        child: child,
-      );
+    width: double.infinity,
+    padding: padding,
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(12),
+      border: Border.all(color: _C.border),
+    ),
+    child: child,
+  );
 }
 
 class _SectionTitle extends StatelessWidget {
@@ -188,11 +200,16 @@ class _SectionTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.only(bottom: 12),
-        child: Text(text,
-            style: const TextStyle(
-                fontSize: 15, fontWeight: FontWeight.bold, color: _C.text)),
-      );
+    padding: const EdgeInsets.only(bottom: 12),
+    child: Text(
+      text,
+      style: const TextStyle(
+        fontSize: 15,
+        fontWeight: FontWeight.bold,
+        color: _C.text,
+      ),
+    ),
+  );
 }
 
 class _Avatar extends StatelessWidget {
@@ -203,14 +220,17 @@ class _Avatar extends StatelessWidget {
   // Swap the child for a NetworkImage when you have real profile pictures.
   @override
   Widget build(BuildContext context) => CircleAvatar(
-        radius: radius,
-        backgroundColor: _C.primary,
-        child: Text(initials,
-            style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-                fontSize: radius * 0.65)),
-      );
+    radius: radius,
+    backgroundColor: _C.primary,
+    child: Text(
+      initials,
+      style: TextStyle(
+        color: Colors.white,
+        fontWeight: FontWeight.bold,
+        fontSize: radius * 0.65,
+      ),
+    ),
+  );
 }
 
 class _StatusBadge extends StatelessWidget {
@@ -219,24 +239,27 @@ class _StatusBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-        decoration: BoxDecoration(
-          color: status.color.withValues(alpha: 0.14),
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Text(status.label,
-            style: TextStyle(
-                color: status.color,
-                fontWeight: FontWeight.bold,
-                fontSize: 12)),
-      );
+    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+    decoration: BoxDecoration(
+      color: status.color.withValues(alpha: 0.14),
+      borderRadius: BorderRadius.circular(20),
+    ),
+    child: Text(
+      status.label,
+      style: TextStyle(
+        color: status.color,
+        fontWeight: FontWeight.bold,
+        fontSize: 12,
+      ),
+    ),
+  );
 }
 
 InputDecoration _fieldDecoration(String hint, {Widget? prefix}) {
   OutlineInputBorder border(Color c) => OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10),
-        borderSide: BorderSide(color: c),
-      );
+    borderRadius: BorderRadius.circular(10),
+    borderSide: BorderSide(color: c),
+  );
   return InputDecoration(
     hintText: hint,
     hintStyle: const TextStyle(color: _C.muted, fontSize: 14),
@@ -263,8 +286,7 @@ class ProfessorEvaluationScreen extends StatefulWidget {
       _ProfessorEvaluationScreenState();
 }
 
-class _ProfessorEvaluationScreenState
-    extends State<ProfessorEvaluationScreen> {
+class _ProfessorEvaluationScreenState extends State<ProfessorEvaluationScreen> {
   final List<_Request> _requests = _sampleRequests();
   final _searchCtrl = TextEditingController();
   final Set<_Status> _filters = {};
@@ -277,28 +299,31 @@ class _ProfessorEvaluationScreenState
     final q = _searchCtrl.text.trim().toLowerCase();
     final list = _requests.where((r) {
       final matchesFilter = _filters.isEmpty || _filters.contains(r.status);
-      final matchesSearch = q.isEmpty ||
+      final matchesSearch =
+          q.isEmpty ||
           r.studentName.toLowerCase().contains(q) ||
           r.title.toLowerCase().contains(q);
       return matchesFilter && matchesSearch;
     }).toList();
 
-    list.sort((a, b) => switch (_sort) {
-          _Sort.newest => b.submitted.compareTo(a.submitted),
-          _Sort.oldest => a.submitted.compareTo(b.submitted),
-          _Sort.nameAZ => a.studentName.compareTo(b.studentName),
-          _Sort.nameZA => b.studentName.compareTo(a.studentName),
-        });
+    list.sort(
+      (a, b) => switch (_sort) {
+        _Sort.newest => b.submitted.compareTo(a.submitted),
+        _Sort.oldest => a.submitted.compareTo(b.submitted),
+        _Sort.nameAZ => a.studentName.compareTo(b.studentName),
+        _Sort.nameZA => b.studentName.compareTo(a.studentName),
+      },
+    );
     return list;
   }
 
   int _count(_Status s) => _requests.where((r) => r.status == s).length;
 
   void _clearFilters() => setState(() {
-        _filters.clear();
-        _searchCtrl.clear();
-        _sort = _Sort.newest;
-      });
+    _filters.clear();
+    _searchCtrl.clear();
+    _sort = _Sort.newest;
+  });
 
   @override
   void dispose() {
@@ -312,138 +337,160 @@ class _ProfessorEvaluationScreenState
 
     return Scaffold(
       backgroundColor: _C.pageBg,
-      body: _Centered(
-        child: Column(
-          children: [
-            // Title
-            const Padding(
-              padding: EdgeInsets.fromLTRB(20, 24, 20, 16),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Text('Modification Requests',
-                    style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                        color: _C.text)),
-              ),
-            ),
-
-            // Search + sort
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Row(
+      body: Row(
+        children: [
+          const ProfessorSidebar(
+            currentDestination: ProfessorNavDestination.evaluation,
+          ),
+          Expanded(
+            child: _Centered(
+              child: Column(
                 children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _searchCtrl,
-                      onChanged: (_) => setState(() {}),
-                      decoration: _fieldDecoration(
-                        'Search by student or request',
-                        prefix: const Icon(Icons.search, color: _C.muted),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  PopupMenuButton<_Sort>(
-                    tooltip: 'Sort',
-                    initialValue: _sort,
-                    offset: const Offset(0, 52),
-                    onSelected: (v) => setState(() => _sort = v),
-                    itemBuilder: (_) => const [
-                      PopupMenuItem(
-                          value: _Sort.newest,
-                          child: Text('Date submitted: newest')),
-                      PopupMenuItem(
-                          value: _Sort.oldest,
-                          child: Text('Date submitted: oldest')),
-                      PopupMenuItem(
-                          value: _Sort.nameAZ,
-                          child: Text('Student name: A to Z')),
-                      PopupMenuItem(
-                          value: _Sort.nameZA,
-                          child: Text('Student name: Z to A')),
-                    ],
-                    child: Container(
-                      width: 50,
-                      height: 50,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: _C.border),
-                      ),
-                      child: const Icon(Icons.swap_vert, color: _C.primary),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            // Status filters with totals
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    for (final s in _Status.values)
-                      _FilterPill(
-                        status: s,
-                        count: _count(s),
-                        selected: _filters.contains(s),
-                        onTap: () => setState(() => _filters.contains(s)
-                            ? _filters.remove(s)
-                            : _filters.add(s)),
-                      ),
-                  ],
-                ),
-              ),
-            ),
-
-            // Result count + clear filter
-            Padding(
-              padding: const EdgeInsets.fromLTRB(24, 8, 14, 0),
-              child: Row(
-                children: [
-                  Text(
-                    '${items.length} ${items.length == 1 ? 'request' : 'requests'}',
-                    style: const TextStyle(color: _C.muted, fontSize: 13),
-                  ),
-                  const Spacer(),
-                  TextButton.icon(
-                    onPressed: _hasActiveFilter ? _clearFilters : null,
-                    icon: const Icon(Icons.close, size: 16),
-                    label: const Text('Clear filter'),
-                  ),
-                ],
-              ),
-            ),
-
-            // List or empty state
-            Expanded(
-              child: items.isEmpty
-                  ? const _EmptyState()
-                  : ListView.separated(
-                      padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
-                      itemCount: items.length,
-                      separatorBuilder: (_, _) => const SizedBox(height: 12),
-                      itemBuilder: (_, i) => _RequestCard(
-                        request: items[i],
-                        onView: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => _RequestDetailsScreen(
-                              request: items[i],
-                              onChanged: () => setState(() {}),
-                            ),
-                          ),
+                  // Title
+                  const Padding(
+                    padding: EdgeInsets.fromLTRB(20, 24, 20, 16),
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        'Modification Requests',
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                          color: _C.text,
                         ),
                       ),
                     ),
+                  ),
+
+                  // Search + sort
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: _searchCtrl,
+                            onChanged: (_) => setState(() {}),
+                            decoration: _fieldDecoration(
+                              'Search by student or request',
+                              prefix: const Icon(Icons.search, color: _C.muted),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        PopupMenuButton<_Sort>(
+                          tooltip: 'Sort',
+                          initialValue: _sort,
+                          offset: const Offset(0, 52),
+                          onSelected: (v) => setState(() => _sort = v),
+                          itemBuilder: (_) => const [
+                            PopupMenuItem(
+                              value: _Sort.newest,
+                              child: Text('Date submitted: newest'),
+                            ),
+                            PopupMenuItem(
+                              value: _Sort.oldest,
+                              child: Text('Date submitted: oldest'),
+                            ),
+                            PopupMenuItem(
+                              value: _Sort.nameAZ,
+                              child: Text('Student name: A to Z'),
+                            ),
+                            PopupMenuItem(
+                              value: _Sort.nameZA,
+                              child: Text('Student name: Z to A'),
+                            ),
+                          ],
+                          child: Container(
+                            width: 50,
+                            height: 50,
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: _C.border),
+                            ),
+                            child: const Icon(
+                              Icons.swap_vert,
+                              color: _C.primary,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // Status filters with totals
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          for (final s in _Status.values)
+                            _FilterPill(
+                              status: s,
+                              count: _count(s),
+                              selected: _filters.contains(s),
+                              onTap: () => setState(
+                                () => _filters.contains(s)
+                                    ? _filters.remove(s)
+                                    : _filters.add(s),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  // Result count + clear filter
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 8, 14, 0),
+                    child: Row(
+                      children: [
+                        Text(
+                          '${items.length} ${items.length == 1 ? 'request' : 'requests'}',
+                          style: const TextStyle(color: _C.muted, fontSize: 13),
+                        ),
+                        const Spacer(),
+                        TextButton.icon(
+                          onPressed: _hasActiveFilter ? _clearFilters : null,
+                          icon: const Icon(Icons.close, size: 16),
+                          label: const Text('Clear filter'),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // List or empty state
+                  Expanded(
+                    child: items.isEmpty
+                        ? const _EmptyState()
+                        : ListView.separated(
+                            padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
+                            itemCount: items.length,
+                            separatorBuilder: (_, _) =>
+                                const SizedBox(height: 12),
+                            itemBuilder: (_, i) => _RequestCard(
+                              request: items[i],
+                              onView: () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => _RequestDetailsScreen(
+                                    request: items[i],
+                                    onChanged: () => setState(() {}),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                  ),
+                ],
+              ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -470,12 +517,12 @@ class _FilterPill extends StatelessWidget {
         duration: const Duration(milliseconds: 150),
         padding: const EdgeInsets.fromLTRB(12, 8, 8, 8),
         decoration: BoxDecoration(
-          color:
-              selected ? status.color.withValues(alpha: 0.12) : Colors.white,
+          color: selected ? status.color.withValues(alpha: 0.12) : Colors.white,
           borderRadius: BorderRadius.circular(24),
           border: Border.all(
-              color: selected ? status.color : _C.border,
-              width: selected ? 1.5 : 1),
+            color: selected ? status.color : _C.border,
+            width: selected ? 1.5 : 1,
+          ),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -483,15 +530,20 @@ class _FilterPill extends StatelessWidget {
             Container(
               width: 8,
               height: 8,
-              decoration:
-                  BoxDecoration(color: status.color, shape: BoxShape.circle),
+              decoration: BoxDecoration(
+                color: status.color,
+                shape: BoxShape.circle,
+              ),
             ),
             const SizedBox(width: 8),
-            Text(status.label,
-                style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: _C.body)),
+            Text(
+              status.label,
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: _C.body,
+              ),
+            ),
             const SizedBox(width: 8),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
@@ -499,11 +551,14 @@ class _FilterPill extends StatelessWidget {
                 color: status.color.withValues(alpha: 0.18),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Text('$count',
-                  style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: status.color)),
+              child: Text(
+                '$count',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: status.color,
+                ),
+              ),
             ),
           ],
         ),
@@ -517,16 +572,18 @@ class _EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => const Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.inbox_outlined, size: 56, color: _C.border),
-            SizedBox(height: 10),
-            Text('No requests found',
-                style: TextStyle(fontSize: 16, color: _C.muted)),
-          ],
+    child: Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(Icons.inbox_outlined, size: 56, color: _C.border),
+        SizedBox(height: 10),
+        Text(
+          'No requests found',
+          style: TextStyle(fontSize: 16, color: _C.muted),
         ),
-      );
+      ],
+    ),
+  );
 }
 
 class _RequestCard extends StatelessWidget {
@@ -549,15 +606,19 @@ class _RequestCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(request.studentName,
-                        style: const TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.bold,
-                            color: _C.body)),
+                    Text(
+                      request.studentName,
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                        color: _C.body,
+                      ),
+                    ),
                     const SizedBox(height: 2),
-                    Text(request.title,
-                        style: const TextStyle(
-                            fontSize: 13, color: _C.muted)),
+                    Text(
+                      request.title,
+                      style: const TextStyle(fontSize: 13, color: _C.muted),
+                    ),
                   ],
                 ),
               ),
@@ -572,11 +633,16 @@ class _RequestCard extends StatelessWidget {
           const Divider(height: 1, color: _C.border),
           Row(
             children: [
-              const Icon(Icons.calendar_today_outlined,
-                  size: 14, color: _C.muted),
+              const Icon(
+                Icons.calendar_today_outlined,
+                size: 14,
+                color: _C.muted,
+              ),
               const SizedBox(width: 6),
-              Text('Submitted ${_fmtDate(request.submitted)}',
-                  style: const TextStyle(fontSize: 12, color: _C.muted)),
+              Text(
+                'Submitted ${_fmtDate(request.submitted)}',
+                style: const TextStyle(fontSize: 12, color: _C.muted),
+              ),
               const Spacer(),
               TextButton(
                 onPressed: onView,
@@ -602,8 +668,7 @@ class _RequestCard extends StatelessWidget {
 class _RequestDetailsScreen extends StatefulWidget {
   final _Request request;
   final VoidCallback onChanged;
-  const _RequestDetailsScreen(
-      {required this.request, required this.onChanged});
+  const _RequestDetailsScreen({required this.request, required this.onChanged});
 
   @override
   State<_RequestDetailsScreen> createState() => _RequestDetailsScreenState();
@@ -630,10 +695,9 @@ class _RequestDetailsScreenState extends State<_RequestDetailsScreen> {
 
   void _toast(String msg) => ScaffoldMessenger.of(context)
     ..hideCurrentSnackBar()
-    ..showSnackBar(SnackBar(
-      content: Text(msg),
-      behavior: SnackBarBehavior.floating,
-    ));
+    ..showSnackBar(
+      SnackBar(content: Text(msg), behavior: SnackBarBehavior.floating),
+    );
 
   void _markUnderReview() {
     setState(() {
@@ -673,20 +737,26 @@ class _RequestDetailsScreenState extends State<_RequestDetailsScreen> {
       r.status = decision;
       r.remarks = remarks;
       r.history
-        ..add(_HistoryEntry(DateTime.now(), approving ? 'Approved' : 'Declined',
-            remarks.isEmpty ? null : remarks))
+        ..add(
+          _HistoryEntry(
+            DateTime.now(),
+            approving ? 'Approved' : 'Declined',
+            remarks.isEmpty ? null : remarks,
+          ),
+        )
         ..add(_HistoryEntry(DateTime.now(), 'Notification sent to student'));
     });
     widget.onChanged();
     _toast(
-        '${approving ? 'Approved' : 'Declined'}. ${r.studentName} has been notified.');
+      '${approving ? 'Approved' : 'Declined'}. ${r.studentName} has been notified.',
+    );
   }
 
   ButtonStyle _decisionStyle(Color color) => FilledButton.styleFrom(
-        backgroundColor: color,
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      );
+    backgroundColor: color,
+    padding: const EdgeInsets.symmetric(vertical: 16),
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -697,9 +767,14 @@ class _RequestDetailsScreenState extends State<_RequestDetailsScreen> {
         surfaceTintColor: Colors.transparent,
         elevation: 1,
         leading: const BackButton(color: _C.muted),
-        title: const Text('Request Details',
-            style: TextStyle(
-                fontSize: 18, fontWeight: FontWeight.bold, color: _C.text)),
+        title: const Text(
+          'Request Details',
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: _C.text,
+          ),
+        ),
       ),
       body: _Centered(
         child: ListView(
@@ -715,18 +790,24 @@ class _RequestDetailsScreenState extends State<_RequestDetailsScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(r.studentName,
-                            style: const TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color: _C.text)),
+                        Text(
+                          r.studentName,
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: _C.text,
+                          ),
+                        ),
                         const SizedBox(height: 2),
-                        Text('${r.studentId}  ·  ${r.program}',
-                            style: const TextStyle(color: _C.muted)),
+                        Text(
+                          '${r.studentId}  ·  ${r.program}',
+                          style: const TextStyle(color: _C.muted),
+                        ),
                         const SizedBox(height: 2),
-                        Text('Submitted ${_fmtDate(r.submitted)}',
-                            style: const TextStyle(
-                                fontSize: 12, color: _C.muted)),
+                        Text(
+                          'Submitted ${_fmtDate(r.submitted)}',
+                          style: const TextStyle(fontSize: 12, color: _C.muted),
+                        ),
                       ],
                     ),
                   ),
@@ -743,8 +824,10 @@ class _RequestDetailsScreenState extends State<_RequestDetailsScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _SectionTitle(r.title),
-                  Text('Field: ${r.field}',
-                      style: const TextStyle(color: _C.muted)),
+                  Text(
+                    'Field: ${r.field}',
+                    style: const TextStyle(color: _C.muted),
+                  ),
                   const SizedBox(height: 12),
                   Row(
                     children: [
@@ -762,9 +845,14 @@ class _RequestDetailsScreenState extends State<_RequestDetailsScreen> {
                           width: 32,
                           height: 32,
                           decoration: const BoxDecoration(
-                              color: _C.primarySoft, shape: BoxShape.circle),
-                          child: const Icon(Icons.arrow_forward,
-                              size: 16, color: _C.primary),
+                            color: _C.primarySoft,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.arrow_forward,
+                            size: 16,
+                            color: _C.primary,
+                          ),
                         ),
                       ),
                       Expanded(
@@ -826,7 +914,8 @@ class _RequestDetailsScreenState extends State<_RequestDetailsScreen> {
                           foregroundColor: _C.primary,
                           padding: const EdgeInsets.symmetric(vertical: 14),
                           shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10)),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
                         ),
                       ),
                     ),
@@ -837,8 +926,9 @@ class _RequestDetailsScreenState extends State<_RequestDetailsScreen> {
                     enabled: !_decided,
                     maxLines: 3,
                     onChanged: (_) => setState(() {}),
-                    decoration:
-                        _fieldDecoration('Add comments or remarks (optional)'),
+                    decoration: _fieldDecoration(
+                      'Add comments or remarks (optional)',
+                    ),
                   ),
                   const SizedBox(height: 8),
                   Align(
@@ -847,7 +937,8 @@ class _RequestDetailsScreenState extends State<_RequestDetailsScreen> {
                       style: FilledButton.styleFrom(
                         backgroundColor: _C.primary,
                         shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10)),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
                       ),
                       onPressed: _decided || _remarksCtrl.text.trim().isEmpty
                           ? null
@@ -861,8 +952,9 @@ class _RequestDetailsScreenState extends State<_RequestDetailsScreen> {
                       Expanded(
                         child: FilledButton(
                           style: _decisionStyle(_Status.approved.color),
-                          onPressed:
-                              _decided ? null : () => _decide(_Status.approved),
+                          onPressed: _decided
+                              ? null
+                              : () => _decide(_Status.approved),
                           child: const Text('Approve'),
                         ),
                       ),
@@ -870,8 +962,9 @@ class _RequestDetailsScreenState extends State<_RequestDetailsScreen> {
                       Expanded(
                         child: FilledButton(
                           style: _decisionStyle(_Status.rejected.color),
-                          onPressed:
-                              _decided ? null : () => _decide(_Status.rejected),
+                          onPressed: _decided
+                              ? null
+                              : () => _decide(_Status.rejected),
                           child: const Text('Decline'),
                         ),
                       ),
@@ -889,8 +982,9 @@ class _RequestDetailsScreenState extends State<_RequestDetailsScreen> {
                       child: Text(
                         'This request was ${r.status.label.toLowerCase()}. The student has been notified.',
                         style: TextStyle(
-                            color: r.status.color,
-                            fontWeight: FontWeight.w600),
+                          color: r.status.color,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
                   ],
@@ -934,28 +1028,34 @@ class _ValueBox extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: background,
-          borderRadius: BorderRadius.circular(10),
+    padding: const EdgeInsets.all(14),
+    decoration: BoxDecoration(
+      color: background,
+      borderRadius: BorderRadius.circular(10),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: accent,
+          ),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(label,
-                style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: accent)),
-            const SizedBox(height: 4),
-            Text(value,
-                style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: _C.text)),
-          ],
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: _C.text,
+          ),
         ),
-      );
+      ],
+    ),
+  );
 }
 
 class _TimelineRow extends StatelessWidget {
@@ -978,7 +1078,9 @@ class _TimelineRow extends StatelessWidget {
                   width: 10,
                   height: 10,
                   decoration: const BoxDecoration(
-                      color: _C.primary, shape: BoxShape.circle),
+                    color: _C.primary,
+                    shape: BoxShape.circle,
+                  ),
                 ),
                 if (!isLast)
                   Expanded(child: Container(width: 2, color: _C.border)),
@@ -992,16 +1094,24 @@ class _TimelineRow extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(entry.action,
-                      style: const TextStyle(
-                          fontWeight: FontWeight.w600, color: _C.body)),
-                  Text(_fmtDate(entry.date),
-                      style: const TextStyle(fontSize: 12, color: _C.muted)),
+                  Text(
+                    entry.action,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      color: _C.body,
+                    ),
+                  ),
+                  Text(
+                    _fmtDate(entry.date),
+                    style: const TextStyle(fontSize: 12, color: _C.muted),
+                  ),
                   if (entry.remarks != null && entry.remarks!.isNotEmpty)
                     Padding(
                       padding: const EdgeInsets.only(top: 4),
-                      child: Text('Remarks: ${entry.remarks}',
-                          style: const TextStyle(color: _C.muted)),
+                      child: Text(
+                        'Remarks: ${entry.remarks}',
+                        style: const TextStyle(color: _C.muted),
+                      ),
                     ),
                 ],
               ),
@@ -1043,9 +1153,14 @@ class _ConfirmDialogState extends State<_ConfirmDialog> {
       backgroundColor: Colors.white,
       surfaceTintColor: Colors.transparent,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      title: Text(widget.title,
-          style: const TextStyle(
-              fontSize: 18, fontWeight: FontWeight.bold, color: _C.text)),
+      title: Text(
+        widget.title,
+        style: const TextStyle(
+          fontSize: 18,
+          fontWeight: FontWeight.bold,
+          color: _C.text,
+        ),
+      ),
       content: Text(widget.message, style: const TextStyle(color: _C.muted)),
       actions: [
         TextButton(

@@ -4,7 +4,9 @@ import 'package:frontend/screens/login_screen.dart';
 import 'package:frontend/screens/signup_screen.dart';
 
 void main() {
-  testWidgets('LoginScreen renders email, password fields and demo buttons', (tester) async {
+  testWidgets('LoginScreen renders email, password fields and demo buttons', (
+    tester,
+  ) async {
     await tester.binding.setSurfaceSize(const Size(1200, 1000));
     addTearDown(() => tester.binding.setSurfaceSize(null));
 

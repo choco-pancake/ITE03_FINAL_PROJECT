@@ -88,11 +88,13 @@ class ScarcityReport {
       totalStudents: json['total_students'] as int? ?? 30,
       numberOfGroups: json['number_of_groups'] as int? ?? 6,
       groupCapacity: json['group_capacity'] as int? ?? 5,
-      skillsDistribution: (json['skills_distribution'] as List?)
+      skillsDistribution:
+          (json['skills_distribution'] as List?)
               ?.map((e) => SkillDistributionItem.fromJson(e))
               .toList() ??
           [],
-      scarceSkills: (json['scarce_skills'] as List?)
+      scarceSkills:
+          (json['scarce_skills'] as List?)
               ?.map((e) => ScarceSkillDeficit.fromJson(e))
               .toList() ??
           [],

@@ -8,6 +8,8 @@ import '../services/auth_service.dart';
 import '../services/profile_service.dart';
 import '../services/skill_approval_service.dart';
 import 'professor_evaluation_screen.dart';
+import 'widgets/bottom_right_notification.dart';
+import '../models/academic_class.dart';
 import 'widgets/professor_sidebar.dart';
 
 // Helper model for student completion statuses
@@ -154,16 +156,41 @@ class _ProfessorDashboardScreenState extends State<ProfessorDashboardScreen> {
     try {
       final profilesFuture = _profileService.getProfiles();
       final activitiesFuture = _activityService.getActivities();
-      final results = await Future.wait([profilesFuture, activitiesFuture]);
+      final classesFuture = _activityService.getClasses();
+      final results = await Future.wait([profilesFuture, activitiesFuture, classesFuture]);
 
       final profiles = results[0] as List<Profile>;
       final activities = results[1] as List<GroupingActivity>;
+      final classes = results[2] as List<AcademicClass>;
 
       if (!mounted) return;
 
       setState(() {
-        // Build students from real registered profiles
-        _allStudents = profiles.map((p) {
+        // If the professor has not created any classes yet, no students or unassigned students should appear
+        if (classes.isEmpty) {
+          _allStudents = [];
+          _teams = [];
+          _unassignedStudents = [];
+          return;
+        }
+
+        final classSections = classes
+            .map((c) => c.section?.trim().toLowerCase())
+            .where((s) => s != null && s.isNotEmpty)
+            .toSet();
+
+        // Filter profiles to those belonging to the instructor's created classes
+        final classProfiles = profiles.where((p) {
+          final block = (p.details['block'] ?? p.availability).toString().trim().toLowerCase();
+          if (classSections.contains(block)) return true;
+          for (final sec in classSections) {
+            if (sec != null && sec.isNotEmpty && block.contains(sec)) return true;
+          }
+          return false;
+        }).toList();
+
+        // Build students from filtered profiles
+        _allStudents = classProfiles.map((p) {
           final hasRole = p.preferredRole.isNotEmpty;
           final hasSkills = p.skills.isNotEmpty;
           final status = (hasRole && hasSkills)
@@ -1828,10 +1855,6 @@ class _ProfessorDashboardScreenState extends State<ProfessorDashboardScreen> {
                         SkillApprovalStatus.pending,
                       ),
                       _buildSkillStatusFilterChip(
-                        'Under Review',
-                        SkillApprovalStatus.underReview,
-                      ),
-                      _buildSkillStatusFilterChip(
                         'Approved',
                         SkillApprovalStatus.approved,
                       ),
@@ -1976,14 +1999,10 @@ class _ProfessorDashboardScreenState extends State<ProfessorDashboardScreen> {
                                 SkillApprovalStatus.approved,
                                 remarks: 'Verified syllabus alignment.',
                               );
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(
-                                    'Approved "${req.skillName}". Added to official skill catalog!',
-                                  ),
-                                  backgroundColor: const Color(0xFF16A34A),
-                                  behavior: SnackBarBehavior.floating,
-                                ),
+                              AppNotification.showMessage(
+                                context,
+                                'Skill Approved',
+                                'Approved "${req.skillName}". Added to official skill catalog!',
                               );
                             },
                             style: OutlinedButton.styleFrom(
@@ -2003,31 +2022,6 @@ class _ProfessorDashboardScreenState extends State<ProfessorDashboardScreen> {
                               ),
                             ),
                           ),
-                          if (req.status != SkillApprovalStatus.underReview)
-                            OutlinedButton(
-                              onPressed: () {
-                                _skillService.updateStatus(
-                                  req.id,
-                                  SkillApprovalStatus.underReview,
-                                  remarks: 'Reviewing domain applicability.',
-                                );
-                              },
-                              style: OutlinedButton.styleFrom(
-                                foregroundColor: const Color(0xFF2563EB),
-                                side: const BorderSide(
-                                  color: Color(0xFFBFDBFE),
-                                ),
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 6,
-                                ),
-                                minimumSize: Size.zero,
-                              ),
-                              child: const Text(
-                                'Review',
-                                style: TextStyle(fontSize: 11),
-                              ),
-                            ),
                           OutlinedButton(
                             onPressed: () {
                               _skillService.updateStatus(

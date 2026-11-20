@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -263,64 +265,78 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
     }
   }
 
+  void _applyProfileData(Profile p) {
+    _existingProfileId = p.id;
+    final details = p.details;
+    final nameParts = p.name.trim().split(RegExp(r'\s+'));
+    if (nameParts.isNotEmpty) _firstNameController.text = nameParts.first;
+    _lastNameController.text = nameParts.length > 1 ? nameParts.last : '';
+    _middleNameController.text = nameParts.length > 2
+        ? nameParts.sublist(1, nameParts.length - 1).join(' ')
+        : '';
+    _studentIdController.text =
+        (details['student_id'] ?? _studentIdController.text).toString();
+    _selectedBlock = (details['block'] ?? _selectedBlock).toString();
+    _selectedYearLevel =
+        (details['year_level'] ??
+                ClassSections.yearFor(_selectedBlock) ??
+                '2nd Year')
+            .toString();
+    if (!ClassSections.byYear.containsKey(_selectedYearLevel)) {
+      _selectedYearLevel = '2nd Year';
+    }
+    _selectedTools
+      ..clear()
+      ..addAll(List<String>.from(details['tools'] ?? []));
+    _selectedDays
+      ..clear()
+      ..addAll(List<String>.from(details['available_days'] ?? []));
+    _startMeetingHour = details['meeting_start'] as String?;
+    _endMeetingHour = details['meeting_end'] as String?;
+    if (_startMeetingHour != null && _endMeetingHour != null) {
+      _selectedMeetingTime = '$_startMeetingHour - $_endMeetingHour';
+    }
+    _collaborationMode =
+        (details['collaboration_mode'] ?? _collaborationMode).toString();
+    _experienceController.text = (details['experience'] ?? '').toString();
+    final roles = List<String>.from(details['roles'] ?? []);
+    if (roles.isNotEmpty) _rolePriority1 = roles[0];
+    _rolePriority2 = roles.length > 1 ? roles[1] : null;
+    _rolePriority3 = roles.length > 2 ? roles[2] : null;
+    if (p.skills.isNotEmpty) {
+      _selectedSkills.clear();
+      _selectedSkills.addAll(p.skills);
+    }
+    if (p.preferredRole.isNotEmpty) {
+      _rolePriority1 = p.preferredRole;
+    }
+    if (p.interests.isNotEmpty) {
+      _selectedInterests.clear();
+      _selectedInterests.addAll(p.interests);
+    }
+    _isSavedAsComplete = details['is_complete'] == true;
+    _editingProfile = false;
+    _isDirty = false;
+  }
+
   Future<void> _loadExistingProfile() async {
+    final userKey = AuthService.currentUser?.id ?? AuthService.currentUser?.email ?? 'active';
+    final cacheKey = 'gmm_profile_cache_$userKey';
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final cachedJson = prefs.getString(cacheKey);
+      if (cachedJson != null && mounted) {
+        final cached = Profile.fromJson(jsonDecode(cachedJson));
+        setState(() => _applyProfileData(cached));
+      }
+    } catch (_) {}
+
     try {
       final myProfile = await _profileService.getMyProfile();
-
       if (myProfile != null && mounted) {
-        setState(() {
-          _existingProfileId = myProfile.id;
-          final details = myProfile.details;
-          final nameParts = myProfile.name.trim().split(RegExp(r'\s+'));
-          _firstNameController.text = nameParts.first;
-          _lastNameController.text = nameParts.length > 1 ? nameParts.last : '';
-          _middleNameController.text = nameParts.length > 2
-              ? nameParts.sublist(1, nameParts.length - 1).join(' ')
-              : '';
-          _studentIdController.text =
-              (details['student_id'] ?? _studentIdController.text).toString();
-          _selectedBlock = (details['block'] ?? _selectedBlock).toString();
-          _selectedYearLevel =
-              (details['year_level'] ??
-                      ClassSections.yearFor(_selectedBlock) ??
-                      '2nd Year')
-                  .toString();
-          if (!ClassSections.byYear.containsKey(_selectedYearLevel)) {
-            _selectedYearLevel = '2nd Year';
-          }
-          _selectedTools
-            ..clear()
-            ..addAll(List<String>.from(details['tools'] ?? []));
-          _selectedDays
-            ..clear()
-            ..addAll(List<String>.from(details['available_days'] ?? []));
-          _startMeetingHour = details['meeting_start'] as String?;
-          _endMeetingHour = details['meeting_end'] as String?;
-          if (_startMeetingHour != null && _endMeetingHour != null) {
-            _selectedMeetingTime = '$_startMeetingHour - $_endMeetingHour';
-          }
-          _collaborationMode =
-              (details['collaboration_mode'] ?? _collaborationMode).toString();
-          _experienceController.text = (details['experience'] ?? '').toString();
-          final roles = List<String>.from(details['roles'] ?? []);
-          if (roles.isNotEmpty) _rolePriority1 = roles[0];
-          _rolePriority2 = roles.length > 1 ? roles[1] : null;
-          _rolePriority3 = roles.length > 2 ? roles[2] : null;
-          if (myProfile.skills.isNotEmpty) {
-            _selectedSkills.clear();
-            _selectedSkills.addAll(myProfile.skills);
-          }
-          if (myProfile.preferredRole.isNotEmpty) {
-            _rolePriority1 = myProfile.preferredRole;
-          }
-          if (myProfile.interests.isNotEmpty) {
-            _selectedInterests.clear();
-            _selectedInterests.addAll(myProfile.interests);
-          }
-          _isSavedAsComplete = details['is_complete'] == true;
-          _editingProfile = false;
-          _isDirty = false;
-        });
+        setState(() => _applyProfileData(myProfile));
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString(cacheKey, jsonEncode(myProfile.toJson()));
       }
     } catch (_) {}
   }
@@ -1198,6 +1214,11 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
     try {
       final saved = await _profileService.saveMyProfile(profile);
       _existingProfileId = saved.id;
+      final userKey = AuthService.currentUser?.id ?? AuthService.currentUser?.email ?? 'active';
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('gmm_profile_cache_$userKey', jsonEncode(saved.toJson()));
+      } catch (_) {}
       final old = AuthService.currentUser;
       if (old != null) {
         AuthService.currentUser = AuthUser(
@@ -1605,74 +1626,90 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
               onBeforeNavigate: _promptUnsavedChanges,
             ),
 
-            // Main Scrollable Form Area
+            // Main Form Area with Fixed Header & Scrollable Content
             Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 32,
-                  vertical: 28,
-                ),
-                child: Center(
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 880),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Settings',
-                          style: TextStyle(
-                            fontSize: 30,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Stationary / Fixed Top Header
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(32, 28, 32, 16),
+                    child: Center(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 880),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            ChoiceChip(
-                              label: const Text('My Profile'),
-                              selected: _activeTab == 0,
-                              onSelected: (_) => setState(() => _activeTab = 0),
+                            const Text(
+                              'Settings',
+                              style: TextStyle(
+                                fontSize: 30,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
-                            ChoiceChip(
-                              label: const Text('Account & Security'),
-                              selected: _activeTab == 1,
-                              onSelected: (_) async {
-                                if (await _promptUnsavedChanges() && mounted) {
-                                  setState(() => _activeTab = 1);
-                                }
-                              },
-                            ),
-                            ChoiceChip(
-                              label: const Text('Notifications'),
-                              selected: _activeTab == 2,
-                              onSelected: (_) async {
-                                if (await _promptUnsavedChanges() && mounted) {
-                                  setState(() => _activeTab = 2);
-                                }
-                              },
+                            const SizedBox(height: 16),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: [
+                                ChoiceChip(
+                                  label: const Text('My Profile'),
+                                  selected: _activeTab == 0,
+                                  onSelected: (_) => setState(() => _activeTab = 0),
+                                ),
+                                ChoiceChip(
+                                  label: const Text('Account & Security'),
+                                  selected: _activeTab == 1,
+                                  onSelected: (_) async {
+                                    if (await _promptUnsavedChanges() && mounted) {
+                                      setState(() => _activeTab = 1);
+                                    }
+                                  },
+                                ),
+                                ChoiceChip(
+                                  label: const Text('Notifications'),
+                                  selected: _activeTab == 2,
+                                  onSelected: (_) async {
+                                    if (await _promptUnsavedChanges() && mounted) {
+                                      setState(() => _activeTab = 2);
+                                    }
+                                  },
+                                ),
+                              ],
                             ),
                           ],
                         ),
-                        const SizedBox(height: 24),
-                        if (_activeTab == -1)
-                          const Card(
-                            child: Padding(
-                              padding: EdgeInsets.all(24),
-                              child: Text(
-                                'Choose a settings tab to view your profile, manage account security, or change notifications.',
-                              ),
-                            ),
-                          ),
-                        if (_activeTab == 1)
-                          StudentAccountTab(
-                            studentId: _studentIdController.text.trim(),
-                          ),
-                        if (_activeTab == 2) _buildNotificationTab(),
-                        if (_activeTab == 0 && !_editingProfile)
-                          _buildSavedProfile(),
-                        if (_activeTab == 0 && _editingProfile) ...[
+                      ),
+                    ),
+                  ),
+
+                  // Scrollable Content Area below the fixed header
+                  Expanded(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.fromLTRB(32, 8, 32, 28),
+                      child: Center(
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 880),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              if (_activeTab == -1)
+                                const Card(
+                                  child: Padding(
+                                    padding: EdgeInsets.all(24),
+                                    child: Text(
+                                      'Choose a settings tab to view your profile, manage account security, or change notifications.',
+                                    ),
+                                  ),
+                                ),
+                              if (_activeTab == 1)
+                                StudentAccountTab(
+                                  studentId: _studentIdController.text.trim(),
+                                ),
+                              if (_activeTab == 2) _buildNotificationTab(),
+                              if (_activeTab == 0 && !_editingProfile)
+                                _buildSavedProfile(),
+                              if (_activeTab == 0 && _editingProfile) ...[
                           // Header Section
                           Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -2675,6 +2712,9 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
                 ),
               ),
             ),
+          ],
+        ),
+      ),
           ],
         ),
       ),

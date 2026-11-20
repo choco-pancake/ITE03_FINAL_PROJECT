@@ -77,11 +77,22 @@ class AuthService {
   static const String _prefKeySavedEmail = 'gmm_saved_email';
   static const String _prefKeySavedToken = 'gmm_saved_token';
   static const String _prefKeySavedUser = 'gmm_saved_user';
+  static const String _prefKeyActiveToken = 'gmm_active_token';
+  static const String _prefKeyActiveUser = 'gmm_active_user';
 
   static const Map<String, String> _headers = {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
   };
+
+  /// Persist the active session so page refreshes in web do not drop credentials
+  static Future<void> saveActiveSession(AuthUser user, String token) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_prefKeyActiveToken, token);
+      await prefs.setString(_prefKeyActiveUser, jsonEncode(user.toJson()));
+    } catch (_) {}
+  }
 
   /// Save or clear Remember Me credentials and full session in persistent storage
   static Future<void> saveSession({
@@ -92,6 +103,7 @@ class AuthService {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool(_prefKeyRememberMe, rememberMe);
+      await saveActiveSession(user, token);
       if (rememberMe) {
         await prefs.setString(_prefKeySavedEmail, user.email.trim());
         await prefs.setString(_prefKeySavedToken, token);
@@ -104,15 +116,14 @@ class AuthService {
     } catch (_) {}
   }
 
-  /// Restore persisted session on app startup if Remember Me was enabled
+  /// Restore persisted session on app startup or browser page refresh
   static Future<AuthUser?> restoreSession() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final remember = prefs.getBool(_prefKeyRememberMe) ?? false;
-      if (!remember) return null;
-
-      final token = prefs.getString(_prefKeySavedToken);
-      final userJson = prefs.getString(_prefKeySavedUser);
+      final token = prefs.getString(_prefKeyActiveToken) ??
+          prefs.getString(_prefKeySavedToken);
+      final userJson = prefs.getString(_prefKeyActiveUser) ??
+          prefs.getString(_prefKeySavedUser);
       if (token != null && userJson != null) {
         final user = AuthUser.fromJson(jsonDecode(userJson));
         currentUser = user;
@@ -183,6 +194,7 @@ class AuthService {
         final user = AuthUser.fromJson(data['user']);
         currentUser = user;
         authToken = data['token'];
+        await saveActiveSession(user, data['token']);
         return user;
       }
 
@@ -246,6 +258,7 @@ class AuthService {
         final user = AuthUser.fromJson(data['user']);
         currentUser = user;
         authToken = data['token'];
+        await saveActiveSession(user, data['token']);
         return user;
       }
 
@@ -287,6 +300,7 @@ class AuthService {
         final user = AuthUser.fromJson(data['user']);
         currentUser = user;
         authToken = data['token'];
+        await saveActiveSession(user, data['token']);
         return user;
       }
 
@@ -314,6 +328,8 @@ class AuthService {
     authToken = null;
     try {
       final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_prefKeyActiveToken);
+      await prefs.remove(_prefKeyActiveUser);
       await prefs.remove(_prefKeySavedToken);
       await prefs.remove(_prefKeySavedUser);
     } catch (_) {}
@@ -356,6 +372,8 @@ class AuthService {
     currentUser = null;
     authToken = null;
     final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_prefKeyActiveToken);
+    await prefs.remove(_prefKeyActiveUser);
     await prefs.remove(_prefKeySavedToken);
     await prefs.remove(_prefKeySavedUser);
     await prefs.remove(_prefKeySavedEmail);

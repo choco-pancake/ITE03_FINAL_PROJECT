@@ -82,6 +82,20 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
     super.initState();
     _loadDashboardData();
     _loadAlertPreference();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final isComplete = await ProfileService().checkProfileComplete();
+      if (!isComplete && mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => const StudentSettingsScreen(
+              initialTab: 0,
+              requireCompletion: true,
+            ),
+          ),
+        );
+      }
+    });
   }
 
   Future<void> _loadAlertPreference() async {
@@ -316,13 +330,6 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              // Top Actions Row
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.end,
-                                children: const [PortalTopActions()],
-                              ),
-                              const SizedBox(height: 12),
-
                               // Top Greeting Banner
                               _buildWelcomeHeader(),
                               const SizedBox(height: 20),
@@ -515,7 +522,13 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                avatarAndInfo,
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(child: avatarAndInfo),
+                    const PortalTopActions(),
+                  ],
+                ),
                 const SizedBox(height: 12),
                 Align(alignment: Alignment.centerLeft, child: editButton),
               ],
@@ -527,6 +540,8 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
               Expanded(child: avatarAndInfo),
               const SizedBox(width: 16),
               editButton,
+              const SizedBox(width: 12),
+              const PortalTopActions(),
             ],
           );
         },

@@ -4,9 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../services/auth_service.dart';
+import '../services/profile_service.dart';
 import 'professor_dashboard_screen.dart';
 import 'signup_screen.dart';
 import 'student_dashboard_screen.dart';
+import 'student_settings_screen.dart';
 import 'widgets/bottom_right_notification.dart';
 import 'widgets/google_auth_button.dart';
 import 'widgets/landing_top_bar.dart';
@@ -90,9 +92,18 @@ class _LoginScreenState extends State<LoginScreen> {
           (route) => false,
         );
       } else {
+        final isComplete = await ProfileService().checkProfileComplete();
+        if (!mounted) return;
         Navigator.pushAndRemoveUntil(
           context,
-          MaterialPageRoute(builder: (_) => const StudentDashboardScreen()),
+          MaterialPageRoute(
+            builder: (_) => isComplete
+                ? const StudentDashboardScreen()
+                : const StudentSettingsScreen(
+                    initialTab: 0,
+                    requireCompletion: true,
+                  ),
+          ),
           (route) => false,
         );
       }
@@ -125,15 +136,28 @@ class _LoginScreenState extends State<LoginScreen> {
       );
       if (!mounted) return;
       AppNotification.showWelcome(context, user.name);
-      Navigator.pushAndRemoveUntil(
-        context,
-        MaterialPageRoute(
-          builder: (_) => user.isProfessor
-              ? const ProfessorDashboardScreen()
-              : const StudentDashboardScreen(),
-        ),
-        (route) => false,
-      );
+      if (user.isProfessor) {
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (_) => const ProfessorDashboardScreen()),
+          (route) => false,
+        );
+      } else {
+        final isComplete = await ProfileService().checkProfileComplete();
+        if (!mounted) return;
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(
+            builder: (_) => isComplete
+                ? const StudentDashboardScreen()
+                : const StudentSettingsScreen(
+                    initialTab: 0,
+                    requireCompletion: true,
+                  ),
+          ),
+          (route) => false,
+        );
+      }
     } catch (error) {
       if (mounted) {
         setState(

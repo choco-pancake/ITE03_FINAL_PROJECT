@@ -3,9 +3,10 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../services/auth_service.dart';
+import '../services/profile_service.dart';
 import 'login_screen.dart';
 import 'professor_dashboard_screen.dart';
-import 'student_dashboard_screen.dart';
+import 'student_settings_screen.dart';
 import 'widgets/bottom_right_notification.dart';
 import 'widgets/google_auth_button.dart';
 import '../models/class_sections.dart';
@@ -165,9 +166,15 @@ class _SignupScreenState extends State<SignupScreen> {
           (route) => false,
         );
       } else {
+        ProfileService.isProfileComplete = false;
         Navigator.pushAndRemoveUntil(
           context,
-          MaterialPageRoute(builder: (_) => const StudentDashboardScreen()),
+          MaterialPageRoute(
+            builder: (_) => const StudentSettingsScreen(
+              initialTab: 0,
+              requireCompletion: true,
+            ),
+          ),
           (route) => false,
         );
       }
@@ -202,15 +209,25 @@ class _SignupScreenState extends State<SignupScreen> {
       );
       if (!mounted) return;
       AppNotification.showWelcome(context, user.name);
-      Navigator.pushAndRemoveUntil(
-        context,
-        MaterialPageRoute(
-          builder: (_) => user.isProfessor
-              ? const ProfessorDashboardScreen()
-              : const StudentDashboardScreen(),
-        ),
-        (route) => false,
-      );
+      if (user.isProfessor) {
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (_) => const ProfessorDashboardScreen()),
+          (route) => false,
+        );
+      } else {
+        ProfileService.isProfileComplete = false;
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(
+            builder: (_) => const StudentSettingsScreen(
+              initialTab: 0,
+              requireCompletion: true,
+            ),
+          ),
+          (route) => false,
+        );
+      }
     } catch (error) {
       if (mounted) {
         setState(
@@ -584,8 +601,13 @@ class _SignupScreenState extends State<SignupScreen> {
                                       ),
                                       const SizedBox(height: 6),
                                       DropdownButtonFormField<String>(
-                                        key: ValueKey('signup:year:$_selectedYearLevel'),
-                                        initialValue: _yearSections.containsKey(_selectedYearLevel)
+                                        key: ValueKey(
+                                          'signup:year:$_selectedYearLevel',
+                                        ),
+                                        initialValue:
+                                            _yearSections.containsKey(
+                                              _selectedYearLevel,
+                                            )
                                             ? _selectedYearLevel
                                             : _yearSections.keys.first,
                                         isExpanded: true,
@@ -641,12 +663,21 @@ class _SignupScreenState extends State<SignupScreen> {
                                       ),
                                       const SizedBox(height: 6),
                                       DropdownButtonFormField<String>(
-                                        key: ValueKey('signup:sec:$_selectedYearLevel:$_selectedSection'),
-                                        initialValue: (_yearSections[_selectedYearLevel] ?? []).contains(_selectedSection)
+                                        key: ValueKey(
+                                          'signup:sec:$_selectedYearLevel:$_selectedSection',
+                                        ),
+                                        initialValue:
+                                            (_yearSections[_selectedYearLevel] ??
+                                                    [])
+                                                .contains(_selectedSection)
                                             ? _selectedSection
-                                            : ((_yearSections[_selectedYearLevel] ?? []).isNotEmpty
-                                                ? (_yearSections[_selectedYearLevel] ?? []).first
-                                                : _selectedSection),
+                                            : ((_yearSections[_selectedYearLevel] ??
+                                                          [])
+                                                      .isNotEmpty
+                                                  ? (_yearSections[_selectedYearLevel] ??
+                                                            [])
+                                                        .first
+                                                  : _selectedSection),
                                         isExpanded: true,
                                         decoration: InputDecoration(
                                           contentPadding:
@@ -665,22 +696,27 @@ class _SignupScreenState extends State<SignupScreen> {
                                             ),
                                           ),
                                         ),
-                                        items: {
-                                          ...(_yearSections[_selectedYearLevel] ?? ['BSIT 2A']),
-                                          if (_selectedSection.trim().isNotEmpty) _selectedSection.trim(),
-                                        }
-                                            .map(
-                                              (sec) => DropdownMenuItem(
-                                                value: sec,
-                                                child: Text(
-                                                  sec,
-                                                  style: const TextStyle(
-                                                    fontSize: 13,
+                                        items:
+                                            {
+                                                  ...(_yearSections[_selectedYearLevel] ??
+                                                      ['BSIT 2A']),
+                                                  if (_selectedSection
+                                                      .trim()
+                                                      .isNotEmpty)
+                                                    _selectedSection.trim(),
+                                                }
+                                                .map(
+                                                  (sec) => DropdownMenuItem(
+                                                    value: sec,
+                                                    child: Text(
+                                                      sec,
+                                                      style: const TextStyle(
+                                                        fontSize: 13,
+                                                      ),
+                                                    ),
                                                   ),
-                                                ),
-                                              ),
-                                            )
-                                            .toList(),
+                                                )
+                                                .toList(),
                                         onChanged: (val) {
                                           if (val != null) {
                                             setState(
@@ -707,10 +743,15 @@ class _SignupScreenState extends State<SignupScreen> {
                             ),
                             const SizedBox(height: 6),
                             DropdownButtonFormField<String>(
-                              key: ValueKey('signup:role:$_preferredProjectRole'),
-                              initialValue: _studentRoles.contains(_preferredProjectRole)
+                              key: ValueKey(
+                                'signup:role:$_preferredProjectRole',
+                              ),
+                              initialValue:
+                                  _studentRoles.contains(_preferredProjectRole)
                                   ? _preferredProjectRole
-                                  : (_studentRoles.isNotEmpty ? _studentRoles.first : _preferredProjectRole),
+                                  : (_studentRoles.isNotEmpty
+                                        ? _studentRoles.first
+                                        : _preferredProjectRole),
                               isExpanded: true,
                               decoration: InputDecoration(
                                 contentPadding: const EdgeInsets.symmetric(
@@ -726,20 +767,26 @@ class _SignupScreenState extends State<SignupScreen> {
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                               ),
-                              items: {
-                                ..._studentRoles,
-                                if (_preferredProjectRole.trim().isNotEmpty) _preferredProjectRole.trim(),
-                              }
-                                  .map(
-                                    (role) => DropdownMenuItem(
-                                      value: role,
-                                      child: Text(
-                                        role,
-                                        style: const TextStyle(fontSize: 13),
-                                      ),
-                                    ),
-                                  )
-                                  .toList(),
+                              items:
+                                  {
+                                        ..._studentRoles,
+                                        if (_preferredProjectRole
+                                            .trim()
+                                            .isNotEmpty)
+                                          _preferredProjectRole.trim(),
+                                      }
+                                      .map(
+                                        (role) => DropdownMenuItem(
+                                          value: role,
+                                          child: Text(
+                                            role,
+                                            style: const TextStyle(
+                                              fontSize: 13,
+                                            ),
+                                          ),
+                                        ),
+                                      )
+                                      .toList(),
                               onChanged: (val) {
                                 if (val != null) {
                                   setState(() => _preferredProjectRole = val);
@@ -1107,7 +1154,10 @@ class _SignupScreenState extends State<SignupScreen> {
                           const Text(
                             'New Google accounts are created as students. Existing instructors keep their account role.',
                             textAlign: TextAlign.center,
-                            style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Color(0xFF64748B),
+                            ),
                           ),
                           const SizedBox(height: 22),
 

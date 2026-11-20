@@ -17,9 +17,14 @@ import 'widgets/bottom_right_notification.dart';
 import 'student_account_tab.dart';
 
 class StudentSettingsScreen extends StatefulWidget {
-  const StudentSettingsScreen({super.key, this.initialTab = 0});
+  const StudentSettingsScreen({
+    super.key,
+    this.initialTab = 0,
+    this.requireCompletion = false,
+  });
 
   final int initialTab;
+  final bool requireCompletion;
 
   @override
   State<StudentSettingsScreen> createState() => _StudentSettingsScreenState();
@@ -328,8 +333,70 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
       _selectedInterests.addAll(p.interests);
     }
     _isSavedAsComplete = details['is_complete'] == true;
-    _editingProfile = false;
+    ProfileService.isProfileComplete = _isSavedAsComplete;
+    _editingProfile = !_isSavedAsComplete || widget.requireCompletion;
     _isDirty = false;
+  }
+
+  bool _completionDialogShown = false;
+
+  void _showMandatoryCompletionDialog() {
+    if (_completionDialogShown || _isSavedAsComplete || !mounted) return;
+    _completionDialogShown = true;
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        titlePadding: const EdgeInsets.fromLTRB(24, 24, 24, 12),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+        actionsPadding: const EdgeInsets.fromLTRB(24, 12, 24, 20),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: const BoxDecoration(
+                color: Color(0xFFEFF6FF),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.assignment_ind,
+                color: Color(0xFF1E40AF),
+                size: 24,
+              ),
+            ),
+            const SizedBox(width: 12),
+            const Text(
+              'Complete Your Profile',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
+        content: const Text(
+          'You must complete your profile setup before accessing GroupMeMaybe features. Other pages are locked until your profile is fully set up.',
+          style: TextStyle(fontSize: 14, color: Color(0xFF475569)),
+        ),
+        actions: [
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF1E40AF),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            onPressed: () {
+              Navigator.pop(ctx);
+              setState(() {
+                _activeTab = 0;
+                _editingProfile = true;
+              });
+            },
+            child: const Text('Complete Profile Now'),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _loadExistingProfile() async {
@@ -355,6 +422,10 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
         await prefs.setString(cacheKey, jsonEncode(myProfile.toJson()));
       }
     } catch (_) {}
+
+    if (!_isSavedAsComplete && mounted) {
+      _showMandatoryCompletionDialog();
+    }
   }
 
   String get _preferencePrefix =>
@@ -1332,6 +1403,7 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
     if (!mounted) return false;
     setState(() {
       _isSavedAsComplete = !isDraft;
+      ProfileService.isProfileComplete = !isDraft;
       _editingProfile = false;
       _isSaving = false;
       _isDirty = false;
@@ -1711,9 +1783,15 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
   @override
   Widget build(BuildContext context) {
     return PopScope(
-      canPop: !_isDirty,
+      canPop: !_isDirty && (!widget.requireCompletion || _isSavedAsComplete),
       onPopInvokedWithResult: (didPop, result) async {
         if (didPop) return;
+        if (widget.requireCompletion && !_isSavedAsComplete) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Complete your profile to continue.')),
+          );
+          return;
+        }
         final canLeave = await _promptUnsavedChanges();
         if (canLeave && context.mounted) {
           Navigator.of(context).pop();

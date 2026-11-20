@@ -10,6 +10,7 @@ class ProfileService {
   // Flutter WEB uses localhost/127.0.0.1.
   // (10.0.2.2 is only for the Android emulator.)
   static const String baseUrl = 'http://127.0.0.1:8000/api';
+  static bool isProfileComplete = false;
 
   static const Map<String, String> _headers = {
     'Content-Type': 'application/json',
@@ -32,14 +33,35 @@ class ProfileService {
     };
   }
 
+  Future<bool> checkProfileComplete() async {
+    try {
+      final profile = await getMyProfile();
+      if (profile == null) {
+        isProfileComplete = false;
+        return false;
+      }
+      isProfileComplete = profile.details['is_complete'] == true;
+      return isProfileComplete;
+    } catch (_) {
+      return isProfileComplete;
+    }
+  }
+
   Future<Profile?> getMyProfile() async {
     final headers = await _resolveAuthHeaders();
     final res = await http.get(
       Uri.parse('$baseUrl/profile'),
       headers: headers,
     );
-    if (res.statusCode == 404) return null;
-    if (res.statusCode == 200) return Profile.fromJson(jsonDecode(res.body));
+    if (res.statusCode == 404) {
+      isProfileComplete = false;
+      return null;
+    }
+    if (res.statusCode == 200) {
+      final prof = Profile.fromJson(jsonDecode(res.body));
+      isProfileComplete = prof.details['is_complete'] == true;
+      return prof;
+    }
     throw Exception('Failed to load your profile (${res.statusCode})');
   }
 
@@ -51,7 +73,9 @@ class ProfileService {
       body: jsonEncode(profile.toJson()),
     );
     if (res.statusCode == 200 || res.statusCode == 201) {
-      return Profile.fromJson(jsonDecode(res.body));
+      final saved = Profile.fromJson(jsonDecode(res.body));
+      isProfileComplete = saved.details['is_complete'] == true;
+      return saved;
     }
     throw Exception('Failed to save your profile: ${res.body}');
   }

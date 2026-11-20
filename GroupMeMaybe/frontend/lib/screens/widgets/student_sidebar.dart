@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../services/auth_service.dart';
+import '../../services/profile_service.dart';
 import '../landing_screen.dart';
 import '../student_classes_screen.dart';
 import '../student_dashboard_screen.dart';
@@ -148,7 +149,18 @@ class StudentSidebar extends StatelessWidget {
             icon: Icons.dashboard_outlined,
             title: 'Dashboard',
             isSelected: currentDestination == StudentNavDestination.dashboard,
+            isLocked: !ProfileService.isProfileComplete,
             onTap: () async {
+              if (!ProfileService.isProfileComplete) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text(
+                      'Please complete your profile in Settings before accessing the dashboard.',
+                    ),
+                  ),
+                );
+                return;
+              }
               if (currentDestination != StudentNavDestination.dashboard) {
                 if (onBeforeNavigate != null) {
                   final canProceed = await onBeforeNavigate!();
@@ -169,7 +181,18 @@ class StudentSidebar extends StatelessWidget {
             icon: Icons.school_outlined,
             title: 'Classes',
             isSelected: currentDestination == StudentNavDestination.classes,
+            isLocked: !ProfileService.isProfileComplete,
             onTap: () async {
+              if (!ProfileService.isProfileComplete) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text(
+                      'Please complete your profile in Settings before accessing classes.',
+                    ),
+                  ),
+                );
+                return;
+              }
               if (currentDestination != StudentNavDestination.classes) {
                 if (onBeforeNavigate != null) {
                   final canProceed = await onBeforeNavigate!();
@@ -190,7 +213,18 @@ class StudentSidebar extends StatelessWidget {
             icon: Icons.groups_outlined,
             title: 'Groups (Teams)',
             isSelected: currentDestination == StudentNavDestination.groups,
+            isLocked: !ProfileService.isProfileComplete,
             onTap: () async {
+              if (!ProfileService.isProfileComplete) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text(
+                      'Please complete your profile in Settings before accessing team groups.',
+                    ),
+                  ),
+                );
+                return;
+              }
               if (currentDestination != StudentNavDestination.groups) {
                 if (onBeforeNavigate != null) {
                   final canProceed = await onBeforeNavigate!();
@@ -211,6 +245,7 @@ class StudentSidebar extends StatelessWidget {
             icon: Icons.settings_outlined,
             title: 'Settings',
             isSelected: currentDestination == StudentNavDestination.settings,
+            isLocked: false,
             onTap: () async {
               if (currentDestination != StudentNavDestination.settings) {
                 if (onBeforeNavigate != null) {
@@ -311,10 +346,12 @@ class StudentSidebar extends StatelessWidget {
     required String title,
     required bool isSelected,
     required VoidCallback onTap,
+    bool isLocked = false,
     Color? color,
   }) {
-    final itemColor =
-        color ?? (isSelected ? Colors.white : const Color(0xFF94A3B8));
+    final itemColor = isLocked
+        ? const Color(0xFF64748B)
+        : (color ?? (isSelected ? Colors.white : const Color(0xFF94A3B8)));
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
       child: InkWell(
@@ -346,6 +383,12 @@ class StudentSidebar extends StatelessWidget {
                   ),
                 ),
               ),
+              if (isLocked)
+                const Icon(
+                  Icons.lock_outline,
+                  color: Color(0xFF64748B),
+                  size: 16,
+                ),
             ],
           ),
         ),

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../professor_activities_screen.dart';
 import '../professor_classes_screen.dart';
 import '../professor_dashboard_screen.dart';
 import '../professor_evaluation_screen.dart';
@@ -9,7 +8,6 @@ import '../professor_settings_screen.dart';
 enum ProfessorNavDestination {
   dashboard,
   classes,
-  projects,
   evaluation,
   settings,
 }
@@ -113,22 +111,6 @@ class ProfessorSidebar extends StatelessWidget {
                   context,
                   MaterialPageRoute(
                     builder: (_) => const ProfessorClassesScreen(),
-                  ),
-                );
-              }
-            },
-          ),
-          _buildItem(
-            context: context,
-            icon: Icons.assignment_outlined,
-            title: 'Projects',
-            isSelected: currentDestination == ProfessorNavDestination.projects,
-            onTap: () {
-              if (currentDestination != ProfessorNavDestination.projects) {
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const ProfessorActivitiesScreen(),
                   ),
                 );
               }

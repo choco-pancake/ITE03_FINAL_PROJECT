@@ -35,7 +35,7 @@ class _FakeStudentRecordService extends StudentRecordService {
 }
 
 void main() {
-  testWidgets('ProfessorSidebar renders all 5 navigation destinations', (
+  testWidgets('ProfessorSidebar renders all 4 navigation destinations', (
     tester,
   ) async {
     tester.view.physicalSize = const Size(1280, 800);
@@ -59,7 +59,7 @@ void main() {
     expect(find.text('FACULTY PORTAL'), findsOneWidget);
     expect(find.text('Dashboard'), findsOneWidget);
     expect(find.text('Classes'), findsOneWidget);
-    expect(find.text('Projects'), findsOneWidget);
+    expect(find.text('Projects'), findsNothing);
     expect(find.text('Student Records'), findsOneWidget);
     expect(find.text('Settings'), findsOneWidget);
   });
@@ -129,8 +129,9 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      // Sidebar
-      expect(find.text('Projects'), findsOneWidget);
+      // Sidebar (Projects is removed from sidebar; Classes is the active destination)
+      expect(find.text('Classes'), findsOneWidget);
+      expect(find.text('Projects'), findsNothing);
 
       // Tabs
       expect(find.text('Activities & Milestones'), findsOneWidget);

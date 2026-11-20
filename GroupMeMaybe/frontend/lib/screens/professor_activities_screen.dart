@@ -38,7 +38,6 @@ class _ProfessorActivitiesScreenState extends State<ProfessorActivitiesScreen> {
   List<GroupingActivity> _activities = [];
   ActivitySummary _summary = const ActivitySummary();
   AcademicClass? _currentClass;
-  List<AcademicClass> _availableClasses = [];
 
   bool _isLoading = true;
   String? _errorMessage;
@@ -55,14 +54,15 @@ class _ProfessorActivitiesScreenState extends State<ProfessorActivitiesScreen> {
   }
 
   Future<void> _loadClassesList() async {
+    if (_currentClass != null) return;
     try {
       final list = await _activityService.getClasses();
       if (mounted) {
         setState(() {
-          _availableClasses = list;
-          if (_currentClass == null && widget.selectedClassId != null) {
+          if (widget.selectedClassId != null) {
             _currentClass = list.where((c) => c.id == widget.selectedClassId).firstOrNull;
           }
+          _currentClass ??= list.isNotEmpty ? list.first : null;
         });
       }
     } catch (_) {}
@@ -416,7 +416,7 @@ class _ProfessorActivitiesScreenState extends State<ProfessorActivitiesScreen> {
       body: Row(
         children: [
           const ProfessorSidebar(
-            currentDestination: ProfessorNavDestination.projects,
+            currentDestination: ProfessorNavDestination.classes,
           ),
           Expanded(
             child: SingleChildScrollView(
@@ -1081,43 +1081,6 @@ class _ProfessorActivitiesScreenState extends State<ProfessorActivitiesScreen> {
           ),
         );
 
-        Widget? classSwitcher;
-        if (_availableClasses.isNotEmpty) {
-          classSwitcher = Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: const Color(0xFFCBD5E1)),
-            ),
-            child: DropdownButtonHideUnderline(
-              child: DropdownButton<int?>(
-                value: _currentClass?.id,
-                hint: const Text('All Classes', style: TextStyle(fontSize: 12)),
-                items: [
-                  const DropdownMenuItem<int?>(
-                    value: null,
-                    child: Text('All Classes (Overview)', style: TextStyle(fontSize: 12)),
-                  ),
-                  ..._availableClasses.map((c) => DropdownMenuItem<int?>(
-                        value: c.id,
-                        child: Text('${c.name} (${c.section ?? ""})', style: const TextStyle(fontSize: 12)),
-                      )),
-                ],
-                onChanged: (int? newId) {
-                  setState(() {
-                    if (newId == null) {
-                      _currentClass = null;
-                    } else {
-                      _currentClass = _availableClasses.firstWhere((c) => c.id == newId);
-                    }
-                  });
-                },
-              ),
-            ),
-          );
-        }
-
         if (isMobile) {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -1130,15 +1093,7 @@ class _ProfessorActivitiesScreenState extends State<ProfessorActivitiesScreen> {
                 ],
               ),
               const SizedBox(height: 12),
-              Wrap(
-                spacing: 10,
-                runSpacing: 10,
-                crossAxisAlignment: WrapCrossAlignment.center,
-                children: [
-                  createButton,
-                  ?classSwitcher,
-                ],
-              ),
+              createButton,
             ],
           );
         }
@@ -1148,10 +1103,6 @@ class _ProfessorActivitiesScreenState extends State<ProfessorActivitiesScreen> {
           children: [
             Expanded(child: titleBlock),
             const SizedBox(width: 16),
-            if (classSwitcher != null) ...[
-              classSwitcher,
-              const SizedBox(width: 12),
-            ],
             createButton,
             const SizedBox(width: 16),
             const PortalTopActions(),

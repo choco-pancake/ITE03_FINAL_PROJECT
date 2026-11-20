@@ -35,12 +35,23 @@ class ProfileService {
 
   Future<bool> checkProfileComplete() async {
     try {
+      final prefs = await SharedPreferences.getInstance();
+      final userKey = AuthService.currentUser?.id?.toString() ??
+          AuthService.currentUser?.email ??
+          'active';
+      final cachedComplete = prefs.getBool('gmm_profile_complete_$userKey');
+      if (cachedComplete == true) {
+        isProfileComplete = true;
+      }
+
       final profile = await getMyProfile();
       if (profile == null) {
         isProfileComplete = false;
+        await prefs.setBool('gmm_profile_complete_$userKey', false);
         return false;
       }
       isProfileComplete = profile.details['is_complete'] == true;
+      await prefs.setBool('gmm_profile_complete_$userKey', isProfileComplete);
       return isProfileComplete;
     } catch (_) {
       return isProfileComplete;
@@ -53,6 +64,14 @@ class ProfileService {
       Uri.parse('$baseUrl/profile'),
       headers: headers,
     );
+    if (res.statusCode == 401) {
+      AuthService.authToken = null;
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.remove('gmm_active_token');
+      } catch (_) {}
+      throw Exception('Session expired or unauthenticated. Please log in again.');
+    }
     if (res.statusCode == 404) {
       isProfileComplete = false;
       return null;
@@ -72,9 +91,24 @@ class ProfileService {
       headers: headers,
       body: jsonEncode(profile.toJson()),
     );
+    if (res.statusCode == 401) {
+      AuthService.authToken = null;
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.remove('gmm_active_token');
+      } catch (_) {}
+      throw Exception('Session expired or unauthenticated. Please log in again.');
+    }
     if (res.statusCode == 200 || res.statusCode == 201) {
       final saved = Profile.fromJson(jsonDecode(res.body));
       isProfileComplete = saved.details['is_complete'] == true;
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        final userKey = AuthService.currentUser?.id?.toString() ??
+            AuthService.currentUser?.email ??
+            'active';
+        await prefs.setBool('gmm_profile_complete_$userKey', isProfileComplete);
+      } catch (_) {}
       return saved;
     }
     throw Exception('Failed to save your profile: ${res.body}');

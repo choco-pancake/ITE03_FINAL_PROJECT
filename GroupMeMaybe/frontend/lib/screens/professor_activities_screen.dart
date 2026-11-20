@@ -651,121 +651,114 @@ class _ProfessorActivitiesScreenState extends State<ProfessorActivitiesScreen> {
           LayoutBuilder(
             builder: (context, constraints) {
               final crossAxisCount = constraints.maxWidth >= 900 ? 2 : 1;
-              return GridView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: crossAxisCount,
-                  crossAxisSpacing: 16,
-                  mainAxisSpacing: 16,
-                  mainAxisExtent: 260,
-                ),
-                itemCount: filtered.length,
-                itemBuilder: (context, index) {
-                  final group = filtered[index];
+              final cardWidth =
+                  (constraints.maxWidth - (crossAxisCount - 1) * 16) /
+                      crossAxisCount;
+              return Wrap(
+                spacing: 16,
+                runSpacing: 16,
+                children: filtered.map((group) {
                   final members =
                       group['members'] as List<Map<String, dynamic>>;
                   final isFull = group['isFull'] as bool;
 
-                  return Container(
-                    padding: const EdgeInsets.all(18),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: const Color(0xFFE2E8F0)),
-                      boxShadow: const [
-                        BoxShadow(
-                          color: Color(0x06000000),
-                          blurRadius: 8,
-                          offset: Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Expanded(
-                              child: Text(
-                                group['name'] as String,
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  color: Color(0xFF0F172A),
+                  return SizedBox(
+                    width: cardWidth,
+                    child: Container(
+                      padding: const EdgeInsets.all(18),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                        boxShadow: const [
+                          BoxShadow(
+                            color: Color(0x06000000),
+                            blurRadius: 8,
+                            offset: Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  group['name'] as String,
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFF0F172A),
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
                                 ),
-                                overflow: TextOverflow.ellipsis,
                               ),
-                            ),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 3,
-                              ),
-                              decoration: BoxDecoration(
-                                color: isFull
-                                    ? const Color(0xFFECFDF5)
-                                    : const Color(0xFFEFF6FF),
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: Text(
-                                group['status'] as String,
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.bold,
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 3,
+                                ),
+                                decoration: BoxDecoration(
                                   color: isFull
-                                      ? const Color(0xFF047857)
-                                      : const Color(0xFF1D4ED8),
+                                      ? const Color(0xFFECFDF5)
+                                      : const Color(0xFFEFF6FF),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text(
+                                  group['status'] as String,
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    color: isFull
+                                        ? const Color(0xFF047857)
+                                        : const Color(0xFF1D4ED8),
+                                  ),
                                 ),
                               ),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            group['course'] as String,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Color(0xFF64748B),
                             ),
-                          ],
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          group['course'] as String,
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: Color(0xFF64748B),
                           ),
-                        ),
-                        Text(
-                          group['activity'] as String,
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: Color(0xFF2563EB),
+                          Text(
+                            group['activity'] as String,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF2563EB),
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 12),
-                        const Divider(color: Color(0xFFF1F5F9), height: 1),
-                        const SizedBox(height: 8),
+                          const SizedBox(height: 12),
+                          const Divider(color: Color(0xFFF1F5F9), height: 1),
+                          const SizedBox(height: 8),
 
-                        const Text(
-                          'Team Roster (click to view profile):',
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF475569),
+                          const Text(
+                            'Team Roster (click to view profile):',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF475569),
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 6),
-                        Expanded(
-                          child: ListView.separated(
-                            physics: const NeverScrollableScrollPhysics(),
-                            itemCount: members.length,
-                            separatorBuilder: (_, _) =>
-                                const SizedBox(height: 6),
-                            itemBuilder: (context, mi) {
-                              final m = members[mi];
-                              final name = m['name'] as String;
-                              final role = m['role'] as String;
-                              final level = m['level'] as String;
-                              final skills = (m['skills'] as List)
-                                  .cast<String>();
+                          const SizedBox(height: 6),
+                          ...members.map((m) {
+                            final name = m['name'] as String;
+                            final role = m['role'] as String;
+                            final level = m['level'] as String;
+                            final skills = (m['skills'] as List)
+                                .cast<String>();
 
-                              return InkWell(
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 6),
+                              child: InkWell(
                                 onTap: () => _showMemberDialog(
                                   name,
                                   role,
@@ -790,7 +783,7 @@ class _ProfessorActivitiesScreenState extends State<ProfessorActivitiesScreen> {
                                           0xFF1E40AF,
                                         ),
                                         child: Text(
-                                          name[0],
+                                          name.isNotEmpty ? name[0] : 'S',
                                           style: const TextStyle(
                                             color: Colors.white,
                                             fontSize: 9,
@@ -820,14 +813,14 @@ class _ProfessorActivitiesScreenState extends State<ProfessorActivitiesScreen> {
                                     ],
                                   ),
                                 ),
-                              );
-                            },
-                          ),
-                        ),
-                      ],
+                              ),
+                            );
+                          }),
+                        ],
+                      ),
                     ),
                   );
-                },
+                }).toList(),
               );
             },
           ),

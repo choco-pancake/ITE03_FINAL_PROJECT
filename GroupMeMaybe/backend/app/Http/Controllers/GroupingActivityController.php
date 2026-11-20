@@ -461,14 +461,17 @@ class GroupingActivityController extends Controller
             'name' => $validated['name'],
             'is_auto_assigned' => false,
             'leader_email' => $leaderEmail,
+            'status' => 'Formed (1/' . ($activity->group_capacity ?? 5) . ')',
+            'balance_score' => 95,
             'members' => [
                 [
                     'name' => $leaderName,
                     'email' => $leaderEmail,
-                    'role' => 'Team Leader & ' . ($validated['role'] ?? 'Developer'),
+                    'role' => $validated['role'] ?? 'Team Leader & Developer',
                     'block' => $section,
                     'avatar' => strtoupper(substr($leaderName, 0, 1)),
                     'is_leader' => true,
+                    'status' => 'accepted',
                 ],
             ],
         ];

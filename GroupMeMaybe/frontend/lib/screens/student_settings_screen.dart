@@ -15,6 +15,7 @@ import '../services/skill_approval_service.dart';
 import 'widgets/student_sidebar.dart';
 import 'widgets/bottom_right_notification.dart';
 import 'student_account_tab.dart';
+import 'login_screen.dart';
 
 class StudentSettingsScreen extends StatefulWidget {
   const StudentSettingsScreen({
@@ -273,13 +274,12 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
         _selectedYearLevel =
             ClassSections.yearFor(_selectedBlock) ?? '2nd Year';
       }
-      _studentIdController.text =
-          '2026-${(user.id ?? 1).toString().padLeft(4, '0')}';
+      _studentIdController.text = '';
     } else {
-      _firstNameController.text = 'Student';
-      _lastNameController.text = 'User';
-      _studentIdController.text = '2026-0001';
-      _emailController.text = 'student@university.edu';
+      _firstNameController.text = '';
+      _lastNameController.text = '';
+      _studentIdController.text = '';
+      _emailController.text = '';
     }
   }
 
@@ -1390,11 +1390,28 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
     } catch (error) {
       if (mounted) {
         setState(() => _isSaving = false);
-        AppNotification.showError(
-          context,
-          'Save Error',
-          error.toString().replaceAll('Exception: ', ''),
-        );
+        final errStr = error.toString().replaceAll('Exception: ', '');
+        final isAuthErr = errStr.toLowerCase().contains('unauthenticated') || errStr.contains('401');
+        if (isAuthErr) {
+          AuthService().logout().catchError((_) {});
+          AppNotification.notify(
+            context,
+            'Your session expired or was unauthenticated. Please log in again to save.',
+            type: NotificationType.error,
+            actionLabel: 'Log In',
+            onAction: () => Navigator.pushAndRemoveUntil(
+              context,
+              MaterialPageRoute(builder: (_) => const LoginScreen()),
+              (route) => false,
+            ),
+          );
+        } else {
+          AppNotification.showError(
+            context,
+            'Save Error',
+            errStr,
+          );
+        }
       }
       return false;
     }

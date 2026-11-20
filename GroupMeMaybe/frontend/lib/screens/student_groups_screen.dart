@@ -96,11 +96,17 @@ class _StudentGroupsScreenState extends State<StudentGroupsScreen>
   // Local state for user review status: 'suggested', 'accepted', 'under_review'
   String _groupReviewStatus = 'suggested';
   bool _isActionInProgress = false;
+  bool _showingDetails = false;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+    if (widget.initialActivityId != null ||
+        widget.initialClassId != null ||
+        widget.initialClassName != null) {
+      _showingDetails = true;
+    }
     _loadData();
   }
 
@@ -375,6 +381,452 @@ class _StudentGroupsScreenState extends State<StudentGroupsScreen>
     );
   }
 
+  void _showCreateGroupDialog({GroupingActivity? preselectedActivity}) {
+    if (_activities.isEmpty) {
+      AppNotification.showWarning(context, 'No available subjects or activities to create a group for.');
+      return;
+    }
+    final nameController = TextEditingController();
+    GroupingActivity selectedActivity = preselectedActivity ?? _selectedActivity ?? _activities.first;
+    String selectedRole = 'Project leader / team leader';
+    final availableRoles = [
+      'Project leader / team leader',
+      'Frontend developer',
+      'Backend developer',
+      'Full-stack developer',
+      'Mobile app developer',
+      'UI / UX designer',
+      'Database administrator',
+      'System analyst',
+      'QA / software tester',
+      'Technical writer / documentation specialist',
+    ];
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (dialogCtx, setModalState) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Row(
+            children: const [
+              Icon(Icons.group_add, color: Color(0xFF1E40AF)),
+              SizedBox(width: 10),
+              Text('Create Your Own Group', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            ],
+          ),
+          content: SingleChildScrollView(
+            child: SizedBox(
+              width: 440,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Form a new team for your subject project. You will automatically become the group leader.',
+                    style: TextStyle(fontSize: 13, color: Color(0xFF64748B)),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text('Select Subject / Activity', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF1E293B))),
+                  const SizedBox(height: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: const Color(0xFFCBD5E1)),
+                    ),
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<GroupingActivity>(
+                        isExpanded: true,
+                        value: selectedActivity,
+                        items: _activities.map((a) => DropdownMenuItem(
+                          value: a,
+                          child: Text('${a.className} - ${a.title}', overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13)),
+                        )).toList(),
+                        onChanged: (val) {
+                          if (val != null) {
+                            setModalState(() => selectedActivity = val);
+                          }
+                        },
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  const Text('Group / Team Name', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF1E293B))),
+                  const SizedBox(height: 6),
+                  TextField(
+                    controller: nameController,
+                    decoration: InputDecoration(
+                      hintText: 'e.g. Binary Beasts, Code Wizards',
+                      hintStyle: const TextStyle(fontSize: 13, color: Color(0xFF94A3B8)),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Color(0xFFCBD5E1))),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  const Text('Your Role in this Group', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF1E293B))),
+                  const SizedBox(height: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: const Color(0xFFCBD5E1)),
+                    ),
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<String>(
+                        isExpanded: true,
+                        value: selectedRole,
+                        items: availableRoles.map((r) => DropdownMenuItem(
+                          value: r,
+                          child: Text(r, style: const TextStyle(fontSize: 13)),
+                        )).toList(),
+                        onChanged: (val) {
+                          if (val != null) {
+                            setModalState(() => selectedRole = val);
+                          }
+                        },
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF1E40AF),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+              onPressed: () async {
+                final teamName = nameController.text.trim();
+                if (teamName.isEmpty) {
+                  AppNotification.showWarning(context, 'Please enter a group name.');
+                  return;
+                }
+                Navigator.pop(ctx);
+                setState(() => _isActionInProgress = true);
+
+                try {
+                  final user = AuthService.currentUser;
+                  await _activityService.createTeam(
+                    selectedActivity.id!,
+                    teamName,
+                    role: selectedRole,
+                    leaderName: user?.name ?? 'Student Leader',
+                    leaderEmail: user?.email ?? 'student@university.edu',
+                  );
+                  await _loadData();
+                  if (mounted) {
+                    setState(() {
+                      _isActionInProgress = false;
+                      _selectedActivity = _activities.firstWhere((a) => a.id == selectedActivity.id, orElse: () => selectedActivity);
+                      _showingDetails = true;
+                    });
+                    AppNotification.showSuccess(
+                      context,
+                      'Group "$teamName" created successfully!',
+                    );
+                  }
+                } catch (e) {
+                  if (mounted) {
+                    setState(() => _isActionInProgress = false);
+                    AppNotification.showError(
+                      context,
+                      'Creation Error',
+                      e.toString().replaceAll('Exception: ', ''),
+                    );
+                  }
+                }
+              },
+              child: const Text('Create Group'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSubjectsAndGroupsCardsView() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: const [
+                    Text(
+                      'Subjects & Groups',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF0F172A),
+                      ),
+                    ),
+                    SizedBox(height: 4),
+                    Text(
+                      'Browse all your subjects, check your assigned teams, or create your own group.',
+                      style: TextStyle(fontSize: 13, color: Color(0xFF64748B)),
+                    ),
+                  ],
+                ),
+              ),
+              FilledButton.icon(
+                onPressed: () => _showCreateGroupDialog(),
+                icon: const Icon(Icons.group_add, size: 16),
+                label: const Text('Create Your Own Group'),
+                style: FilledButton.styleFrom(
+                  backgroundColor: const Color(0xFF1E40AF),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          if (_activities.isEmpty)
+            Container(
+              padding: const EdgeInsets.all(32),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFFE2E8F0)),
+              ),
+              alignment: Alignment.center,
+              child: Column(
+                children: const [
+                  Icon(Icons.school_outlined, size: 48, color: Color(0xFF94A3B8)),
+                  SizedBox(height: 12),
+                  Text('No enrolled subjects or group activities found.', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF334155))),
+                  SizedBox(height: 4),
+                  Text('Join classes in the Classes page to get assigned to activities and teams.', style: TextStyle(fontSize: 13, color: Color(0xFF64748B))),
+                ],
+              ),
+            )
+          else
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final crossAxisCount = constraints.maxWidth >= 900 ? 3 : (constraints.maxWidth >= 600 ? 2 : 1);
+                final cardWidth = (constraints.maxWidth - (crossAxisCount - 1) * 16) / crossAxisCount;
+
+                return Wrap(
+                  spacing: 16,
+                  runSpacing: 16,
+                  children: _activities.map((activity) {
+                    final studentTeam = _getStudentTeam(activity);
+                    final hasTeam = studentTeam != null;
+                    final teamName = studentTeam?['name']?.toString() ?? 'Unassigned';
+                    final teamStatus = studentTeam?['status']?.toString() ?? 'Pending Group Formation';
+                    final members = (studentTeam?['members'] as List?) ?? [];
+                    final balanceScore = studentTeam?['balance_score'] ?? 92;
+
+                    return SizedBox(
+                      width: cardWidth,
+                      child: Container(
+                        padding: const EdgeInsets.all(18),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: hasTeam ? const Color(0xFFBFDBFE) : const Color(0xFFE2E8F0)),
+                          boxShadow: const [
+                            BoxShadow(
+                              color: Color(0x06000000),
+                              blurRadius: 8,
+                              offset: Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Subject Code & Status Badge
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    activity.className,
+                                    style: const TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.bold,
+                                      color: Color(0xFF0F172A),
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                  decoration: BoxDecoration(
+                                    color: hasTeam ? const Color(0xFFEFF6FF) : const Color(0xFFFFFBEB),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Text(
+                                    hasTeam ? teamStatus : 'No Team Yet',
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                      color: hasTeam ? const Color(0xFF1D4ED8) : const Color(0xFFD97706),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 4),
+                            // Activity Title
+                            Text(
+                              activity.title,
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF2563EB),
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            if (activity.description != null && activity.description!.isNotEmpty) ...[
+                              const SizedBox(height: 6),
+                              Text(
+                                activity.description!,
+                                style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                            const SizedBox(height: 12),
+                            const Divider(color: Color(0xFFF1F5F9), height: 1),
+                            const SizedBox(height: 10),
+
+                            // Group Details Info
+                            if (hasTeam) ...[
+                              Row(
+                                children: [
+                                  const Icon(Icons.groups, size: 16, color: Color(0xFF1E40AF)),
+                                  const SizedBox(width: 6),
+                                  Expanded(
+                                    child: Text(
+                                      teamName,
+                                      style: const TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.bold,
+                                        color: Color(0xFF1E293B),
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFECFDF5),
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: Text(
+                                      'Balance: $balanceScore%',
+                                      style: const TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                        color: Color(0xFF047857),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              // Members Avatars
+                              Row(
+                                children: [
+                                  ...members.take(4).map((m) {
+                                    final mName = (m['name'] ?? 'M').toString();
+                                    return Container(
+                                      margin: const EdgeInsets.only(right: 4),
+                                      child: CircleAvatar(
+                                        radius: 12,
+                                        backgroundColor: const Color(0xFF1E40AF),
+                                        child: Text(
+                                          mName.isNotEmpty ? mName[0].toUpperCase() : 'M',
+                                          style: const TextStyle(fontSize: 9, color: Colors.white, fontWeight: FontWeight.bold),
+                                        ),
+                                      ),
+                                    );
+                                  }),
+                                  if (members.length > 4)
+                                    Text('+${members.length - 4}', style: const TextStyle(fontSize: 11, color: Color(0xFF64748B))),
+                                  const Spacer(),
+                                  Text(
+                                    '${members.length} member${members.length == 1 ? '' : 's'}',
+                                    style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+                                  ),
+                                ],
+                              ),
+                            ] else ...[
+                              Row(
+                                children: const [
+                                  Icon(Icons.info_outline, size: 16, color: Color(0xFFD97706)),
+                                  SizedBox(width: 6),
+                                  Expanded(
+                                    child: Text(
+                                      'Awaiting team assignment or creation',
+                                      style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+
+                            const SizedBox(height: 14),
+                            // Action Buttons
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: OutlinedButton(
+                                    onPressed: () {
+                                      setState(() {
+                                        _selectedActivity = activity;
+                                        _showingDetails = true;
+                                        final team = _getStudentTeam(activity);
+                                        if (team != null) {
+                                          _groupReviewStatus = team['status']?.toString() ?? 'suggested';
+                                        }
+                                      });
+                                    },
+                                    style: OutlinedButton.styleFrom(
+                                      foregroundColor: const Color(0xFF1E40AF),
+                                      side: const BorderSide(color: Color(0xFF93C5FD)),
+                                      padding: const EdgeInsets.symmetric(vertical: 8),
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                    ),
+                                    child: const Text('Open Workspace →', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                IconButton(
+                                  tooltip: 'Create Group for this Subject',
+                                  icon: const Icon(Icons.group_add_outlined, size: 18, color: Color(0xFF1E40AF)),
+                                  onPressed: () => _showCreateGroupDialog(preselectedActivity: activity),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                );
+              },
+            ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -400,8 +852,8 @@ class _StudentGroupsScreenState extends State<StudentGroupsScreen>
                                 ],
                               ),
                             )
-                          : _selectedActivity == null
-                              ? const Center(child: Text('No active activities available.'))
+                          : (!_showingDetails || _selectedActivity == null)
+                              ? _buildSubjectsAndGroupsCardsView()
                               : TabBarView(
                                   controller: _tabController,
                                   children: [
@@ -433,11 +885,11 @@ class _StudentGroupsScreenState extends State<StudentGroupsScreen>
         children: [
           Row(
             children: [
-              if (widget.initialClassId != null && Navigator.canPop(context)) ...[
+              if (_showingDetails) ...[
                 OutlinedButton.icon(
-                  onPressed: () => Navigator.pop(context),
+                  onPressed: () => setState(() => _showingDetails = false),
                   icon: const Icon(Icons.arrow_back, size: 14),
-                  label: const Text('← Enrolled Classes', style: TextStyle(fontSize: 11)),
+                  label: const Text('← All Subjects & Groups', style: TextStyle(fontSize: 11)),
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                     minimumSize: Size.zero,
@@ -447,12 +899,28 @@ class _StudentGroupsScreenState extends State<StudentGroupsScreen>
               ],
               Expanded(
                 child: Text(
-                  activity != null ? '${activity.className} • ${activity.title}' : 'Student Groups Workspace',
+                  _showingDetails && activity != null
+                      ? '${activity.className} • ${activity.title}'
+                      : 'My Subjects & Groups',
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
                 ),
               ),
-              if (_activities.length > 1) ...[
+              if (!_showingDetails) ...[
+                FilledButton.icon(
+                  onPressed: () => _showCreateGroupDialog(),
+                  icon: const Icon(Icons.group_add, size: 14),
+                  label: const Text('Create Your Own Group', style: TextStyle(fontSize: 12)),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFF1E40AF),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    minimumSize: Size.zero,
+                  ),
+                ),
+                const SizedBox(width: 12),
+              ],
+              if (_showingDetails && _activities.length > 1) ...[
                 const SizedBox(width: 8),
                 DropdownButton<GroupingActivity>(
                   value: _selectedActivity,
@@ -478,23 +946,25 @@ class _StudentGroupsScreenState extends State<StudentGroupsScreen>
               const PortalTopActions(),
             ],
           ),
-          const SizedBox(height: 10),
+          if (_showingDetails) ...[
+            const SizedBox(height: 10),
 
-          // 3 Tabs corresponding to Steps 8, 6, and 7
-          TabBar(
-            controller: _tabController,
-            isScrollable: true,
-            labelColor: const Color(0xFF059669),
-            unselectedLabelColor: const Color(0xFF64748B),
-            indicatorColor: const Color(0xFF059669),
-            indicatorWeight: 3,
-            labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-            tabs: const [
-              Tab(icon: Icon(Icons.stars, size: 18), text: 'Your Suggested Group (Step 8)'),
-              Tab(icon: Icon(Icons.compare_arrows, size: 18), text: 'Compatibility Matching (Step 6)'),
-              Tab(icon: Icon(Icons.groups, size: 18), text: 'All Generated Groups (Step 7)'),
-            ],
-          ),
+            // 3 Tabs corresponding to Steps 8, 6, and 7
+            TabBar(
+              controller: _tabController,
+              isScrollable: true,
+              labelColor: const Color(0xFF059669),
+              unselectedLabelColor: const Color(0xFF64748B),
+              indicatorColor: const Color(0xFF059669),
+              indicatorWeight: 3,
+              labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+              tabs: const [
+                Tab(icon: Icon(Icons.stars, size: 18), text: 'Your Suggested Group (Step 8)'),
+                Tab(icon: Icon(Icons.compare_arrows, size: 18), text: 'Compatibility Matching (Step 6)'),
+                Tab(icon: Icon(Icons.groups, size: 18), text: 'All Generated Groups (Step 7)'),
+              ],
+            ),
+          ],
         ],
       ),
     );

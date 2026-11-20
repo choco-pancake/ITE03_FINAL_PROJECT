@@ -1575,115 +1575,108 @@ class _ProfessorDashboardScreenState extends State<ProfessorDashboardScreen> {
               final crossAxisCount = constraints.maxWidth >= 900
                   ? 3
                   : (constraints.maxWidth >= 600 ? 2 : 1);
-              return GridView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: crossAxisCount,
-                  crossAxisSpacing: 16,
-                  mainAxisSpacing: 16,
-                  mainAxisExtent: 250,
-                ),
-                itemCount: _teams.length,
-                itemBuilder: (context, index) {
-                  final team = _teams[index];
-                  return Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: const Color(0xFFE2E8F0)),
-                      boxShadow: const [
-                        BoxShadow(
-                          color: Color(0x06000000),
-                          blurRadius: 6,
-                          offset: Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Expanded(
-                              child: Text(
-                                team.name,
-                                style: const TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.bold,
-                                  color: Color(0xFF0F172A),
+              final cardWidth =
+                  (constraints.maxWidth - (crossAxisCount - 1) * 16) /
+                      crossAxisCount;
+              return Wrap(
+                spacing: 16,
+                runSpacing: 16,
+                children: _teams.map((team) {
+                  return SizedBox(
+                    width: cardWidth,
+                    child: Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                        boxShadow: const [
+                          BoxShadow(
+                            color: Color(0x06000000),
+                            blurRadius: 6,
+                            offset: Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  team.name,
+                                  style: const TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFF0F172A),
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
                                 ),
-                                overflow: TextOverflow.ellipsis,
                               ),
-                            ),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 6,
-                                vertical: 2,
-                              ),
-                              decoration: BoxDecoration(
-                                color: team.members.length >= team.maxMembers
-                                    ? const Color(0xFFECFDF5)
-                                    : const Color(0xFFEFF6FF),
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              child: Text(
-                                team.status,
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                  vertical: 2,
+                                ),
+                                decoration: BoxDecoration(
                                   color: team.members.length >= team.maxMembers
-                                      ? const Color(0xFF047857)
-                                      : const Color(0xFF1D4ED8),
+                                      ? const Color(0xFFECFDF5)
+                                      : const Color(0xFFEFF6FF),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Text(
+                                  team.status,
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                    color: team.members.length >= team.maxMembers
+                                        ? const Color(0xFF047857)
+                                        : const Color(0xFF1D4ED8),
+                                  ),
                                 ),
                               ),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            team.course,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: Color(0xFF64748B),
                             ),
-                          ],
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          team.course,
-                          style: const TextStyle(
-                            fontSize: 11,
-                            color: Color(0xFF64748B),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        Text(
-                          team.activityName,
-                          style: const TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            color: Color(0xFF2563EB),
+                          Text(
+                            team.activityName,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF2563EB),
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 12),
-                        const Divider(color: Color(0xFFF1F5F9), height: 1),
-                        const SizedBox(height: 8),
+                          const SizedBox(height: 12),
+                          const Divider(color: Color(0xFFF1F5F9), height: 1),
+                          const SizedBox(height: 8),
 
-                        const Text(
-                          'Team Members:',
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF475569),
+                          const Text(
+                            'Team Members:',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF475569),
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 6),
-                        Expanded(
-                          child: ListView.separated(
-                            physics: const NeverScrollableScrollPhysics(),
-                            itemCount: team.members.length,
-                            separatorBuilder: (_, _) =>
-                                const SizedBox(height: 6),
-                            itemBuilder: (context, mi) {
-                              final m = team.members[mi];
-                              return InkWell(
+                          const SizedBox(height: 6),
+                          ...team.members.map((m) {
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 6),
+                              child: InkWell(
                                 onTap: () => _showStudentProfileDialog(m),
                                 borderRadius: BorderRadius.circular(6),
                                 child: Container(
@@ -1703,7 +1696,7 @@ class _ProfessorDashboardScreenState extends State<ProfessorDashboardScreen> {
                                           0xFF1E40AF,
                                         ),
                                         child: Text(
-                                          m.name[0],
+                                          m.name.isNotEmpty ? m.name[0] : 'S',
                                           style: const TextStyle(
                                             color: Colors.white,
                                             fontSize: 9,
@@ -1733,14 +1726,14 @@ class _ProfessorDashboardScreenState extends State<ProfessorDashboardScreen> {
                                     ],
                                   ),
                                 ),
-                              );
-                            },
-                          ),
-                        ),
-                      ],
+                              ),
+                            );
+                          }),
+                        ],
+                      ),
                     ),
                   );
-                },
+                }).toList(),
               );
             },
           ),

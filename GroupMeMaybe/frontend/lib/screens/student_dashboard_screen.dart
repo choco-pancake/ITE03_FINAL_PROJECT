@@ -129,6 +129,8 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
           _activities = results[0] as List<GroupingActivity>;
           _classes = results[1] as List<AcademicClass>;
           if (myProfile != null) {
+            ProfileService.isProfileComplete =
+                myProfile.details['is_complete'] == true;
             if (myProfile.preferredRole.isNotEmpty) {
               _primaryRole = myProfile.preferredRole;
             }

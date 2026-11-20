@@ -143,12 +143,10 @@ class _SignupScreenState extends State<SignupScreen> {
       );
 
       // Save session
-      unawaited(
-        AuthService.saveSession(
-          user: user,
-          token: AuthService.authToken ?? '',
-          rememberMe: true,
-        ),
+      await AuthService.saveSession(
+        user: user,
+        token: AuthService.authToken ?? '',
+        rememberMe: true,
       );
 
       if (!mounted) return;

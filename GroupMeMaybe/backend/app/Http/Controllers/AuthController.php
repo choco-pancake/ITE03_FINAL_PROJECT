@@ -99,8 +99,8 @@ class AuthController extends Controller
                     'last_name' => $lastName,
                     'name' => $user->name,
                     'skills' => $validated['skills'] ?? [],
-                    'interests' => ['Web Development', 'Mobile Apps'],
-                    'preferred_role' => $validated['preferred_role'] ?? 'Frontend Developer',
+                    'interests' => [],
+                    'preferred_role' => $validated['preferred_role'] ?? '',
                     'availability' => $departmentOrSection,
                 ]
             );
@@ -253,8 +253,8 @@ class AuthController extends Controller
                 [
                     'name' => $user->name,
                     'skills' => [],
-                    'interests' => ['Web Development', 'Mobile Apps'],
-                    'preferred_role' => $validated['preferred_role'] ?? 'Frontend Developer',
+                    'interests' => [],
+                    'preferred_role' => $validated['preferred_role'] ?? '',
                     'availability' => $user->department_or_section ?? 'BSIT',
                 ]
             );

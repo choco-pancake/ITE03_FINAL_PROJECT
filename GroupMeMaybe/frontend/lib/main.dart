@@ -6,6 +6,7 @@ import 'screens/professor_dashboard_screen.dart';
 import 'screens/profile_list_screen.dart';
 import 'screens/student_dashboard_screen.dart';
 import 'services/auth_service.dart';
+import 'services/profile_service.dart';
 
 void main() {
   runApp(const MyApp());
@@ -63,6 +64,9 @@ class _AppEntryPointState extends State<AppEntryPoint> {
   Future<void> _checkRememberedSession() async {
     try {
       final user = await AuthService.restoreSession();
+      if (user != null && user.isStudent) {
+        await ProfileService().checkProfileComplete();
+      }
       if (mounted) {
         setState(() {
           _restoredUser = user;

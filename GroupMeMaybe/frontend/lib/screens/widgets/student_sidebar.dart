@@ -116,11 +116,16 @@ class StudentSidebar extends StatelessWidget {
             isLocked: !ProfileService.isProfileComplete,
             onTap: () async {
               if (!ProfileService.isProfileComplete) {
-                AppNotification.showWarning(
-                  context,
-                  'Please complete your profile in Settings before accessing classes.',
-                );
-                return;
+                final isComplete = await ProfileService().checkProfileComplete();
+                if (!isComplete) {
+                  if (context.mounted) {
+                    AppNotification.showWarning(
+                      context,
+                      'Please complete your profile in Settings before accessing classes.',
+                    );
+                  }
+                  return;
+                }
               }
               if (currentDestination != StudentNavDestination.classes) {
                 if (onBeforeNavigate != null) {
@@ -145,11 +150,16 @@ class StudentSidebar extends StatelessWidget {
             isLocked: !ProfileService.isProfileComplete,
             onTap: () async {
               if (!ProfileService.isProfileComplete) {
-                AppNotification.showWarning(
-                  context,
-                  'Please complete your profile in Settings before accessing team groups.',
-                );
-                return;
+                final isComplete = await ProfileService().checkProfileComplete();
+                if (!isComplete) {
+                  if (context.mounted) {
+                    AppNotification.showWarning(
+                      context,
+                      'Please complete your profile in Settings before accessing team groups.',
+                    );
+                  }
+                  return;
+                }
               }
               if (currentDestination != StudentNavDestination.groups) {
                 if (onBeforeNavigate != null) {

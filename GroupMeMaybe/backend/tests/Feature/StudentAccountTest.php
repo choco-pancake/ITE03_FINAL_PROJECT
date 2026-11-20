@@ -50,6 +50,33 @@ class StudentAccountTest extends TestCase
         $this->assertDatabaseHas('users', ['id' => $user->id, 'department_or_section' => '21-ITEM-03']);
     }
 
+    public function test_student_profile_saves_even_without_split_name_or_partial_payload(): void
+    {
+        $user = User::factory()->create([
+            'role' => 'student',
+            'name' => 'Juan Dela Cruz',
+            'email' => 'juan@example.com',
+        ]);
+        Sanctum::actingAs($user);
+
+        $this->putJson('/api/profile', [
+            'name' => 'Juan Dela Cruz',
+            'email' => 'juan@example.com',
+            'skills' => ['Frontend Development'],
+            'interests' => [],
+            'preferred_role' => 'Frontend developer',
+            'availability' => '21-ITEM-01',
+            'details' => [
+                'block' => '21-ITEM-01',
+                'student_id' => '2026-9999',
+            ],
+        ])->assertOk()
+            ->assertJsonPath('name', 'Juan Dela Cruz')
+            ->assertJsonPath('first_name', 'Juan')
+            ->assertJsonPath('last_name', 'Cruz')
+            ->assertJsonPath('details.block', '21-ITEM-01');
+    }
+
     public function test_password_change_requires_current_password(): void
     {
         $user = User::factory()->create(['password' => Hash::make('old-password')]);

@@ -20,18 +20,28 @@ class ProfileController extends Controller
 
     public function saveMine(Request $request): JsonResponse
     {
+        // Auto-extract first_name, middle_name, and last_name from name if not provided
+        if ((! $request->filled('first_name') || ! $request->filled('last_name')) && $request->filled('name')) {
+            $parts = preg_split('/\s+/', trim((string) $request->input('name')));
+            $request->merge([
+                'first_name' => $request->input('first_name') ?: ($parts[0] ?? $request->user()->first_name ?? 'Student'),
+                'last_name' => $request->input('last_name') ?: (count($parts) > 1 ? end($parts) : ($request->user()->last_name ?? 'User')),
+                'middle_name' => $request->input('middle_name') ?: (count($parts) > 2 ? implode(' ', array_slice($parts, 1, count($parts) - 2)) : ($request->user()->middle_name ?? null)),
+            ]);
+        }
+
         $data = $request->validate([
             'name' => 'required|string|max:255',
-            'first_name' => 'required|string|max:255',
+            'first_name' => 'nullable|string|max:255',
             'middle_name' => 'nullable|string|max:255',
-            'last_name' => 'required|string|max:255',
-            'skills' => 'present|array',
+            'last_name' => 'nullable|string|max:255',
+            'skills' => 'nullable|array',
             'skills.*' => 'string|max:255',
-            'interests' => 'present|array',
+            'interests' => 'nullable|array',
             'interests.*' => 'string|max:255',
-            'preferred_role' => 'required|string|max:255',
-            'availability' => 'required|string|max:255',
-            'details' => 'required|array',
+            'preferred_role' => 'nullable|string|max:255',
+            'availability' => 'nullable|string|max:255',
+            'details' => 'nullable|array',
             'details.student_id' => 'nullable|string|max:100',
             'details.year_level' => 'nullable|string|max:30',
             'details.block' => 'nullable|string|max:100',
@@ -45,6 +55,12 @@ class ProfileController extends Controller
             'details.is_complete' => 'nullable|boolean',
         ]);
 
+        $data['skills'] = $data['skills'] ?? [];
+        $data['interests'] = $data['interests'] ?? [];
+        $data['preferred_role'] = $data['preferred_role'] ?? 'Frontend developer';
+        $data['availability'] = $data['availability'] ?? ($data['details']['block'] ?? 'General');
+        $data['details'] = $data['details'] ?? [];
+
         $user = $request->user();
         if ($user->role !== 'student') {
             return response()->json(['message' => 'Only students can save student profiles.'], 403);
@@ -53,9 +69,9 @@ class ProfileController extends Controller
         $profile = DB::transaction(function () use ($user, $data): Profile {
             $user->update([
                 'name' => $data['name'],
-                'first_name' => $data['first_name'],
-                'middle_name' => $data['middle_name'] ?? null,
-                'last_name' => $data['last_name'],
+                'first_name' => $data['first_name'] ?? $user->first_name,
+                'middle_name' => $data['middle_name'] ?? $user->middle_name,
+                'last_name' => $data['last_name'] ?? $user->last_name,
                 'department_or_section' => $data['details']['block'] ?? $user->department_or_section,
             ]);
 

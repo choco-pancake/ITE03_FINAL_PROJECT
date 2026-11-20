@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/profile.dart';
 import 'auth_service.dart';
@@ -15,15 +16,27 @@ class ProfileService {
     'Accept': 'application/json',
   };
 
-  Map<String, String> get _authHeaders => {
-    ..._headers,
-    'Authorization': 'Bearer ${AuthService.authToken ?? ''}',
-  };
+  Future<Map<String, String>> _resolveAuthHeaders() async {
+    String? token = AuthService.authToken;
+    if (token == null || token.isEmpty) {
+      final prefs = await SharedPreferences.getInstance();
+      token = prefs.getString('gmm_active_token') ?? prefs.getString('gmm_saved_token');
+      if (token != null) {
+        AuthService.authToken = token;
+      }
+    }
+    return {
+      ..._headers,
+      if (token != null && token.isNotEmpty)
+        'Authorization': 'Bearer $token',
+    };
+  }
 
   Future<Profile?> getMyProfile() async {
+    final headers = await _resolveAuthHeaders();
     final res = await http.get(
       Uri.parse('$baseUrl/profile'),
-      headers: _authHeaders,
+      headers: headers,
     );
     if (res.statusCode == 404) return null;
     if (res.statusCode == 200) return Profile.fromJson(jsonDecode(res.body));
@@ -31,12 +44,15 @@ class ProfileService {
   }
 
   Future<Profile> saveMyProfile(Profile profile) async {
+    final headers = await _resolveAuthHeaders();
     final res = await http.put(
       Uri.parse('$baseUrl/profile'),
-      headers: _authHeaders,
+      headers: headers,
       body: jsonEncode(profile.toJson()),
     );
-    if (res.statusCode == 200) return Profile.fromJson(jsonDecode(res.body));
+    if (res.statusCode == 200 || res.statusCode == 201) {
+      return Profile.fromJson(jsonDecode(res.body));
+    }
     throw Exception('Failed to save your profile: ${res.body}');
   }
 

@@ -1184,6 +1184,11 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
 
     final profile = Profile(
       id: _existingProfileId,
+      firstName: _firstNameController.text.trim(),
+      middleName: _middleNameController.text.trim().isNotEmpty
+          ? _middleNameController.text.trim()
+          : null,
+      lastName: _lastNameController.text.trim(),
       name: fullName.isNotEmpty
           ? fullName
           : (_emailController.text.split('@').first),
@@ -1200,7 +1205,11 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
         'student_id': _studentIdController.text.trim(),
         'year_level': _selectedYearLevel,
         'block': _selectedBlock,
-        'roles': [_rolePriority1, ?_rolePriority2, ?_rolePriority3],
+        'roles': [
+          if (_rolePriority1.isNotEmpty) _rolePriority1,
+          if (_rolePriority2 != null && _rolePriority2!.isNotEmpty) _rolePriority2!,
+          if (_rolePriority3 != null && _rolePriority3!.isNotEmpty) _rolePriority3!,
+        ],
         'tools': _selectedTools,
         'available_days': _selectedDays.toList(),
         'meeting_start': _startMeetingHour,

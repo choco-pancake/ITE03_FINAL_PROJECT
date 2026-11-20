@@ -11,8 +11,13 @@ enum StudentNavDestination { dashboard, classes, groups, settings }
 
 class StudentSidebar extends StatelessWidget {
   final StudentNavDestination currentDestination;
+  final Future<bool> Function()? onBeforeNavigate;
 
-  const StudentSidebar({super.key, required this.currentDestination});
+  const StudentSidebar({
+    super.key,
+    required this.currentDestination,
+    this.onBeforeNavigate,
+  });
 
   Future<void> _confirmSignOut(BuildContext context) async {
     final confirmed = await showDialog<bool>(
@@ -143,8 +148,13 @@ class StudentSidebar extends StatelessWidget {
             icon: Icons.dashboard_outlined,
             title: 'Dashboard',
             isSelected: currentDestination == StudentNavDestination.dashboard,
-            onTap: () {
+            onTap: () async {
               if (currentDestination != StudentNavDestination.dashboard) {
+                if (onBeforeNavigate != null) {
+                  final canProceed = await onBeforeNavigate!();
+                  if (!canProceed) return;
+                }
+                if (!context.mounted) return;
                 Navigator.pushReplacement(
                   context,
                   MaterialPageRoute(
@@ -159,8 +169,13 @@ class StudentSidebar extends StatelessWidget {
             icon: Icons.school_outlined,
             title: 'Classes',
             isSelected: currentDestination == StudentNavDestination.classes,
-            onTap: () {
+            onTap: () async {
               if (currentDestination != StudentNavDestination.classes) {
+                if (onBeforeNavigate != null) {
+                  final canProceed = await onBeforeNavigate!();
+                  if (!canProceed) return;
+                }
+                if (!context.mounted) return;
                 Navigator.pushReplacement(
                   context,
                   MaterialPageRoute(
@@ -175,8 +190,13 @@ class StudentSidebar extends StatelessWidget {
             icon: Icons.groups_outlined,
             title: 'Groups (Teams)',
             isSelected: currentDestination == StudentNavDestination.groups,
-            onTap: () {
+            onTap: () async {
               if (currentDestination != StudentNavDestination.groups) {
+                if (onBeforeNavigate != null) {
+                  final canProceed = await onBeforeNavigate!();
+                  if (!canProceed) return;
+                }
+                if (!context.mounted) return;
                 Navigator.pushReplacement(
                   context,
                   MaterialPageRoute(
@@ -191,8 +211,13 @@ class StudentSidebar extends StatelessWidget {
             icon: Icons.settings_outlined,
             title: 'Settings',
             isSelected: currentDestination == StudentNavDestination.settings,
-            onTap: () {
+            onTap: () async {
               if (currentDestination != StudentNavDestination.settings) {
+                if (onBeforeNavigate != null) {
+                  final canProceed = await onBeforeNavigate!();
+                  if (!canProceed) return;
+                }
+                if (!context.mounted) return;
                 Navigator.pushReplacement(
                   context,
                   MaterialPageRoute(

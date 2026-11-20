@@ -26,47 +26,51 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
   int? _existingProfileId;
 
   // Step 2: Technical Skills
-  final List<String> _selectedSkills = [
-    'Frontend development',
-    'UI/UX design',
-    'Mobile app development',
-  ];
+  final List<String> _selectedSkills = [];
 
   // Preferred Project Roles (1 to 3 ordered by priority)
-  String _rolePriority1 = 'Frontend developer';
-  String? _rolePriority2 = 'UI / UX designer';
-  String? _rolePriority3 = 'Project leader / team leader';
+  String _rolePriority1 = '';
+  String? _rolePriority2;
+  String? _rolePriority3;
 
   // Tools & Technologies
-  final List<String> _selectedTools = [
-    'Flutter',
-    'Dart',
-    'Figma',
-    'Git',
-    'GitHub',
-    'HTML',
-    'CSS',
-  ];
+  final List<String> _selectedTools = [];
 
   // Interests
-  final List<String> _selectedInterests = [
-    'Web development',
-    'Mobile apps',
-    'UI/UX and creative design',
-  ];
+  final List<String> _selectedInterests = [];
 
   // Availability & Collaboration Mode
-  final Set<String> _selectedDays = {'Mon', 'Wed', 'Fri', 'Sat'};
-  String _selectedMeetingTime = 'Afternoon (1PM - 5PM)';
+  final Set<String> _selectedDays = {};
+  String? _startMeetingHour;
+  String? _endMeetingHour;
+  String _selectedMeetingTime = '';
   String _collaborationMode = 'Hybrid';
-  final _experienceController = TextEditingController(
-    text: 'Developed a mobile task tracker in Flutter; built landing pages for school organizations.',
-  );
+  final _experienceController = TextEditingController();
 
   // Validation state tracking
   final Map<String, bool> _invalidCards = {};
-  bool _isSavedAsComplete = true;
+  bool _isSavedAsComplete = false;
   bool _isSaving = false;
+  bool _isDirty = false;
+
+  static const List<String> _meetingHours = [
+    '07:00 AM',
+    '08:00 AM',
+    '09:00 AM',
+    '10:00 AM',
+    '11:00 AM',
+    '12:00 PM',
+    '01:00 PM',
+    '02:00 PM',
+    '03:00 PM',
+    '04:00 PM',
+    '05:00 PM',
+    '06:00 PM',
+    '07:00 PM',
+    '08:00 PM',
+    '09:00 PM',
+    '10:00 PM',
+  ];
 
   // Options catalogs
   static const List<String> _blocks = [
@@ -206,6 +210,19 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
     SkillApprovalService().addListener(_onSkillsUpdated);
     _initUserFields();
     _loadExistingProfile();
+
+    _firstNameController.addListener(_markDirty);
+    _middleNameController.addListener(_markDirty);
+    _lastNameController.addListener(_markDirty);
+    _studentIdController.addListener(_markDirty);
+    _emailController.addListener(_markDirty);
+    _experienceController.addListener(_markDirty);
+  }
+
+  void _markDirty() {
+    if (!_isDirty && mounted) {
+      setState(() => _isDirty = true);
+    }
   }
 
   void _initUserFields() {
@@ -259,6 +276,10 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
             _selectedInterests.clear();
             _selectedInterests.addAll(myProfile.interests);
           }
+          if (_selectedSkills.isNotEmpty && _rolePriority1.isNotEmpty) {
+            _isSavedAsComplete = true;
+          }
+          _isDirty = false;
         });
       }
     } catch (_) {}
@@ -267,6 +288,12 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
   @override
   void dispose() {
     SkillApprovalService().removeListener(_onSkillsUpdated);
+    _firstNameController.removeListener(_markDirty);
+    _middleNameController.removeListener(_markDirty);
+    _lastNameController.removeListener(_markDirty);
+    _studentIdController.removeListener(_markDirty);
+    _emailController.removeListener(_markDirty);
+    _experienceController.removeListener(_markDirty);
     _firstNameController.dispose();
     _middleNameController.dispose();
     _lastNameController.dispose();
@@ -339,7 +366,76 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
     return categories.toList();
   }
 
-  void _validateAndSave({required bool isDraft}) async {
+  Future<bool> _promptUnsavedChanges() async {
+    if (!_isDirty) return true;
+
+    final result = await showDialog<String>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: const [
+            Icon(Icons.warning_amber_rounded, color: Color(0xFFF59E0B), size: 24),
+            SizedBox(width: 10),
+            Text(
+              'Unsaved Changes',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
+        content: const Text(
+          'You have unsaved changes in your profile. Are you sure you want to navigate away without saving?',
+          style: TextStyle(fontSize: 14, color: Color(0xFF475569)),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, 'keep'),
+            child: const Text(
+              'Keep Editing',
+              style: TextStyle(
+                color: Color(0xFF64748B),
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, 'discard'),
+            child: const Text(
+              'Discard Changes',
+              style: TextStyle(
+                color: Color(0xFFDC2626),
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF1E40AF),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            onPressed: () => Navigator.pop(ctx, 'save_exit'),
+            child: const Text('Save Draft & Exit'),
+          ),
+        ],
+      ),
+    );
+
+    if (result == 'discard') {
+      _isDirty = false;
+      return true;
+    } else if (result == 'save_exit') {
+      _validateAndSave(isDraft: true, showModal: false);
+      _isDirty = false;
+      return true;
+    }
+    return false;
+  }
+
+  void _validateAndSave({required bool isDraft, bool showModal = true}) async {
     setState(() {
       _invalidCards.clear();
       _isSaving = true;
@@ -401,7 +497,9 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
       preferredRole: _rolePriority1.isNotEmpty
           ? _rolePriority1
           : 'Frontend developer',
-      availability: _selectedBlock,
+      availability: _selectedMeetingTime.isNotEmpty
+          ? '$_selectedBlock | $_selectedMeetingTime'
+          : _selectedBlock,
     );
 
     try {
@@ -419,22 +517,245 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
     setState(() {
       _isSavedAsComplete = !isDraft;
       _isSaving = false;
+      _isDirty = false;
     });
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          isDraft ? 'Draft saved successfully!' : 'Profile complete! You are now visible in team matching recommendations.',
+    if (showModal) {
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Row(
+            children: [
+              Icon(
+                isDraft ? Icons.check_circle_outline : Icons.verified,
+                color: isDraft ? const Color(0xFF2563EB) : const Color(0xFF16A34A),
+                size: 24,
+              ),
+              const SizedBox(width: 10),
+              Text(
+                isDraft ? 'Draft Saved Successfully!' : 'Profile Complete!',
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+          content: Text(
+            isDraft
+                ? 'Your profile draft has been saved. You can return anytime to continue editing.'
+                : 'Profile complete! You are now visible in team matching recommendations.',
+            style: const TextStyle(fontSize: 14, color: Color(0xFF475569)),
+          ),
+          actions: [
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: isDraft
+                    ? const Color(0xFF2563EB)
+                    : const Color(0xFF16A34A),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('OK'),
+            ),
+          ],
         ),
-        backgroundColor: isDraft
-            ? const Color(0xFF2563EB)
-            : const Color(0xFF16A34A),
-        behavior: SnackBarBehavior.floating,
-      ),
+      );
+    }
+  }
+
+  void _showSkillsChecklistModal() {
+    String searchQuery = '';
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (dialogContext, setDialogState) {
+            final availableSkills = _combinedTechnicalSkills
+                .where((skill) =>
+                    !_selectedSkills.contains(skill) &&
+                    (searchQuery.isEmpty ||
+                        skill.toLowerCase().contains(searchQuery.toLowerCase())))
+                .toList();
+
+            return Dialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(
+                  maxWidth: 600,
+                  maxHeight: 650,
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // Header Row
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFEFF6FF),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Icon(
+                              Icons.checklist_rtl_rounded,
+                              color: Color(0xFF1E40AF),
+                              size: 22,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          const Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Technical Skills Checklist',
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFF0F172A),
+                                  ),
+                                ),
+                                Text(
+                                  'Select skills you are proficient in. Selected skills will be added to your profile.',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Color(0xFF64748B),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.close, size: 20),
+                            onPressed: () => Navigator.pop(dialogContext),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Search bar
+                      TextField(
+                        decoration: InputDecoration(
+                          hintText: 'Search skills (e.g. Frontend, Flutter, Database)...',
+                          prefixIcon: const Icon(Icons.search, size: 20),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 10,
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
+                          ),
+                          filled: true,
+                          fillColor: const Color(0xFFF8FAFC),
+                        ),
+                        onChanged: (val) {
+                          setDialogState(() {
+                            searchQuery = val.trim();
+                          });
+                        },
+                      ),
+                      const SizedBox(height: 12),
+
+                      // Skills Checklist List
+                      Expanded(
+                        child: availableSkills.isEmpty
+                            ? Center(
+                                child: Text(
+                                  searchQuery.isEmpty
+                                      ? 'All available skills have been added to your profile!'
+                                      : 'No unselected skills match "$searchQuery"',
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(
+                                    color: Color(0xFF64748B),
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              )
+                            : ListView.separated(
+                                itemCount: availableSkills.length,
+                                separatorBuilder: (context, index) =>
+                                    const Divider(height: 1, color: Color(0xFFF1F5F9)),
+                                itemBuilder: (c, idx) {
+                                  final skill = availableSkills[idx];
+                                  return CheckboxListTile(
+                                    value: false,
+                                    dense: true,
+                                    activeColor: const Color(0xFF1E40AF),
+                                    title: Text(
+                                      skill,
+                                      style: const TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w500,
+                                        color: Color(0xFF1E293B),
+                                      ),
+                                    ),
+                                    controlAffinity:
+                                        ListTileControlAffinity.leading,
+                                    onChanged: (bool? checked) {
+                                      if (checked == true) {
+                                        setState(() {
+                                          _selectedSkills.add(skill);
+                                          _isDirty = true;
+                                        });
+                                        setDialogState(() {});
+                                      }
+                                    },
+                                  );
+                                },
+                              ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Footer Actions
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          OutlinedButton.icon(
+                            onPressed: () {
+                              _showAddCustomSkillDialog(onAdded: (s) {
+                                setDialogState(() {});
+                              });
+                            },
+                            icon: const Icon(Icons.add, size: 16),
+                            label: const Text('Add Custom Skill'),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: const Color(0xFF1E40AF),
+                              side: const BorderSide(color: Color(0xFF93C5FD)),
+                            ),
+                          ),
+                          ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF1E40AF),
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
+                            onPressed: () => Navigator.pop(dialogContext),
+                            child: const Text('Done'),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
     );
   }
 
-  void _showAddCustomSkillDialog() {
+  void _showAddCustomSkillDialog({ValueChanged<String>? onAdded}) {
     final customSkillController = TextEditingController();
     showDialog(
       context: context,
@@ -502,7 +823,9 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
                   if (!_selectedSkills.contains(newSkill)) {
                     _selectedSkills.add(newSkill);
                   }
+                  _isDirty = true;
                 });
+                onAdded?.call(newSkill);
                 Navigator.pop(ctx);
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
@@ -524,14 +847,24 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
-      body: Row(
-        children: [
-          // Unified Sidebar
-          const StudentSidebar(
-            currentDestination: StudentNavDestination.settings,
-          ),
+    return PopScope(
+      canPop: !_isDirty,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+        final canLeave = await _promptUnsavedChanges();
+        if (canLeave && context.mounted) {
+          Navigator.of(context).pop();
+        }
+      },
+      child: Scaffold(
+        backgroundColor: const Color(0xFFF8FAFC),
+        body: Row(
+          children: [
+            // Unified Sidebar
+            StudentSidebar(
+              currentDestination: StudentNavDestination.settings,
+              onBeforeNavigate: _promptUnsavedChanges,
+            ),
 
           // Main Scrollable Form Area
           Expanded(
@@ -757,60 +1090,33 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
                       _buildSectionCard(
                         id: 'skills',
                         title: '2. Technical Skills',
-                        subtitle: 'Select all skills you are proficient in (removable with X). Request custom skills if needed.',
+                        subtitle: 'Select skills you are proficient in (removable with X). Open the checklist modal to search and pick skills.',
                         icon: Icons.code,
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Row(
+                            Wrap(
+                              spacing: 12,
+                              runSpacing: 10,
                               children: [
-                                Expanded(
-                                  child: DropdownButtonFormField<String>(
-                                    key: ValueKey(_selectedSkills.join('|')),
-                                    isExpanded: true,
-                                    hint: const Text(
-                                      'Select a technical skill to add...',
-                                      style: TextStyle(fontSize: 13),
+                                ElevatedButton.icon(
+                                  onPressed: _showSkillsChecklistModal,
+                                  icon: const Icon(Icons.playlist_add_check_rounded, size: 20),
+                                  label: const Text('Select Skills (Checklist Modal)'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFF1E40AF),
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 18,
+                                      vertical: 12,
                                     ),
-                                    decoration: InputDecoration(
-                                      contentPadding:
-                                          const EdgeInsets.symmetric(
-                                            horizontal: 14,
-                                            vertical: 10,
-                                          ),
-                                      border: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8),
                                     ),
-                                    items: _combinedTechnicalSkills
-                                        .where(
-                                          (s) => !_selectedSkills.contains(s),
-                                        )
-                                        .map(
-                                          (s) => DropdownMenuItem(
-                                            value: s,
-                                            child: Text(
-                                              s,
-                                              style: const TextStyle(
-                                                fontSize: 13,
-                                              ),
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
-                                          ),
-                                        )
-                                        .toList(),
-                                    onChanged: (val) {
-                                      if (val != null) {
-                                        setState(
-                                          () => _selectedSkills.add(val),
-                                        );
-                                      }
-                                    },
                                   ),
                                 ),
-                                const SizedBox(width: 12),
                                 OutlinedButton.icon(
-                                  onPressed: _showAddCustomSkillDialog,
+                                  onPressed: () => _showAddCustomSkillDialog(),
                                   icon: const Icon(Icons.add, size: 16),
                                   label: const Text('Request Custom Skill'),
                                   style: OutlinedButton.styleFrom(
@@ -822,28 +1128,68 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
                                       horizontal: 14,
                                       vertical: 12,
                                     ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
                                   ),
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 14),
-                            // Removable Chips with X Icon
-                            Wrap(
-                              spacing: 8,
-                              runSpacing: 8,
-                              children: _selectedSkills.map((skill) {
-                                return _buildRemovableChip(
-                                  label: skill,
-                                  color: const Color(0xFFDBEAFE),
-                                  textColor: const Color(0xFF1E40AF),
-                                  onRemove: () {
-                                    setState(
-                                      () => _selectedSkills.remove(skill),
-                                    );
-                                  },
-                                );
-                              }).toList(),
-                            ),
+                            const SizedBox(height: 16),
+                            if (_selectedSkills.isEmpty)
+                              Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 14,
+                                  vertical: 14,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFF8FAFC),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                                ),
+                                child: const Row(
+                                  children: [
+                                    Icon(Icons.info_outline, size: 18, color: Color(0xFF64748B)),
+                                    SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        'No technical skills chosen yet. Click "Select Skills" above to open the checklist.',
+                                        style: TextStyle(fontSize: 13, color: Color(0xFF64748B)),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              )
+                            else ...[
+                              Text(
+                                'Selected Skills (${_selectedSkills.length}):',
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: Color(0xFF475569),
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              // Removable Chips with X Icon
+                              Wrap(
+                                spacing: 8,
+                                runSpacing: 8,
+                                children: _selectedSkills.map((skill) {
+                                  return _buildRemovableChip(
+                                    label: skill,
+                                    color: const Color(0xFFDBEAFE),
+                                    textColor: const Color(0xFF1E40AF),
+                                    onRemove: () {
+                                      setState(() {
+                                        _selectedSkills.remove(skill);
+                                        _isDirty = true;
+                                      });
+                                    },
+                                  );
+                                }).toList(),
+                              ),
+                            ],
                           ],
                         ),
                       ),
@@ -864,11 +1210,12 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
                                     priorityLabel:
                                         '1st Priority (Primary Role)',
                                     badgeColor: const Color(0xFF16A34A),
-                                    value: _rolePriority1,
+                                    value: _rolePriority1.isNotEmpty ? _rolePriority1 : null,
                                     onChanged: (val) {
-                                      if (val != null) {
-                                        setState(() => _rolePriority1 = val);
-                                      }
+                                      setState(() {
+                                        _rolePriority1 = val ?? '';
+                                        _isDirty = true;
+                                      });
                                     },
                                   ),
                                   const SizedBox(height: 14),
@@ -876,8 +1223,12 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
                                     priorityLabel: '2nd Priority (Secondary)',
                                     badgeColor: const Color(0xFF2563EB),
                                     value: _rolePriority2,
-                                    onChanged: (val) =>
-                                        setState(() => _rolePriority2 = val),
+                                    onChanged: (val) {
+                                      setState(() {
+                                        _rolePriority2 = val;
+                                        _isDirty = true;
+                                      });
+                                    },
                                     isOptional: true,
                                   ),
                                   const SizedBox(height: 14),
@@ -885,8 +1236,12 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
                                     priorityLabel: '3rd Priority (Tertiary)',
                                     badgeColor: const Color(0xFF6B7280),
                                     value: _rolePriority3,
-                                    onChanged: (val) =>
-                                        setState(() => _rolePriority3 = val),
+                                    onChanged: (val) {
+                                      setState(() {
+                                        _rolePriority3 = val;
+                                        _isDirty = true;
+                                      });
+                                    },
                                     isOptional: true,
                                   ),
                                 ],
@@ -899,11 +1254,12 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
                                     priorityLabel:
                                         '1st Priority (Primary Role)',
                                     badgeColor: const Color(0xFF16A34A),
-                                    value: _rolePriority1,
+                                    value: _rolePriority1.isNotEmpty ? _rolePriority1 : null,
                                     onChanged: (val) {
-                                      if (val != null) {
-                                        setState(() => _rolePriority1 = val);
-                                      }
+                                      setState(() {
+                                        _rolePriority1 = val ?? '';
+                                        _isDirty = true;
+                                      });
                                     },
                                   ),
                                 ),
@@ -913,8 +1269,12 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
                                     priorityLabel: '2nd Priority (Secondary)',
                                     badgeColor: const Color(0xFF2563EB),
                                     value: _rolePriority2,
-                                    onChanged: (val) =>
-                                        setState(() => _rolePriority2 = val),
+                                    onChanged: (val) {
+                                      setState(() {
+                                        _rolePriority2 = val;
+                                        _isDirty = true;
+                                      });
+                                    },
                                     isOptional: true,
                                   ),
                                 ),
@@ -924,8 +1284,12 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
                                     priorityLabel: '3rd Priority (Tertiary)',
                                     badgeColor: const Color(0xFF6B7280),
                                     value: _rolePriority3,
-                                    onChanged: (val) =>
-                                        setState(() => _rolePriority3 = val),
+                                    onChanged: (val) {
+                                      setState(() {
+                                        _rolePriority3 = val;
+                                        _isDirty = true;
+                                      });
+                                    },
                                     isOptional: true,
                                   ),
                                 ),
@@ -983,6 +1347,7 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
                                         } else {
                                           _selectedTools.remove(tool);
                                         }
+                                        _isDirty = true;
                                       });
                                     },
                                   );
@@ -1032,6 +1397,7 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
                                       } else {
                                         _selectedInterests.remove(interest);
                                       }
+                                      _isDirty = true;
                                     });
                                   },
                                 );
@@ -1051,7 +1417,7 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
                               controller: _experienceController,
                               maxLines: 3,
                               decoration: InputDecoration(
-                                hintText: 'Share a brief summary of projects or coursework you have worked on...',
+                                hintText: 'e.g. Developed a mobile task tracker in Flutter; built landing pages for school organizations...',
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(8),
                                 ),
@@ -1112,6 +1478,7 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
                                           } else {
                                             _selectedDays.remove(day);
                                           }
+                                          _isDirty = true;
                                         });
                                       },
                                     );
@@ -1126,7 +1493,7 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
                                         CrossAxisAlignment.start,
                                     children: [
                                       const Text(
-                                        'Preferred Meeting Time',
+                                        'Starting Hour',
                                         style: TextStyle(
                                           fontSize: 12,
                                           fontWeight: FontWeight.w600,
@@ -1136,7 +1503,11 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
                                       const SizedBox(height: 6),
                                       DropdownButtonFormField<String>(
                                         isExpanded: true,
-                                        initialValue: _selectedMeetingTime,
+                                        initialValue: _startMeetingHour,
+                                        hint: const Text(
+                                          'Select start hour...',
+                                          style: TextStyle(fontSize: 13),
+                                        ),
                                         decoration: InputDecoration(
                                           contentPadding:
                                               const EdgeInsets.symmetric(
@@ -1149,31 +1520,26 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
                                             ),
                                           ),
                                         ),
-                                        items:
-                                            [
-                                                  'Morning (8AM - 12PM)',
-                                                  'Afternoon (1PM - 5PM)',
-                                                  'Evening (after 5PM)',
-                                                  'Weekends',
-                                                ]
-                                                .map(
-                                                  (t) => DropdownMenuItem(
-                                                    value: t,
-                                                    child: Text(
-                                                      t,
-                                                      style: const TextStyle(
-                                                        fontSize: 13,
-                                                      ),
-                                                    ),
+                                        items: _meetingHours
+                                            .map(
+                                              (h) => DropdownMenuItem(
+                                                value: h,
+                                                child: Text(
+                                                  h,
+                                                  style: const TextStyle(
+                                                    fontSize: 13,
                                                   ),
-                                                )
-                                                .toList(),
+                                                ),
+                                              ),
+                                            )
+                                            .toList(),
                                         onChanged: (val) {
-                                          if (val != null) {
-                                            setState(
-                                              () => _selectedMeetingTime = val,
-                                            );
-                                          }
+                                          setState(() {
+                                            _startMeetingHour = val;
+                                            _selectedMeetingTime =
+                                                '${_startMeetingHour ?? ""} - ${_endMeetingHour ?? ""}';
+                                            _isDirty = true;
+                                          });
                                         },
                                       ),
                                     ],
@@ -1186,7 +1552,7 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
                                         CrossAxisAlignment.start,
                                     children: [
                                       const Text(
-                                        'Preferred Collaboration Mode',
+                                        'Ending Hour',
                                         style: TextStyle(
                                           fontSize: 12,
                                           fontWeight: FontWeight.w600,
@@ -1196,7 +1562,11 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
                                       const SizedBox(height: 6),
                                       DropdownButtonFormField<String>(
                                         isExpanded: true,
-                                        initialValue: _collaborationMode,
+                                        initialValue: _endMeetingHour,
+                                        hint: const Text(
+                                          'Select end hour...',
+                                          style: TextStyle(fontSize: 13),
+                                        ),
                                         decoration: InputDecoration(
                                           contentPadding:
                                               const EdgeInsets.symmetric(
@@ -1209,12 +1579,12 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
                                             ),
                                           ),
                                         ),
-                                        items: ['On-campus', 'Online', 'Hybrid']
+                                        items: _meetingHours
                                             .map(
-                                              (m) => DropdownMenuItem(
-                                                value: m,
+                                              (h) => DropdownMenuItem(
+                                                value: h,
                                                 child: Text(
-                                                  m,
+                                                  h,
                                                   style: const TextStyle(
                                                     fontSize: 13,
                                                   ),
@@ -1223,15 +1593,66 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
                                             )
                                             .toList(),
                                         onChanged: (val) {
-                                          if (val != null) {
-                                            setState(
-                                              () => _collaborationMode = val,
-                                            );
-                                          }
+                                          setState(() {
+                                            _endMeetingHour = val;
+                                            _selectedMeetingTime =
+                                                '${_startMeetingHour ?? ""} - ${_endMeetingHour ?? ""}';
+                                            _isDirty = true;
+                                          });
                                         },
                                       ),
                                     ],
                                   ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 14),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Preferred Collaboration Mode',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: Color(0xFF334155),
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                DropdownButtonFormField<String>(
+                                  isExpanded: true,
+                                  initialValue: _collaborationMode,
+                                  decoration: InputDecoration(
+                                    contentPadding:
+                                        const EdgeInsets.symmetric(
+                                          horizontal: 12,
+                                          vertical: 10,
+                                        ),
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                  ),
+                                  items: ['On-campus', 'Online', 'Hybrid']
+                                      .map(
+                                        (m) => DropdownMenuItem(
+                                          value: m,
+                                          child: Text(
+                                            m,
+                                            style: const TextStyle(
+                                              fontSize: 13,
+                                            ),
+                                          ),
+                                        ),
+                                      )
+                                      .toList(),
+                                  onChanged: (val) {
+                                    if (val != null) {
+                                      setState(() {
+                                        _collaborationMode = val;
+                                        _isDirty = true;
+                                      });
+                                    }
+                                  },
                                 ),
                               ],
                             ),
@@ -1363,7 +1784,8 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
           ),
         ],
       ),
-    );
+    ),
+  );
   }
 
   // Section Card container with error state highlighting in red
@@ -1578,7 +2000,9 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
         DropdownButtonFormField<String>(
           key: ValueKey('$priorityLabel:$value'),
           isExpanded: true,
-          initialValue: value,
+          initialValue: (value != null && value.isNotEmpty && _allProjectRoles.contains(value))
+              ? value
+              : null,
           decoration: InputDecoration(
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 12,

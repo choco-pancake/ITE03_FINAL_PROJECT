@@ -8,6 +8,11 @@ import '../professor_dashboard_screen.dart';
 import '../professor_settings_screen.dart';
 import '../student_dashboard_screen.dart';
 import '../student_settings_screen.dart';
+import '../student_groups_screen.dart';
+import '../student_classes_screen.dart';
+import '../professor_activities_screen.dart';
+import '../professor_classes_screen.dart';
+import '../../models/portal_notification.dart';
 
 class PortalTopActions extends StatefulWidget {
   const PortalTopActions({super.key, this.onProfile});
@@ -84,6 +89,7 @@ class _PortalTopActionsState extends State<PortalTopActions> {
                           if (dialogContext.mounted) {
                             Navigator.pop(dialogContext);
                           }
+                          _handleNotificationClick(item);
                         } catch (error) {
                           if (dialogContext.mounted) {
                             ScaffoldMessenger.of(dialogContext).showSnackBar(
@@ -111,6 +117,78 @@ class _PortalTopActionsState extends State<PortalTopActions> {
         ],
       ),
     );
+  }
+
+  void _handleNotificationClick(PortalNotification item) {
+    if (!mounted) return;
+    final user = AuthService.currentUser;
+    final isProf = user?.isProfessor == true;
+
+    // 1. Custom Skill Request -> Professor Dashboard (scroll to skills section)
+    if (item.kind == 'skill_request' || item.target == 'skill_requests') {
+      if (isProf) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => const ProfessorDashboardScreen(scrollToSkills: true),
+          ),
+        );
+      }
+      return;
+    }
+
+    // 2. Skill Approval Decision -> Student Profile & Settings (Skill section)
+    if (item.kind == 'skill_decision' || item.target == 'skills') {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => const StudentSettingsScreen(initialTab: 0),
+        ),
+      );
+      return;
+    }
+
+    // 3. Group Deadline or Activity -> Groups (Student) or Activities (Professor)
+    if (item.kind == 'group_deadline' ||
+        item.target == 'groups' ||
+        item.target == 'activities') {
+      if (isProf) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => const ProfessorActivitiesScreen(),
+          ),
+        );
+      } else {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => const StudentGroupsScreen(),
+          ),
+        );
+      }
+      return;
+    }
+
+    // 4. Classes
+    if (item.target == 'classes') {
+      if (isProf) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => const ProfessorClassesScreen(),
+          ),
+        );
+      } else {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => const StudentClassesScreen(),
+          ),
+        );
+      }
+      return;
+    }
   }
 
   void _openProfile() {

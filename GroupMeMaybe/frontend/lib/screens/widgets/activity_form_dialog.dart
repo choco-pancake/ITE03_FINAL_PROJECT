@@ -289,8 +289,8 @@ class _ActivityFormDialogState extends State<ActivityFormDialog> {
                       children: [
                         Text(
                           isEditing
-                              ? 'Edit Grouping Activity'
-                              : 'Create Grouping Activity',
+                              ? 'Edit Project'
+                              : 'Create Project',
                           style: const TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
@@ -1011,7 +1011,7 @@ class _ActivityFormDialogState extends State<ActivityFormDialog> {
                             )
                           : Icon(isEditing ? Icons.save : Icons.add_task),
                       label: Text(
-                        isEditing ? 'Save Changes' : 'Create Activity',
+                        isEditing ? 'Save Changes' : 'Create Project',
                         style: const TextStyle(fontWeight: FontWeight.bold),
                       ),
                     ),

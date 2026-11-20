@@ -100,7 +100,9 @@ class RecommendedGroupMatch {
 }
 
 class ProfessorDashboardScreen extends StatefulWidget {
-  const ProfessorDashboardScreen({super.key});
+  final bool scrollToSkills;
+
+  const ProfessorDashboardScreen({super.key, this.scrollToSkills = false});
 
   @override
   State<ProfessorDashboardScreen> createState() =>
@@ -113,6 +115,7 @@ class _ProfessorDashboardScreenState extends State<ProfessorDashboardScreen> {
   final ActivityService _activityService = ActivityService();
   final TextEditingController _studentSearchController =
       TextEditingController();
+  final GlobalKey _skillsSectionKey = GlobalKey();
 
   // Completion filter: 'all', 'complete', 'incomplete', 'uninitialized'
   String _selectedCompletionFilter = 'all';
@@ -135,6 +138,17 @@ class _ProfessorDashboardScreenState extends State<ProfessorDashboardScreen> {
     _skillService.addListener(_onSkillServiceUpdated);
     _skillService.loadRequests().catchError((Object _) {});
     _initData();
+    if (widget.scrollToSkills) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (_skillsSectionKey.currentContext != null) {
+          Scrollable.ensureVisible(
+            _skillsSectionKey.currentContext!,
+            duration: const Duration(milliseconds: 600),
+            curve: Curves.easeInOut,
+          );
+        }
+      });
+    }
   }
 
   @override
@@ -824,7 +838,10 @@ class _ProfessorDashboardScreenState extends State<ProfessorDashboardScreen> {
                       const SizedBox(height: 28),
 
                       // Custom Requested Skills Approval Queue
-                      _buildCustomSkillsApprovalSection(),
+                      KeyedSubtree(
+                        key: _skillsSectionKey,
+                        child: _buildCustomSkillsApprovalSection(),
+                      ),
                       const SizedBox(height: 32),
                     ],
                   ),

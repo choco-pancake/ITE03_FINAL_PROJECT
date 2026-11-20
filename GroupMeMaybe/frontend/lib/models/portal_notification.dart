@@ -4,6 +4,7 @@ class PortalNotification {
     required this.title,
     required this.message,
     required this.kind,
+    this.target,
     required this.createdAt,
     this.readAt,
   });
@@ -12,18 +13,21 @@ class PortalNotification {
   final String title;
   final String message;
   final String kind;
+  final String? target;
   final DateTime createdAt;
   final DateTime? readAt;
 
   factory PortalNotification.fromJson(Map<String, dynamic> json) =>
       PortalNotification(
         id: json['id'] as int,
-        title: json['title'] as String,
-        message: json['message'] as String,
-        kind: json['kind'] as String,
-        createdAt: DateTime.parse(json['created_at'] as String),
+        title: (json['title'] ?? '').toString(),
+        message: (json['message'] ?? '').toString(),
+        kind: (json['kind'] ?? '').toString(),
+        target: json['target'] as String?,
+        createdAt: DateTime.tryParse(json['created_at']?.toString() ?? '') ??
+            DateTime.now(),
         readAt: json['read_at'] == null
             ? null
-            : DateTime.parse(json['read_at'] as String),
+            : DateTime.tryParse(json['read_at']?.toString() ?? ''),
       );
 }

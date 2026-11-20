@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'widgets/portal_top_actions.dart';
+
 import '../models/custom_skill_request.dart';
 import '../models/grouping_activity.dart';
 import '../models/profile.dart';
@@ -131,6 +133,7 @@ class _ProfessorDashboardScreenState extends State<ProfessorDashboardScreen> {
   void initState() {
     super.initState();
     _skillService.addListener(_onSkillServiceUpdated);
+    _skillService.loadRequests().catchError((Object _) {});
     _initData();
   }
 
@@ -145,6 +148,157 @@ class _ProfessorDashboardScreenState extends State<ProfessorDashboardScreen> {
     if (mounted) setState(() {});
   }
 
+  Future<void> _confirmSkillDecision(
+    CustomSkillRequest request,
+    SkillApprovalStatus decision,
+  ) async {
+    final approving = decision == SkillApprovalStatus.approved;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        titlePadding: const EdgeInsets.fromLTRB(24, 24, 24, 12),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+        actionsPadding: const EdgeInsets.fromLTRB(24, 12, 24, 20),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: approving
+                    ? const Color(0xFFEFF6FF)
+                    : const Color(0xFFFEF2F2),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                approving ? Icons.verified : Icons.cancel_outlined,
+                color: approving
+                    ? const Color(0xFF1E40AF)
+                    : const Color(0xFFDC2626),
+                size: 22,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Text(
+              approving ? 'Approve Skill Request' : 'Decline Skill Request',
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Are you sure you want to ${approving ? "approve" : "decline"} this custom skill request?',
+              style: const TextStyle(fontSize: 14, color: Color(0xFF334155)),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: const Color(0xFFE2E8F0)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Text(
+                        'Requested Skill: ',
+                        style:
+                            TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                      ),
+                      Text(
+                        request.skillName,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF1E293B),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      const Text(
+                        'Student: ',
+                        style:
+                            TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                      ),
+                      Text(
+                        '${request.studentName} (${request.block})',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF334155),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(
+                color: Color(0xFF64748B),
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: approving
+                  ? const Color(0xFF1E40AF)
+                  : const Color(0xFFDC2626),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: Text(approving ? 'Confirm Approve' : 'Confirm Decline'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    try {
+      await _skillService.updateStatus(
+        request.id,
+        decision,
+        remarks: approving
+            ? 'Verified syllabus alignment.'
+            : 'Out of scope for current curriculum.',
+      );
+      if (mounted) {
+        AppNotification.showMessage(
+          context,
+          approving ? 'Skill approved' : 'Skill request rejected',
+          '"${request.skillName}" was ${approving ? 'approved' : 'rejected'}.',
+        );
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(error.toString().replaceAll('Exception: ', '')),
+          ),
+        );
+      }
+    }
+  }
+
   void _initData() {
     _allStudents = [];
     _teams = [];
@@ -157,7 +311,11 @@ class _ProfessorDashboardScreenState extends State<ProfessorDashboardScreen> {
       final profilesFuture = _profileService.getProfiles();
       final activitiesFuture = _activityService.getActivities();
       final classesFuture = _activityService.getClasses();
-      final results = await Future.wait([profilesFuture, activitiesFuture, classesFuture]);
+      final results = await Future.wait([
+        profilesFuture,
+        activitiesFuture,
+        classesFuture,
+      ]);
 
       final profiles = results[0] as List<Profile>;
       final activities = results[1] as List<GroupingActivity>;
@@ -181,10 +339,17 @@ class _ProfessorDashboardScreenState extends State<ProfessorDashboardScreen> {
 
         // Filter profiles to those belonging to the instructor's created classes
         final classProfiles = profiles.where((p) {
-          final block = (p.details['block'] ?? p.availability).toString().trim().toLowerCase();
-          if (classSections.contains(block)) return true;
+          final block = (p.details['block'] ?? p.availability)
+              .toString()
+              .trim()
+              .toLowerCase();
+          if (classSections.contains(block)) {
+            return true;
+          }
           for (final sec in classSections) {
-            if (sec != null && sec.isNotEmpty && block.contains(sec)) return true;
+            if (sec != null && sec.isNotEmpty && block.contains(sec)) {
+              return true;
+            }
           }
           return false;
         }).toList();
@@ -196,8 +361,8 @@ class _ProfessorDashboardScreenState extends State<ProfessorDashboardScreen> {
           final status = (hasRole && hasSkills)
               ? ProfileCompletionStatus.complete
               : ((hasRole || hasSkills)
-                  ? ProfileCompletionStatus.incomplete
-                  : ProfileCompletionStatus.uninitialized);
+                    ? ProfileCompletionStatus.incomplete
+                    : ProfileCompletionStatus.uninitialized);
 
           return StudentRosterItem(
             id: 's-${p.id ?? DateTime.now().millisecond}',
@@ -240,16 +405,17 @@ class _ProfessorDashboardScreenState extends State<ProfessorDashboardScreen> {
                         studentId: '2023-0000',
                         block: 'General',
                         status: ProfileCompletionStatus.complete,
-                        primaryRole:
-                            (m is Map) ? m['role']?.toString() : 'Member',
+                        primaryRole: (m is Map)
+                            ? m['role']?.toString()
+                            : 'Member',
                         skillLevel: (m is Map)
                             ? m['level']?.toString()
                             : 'Intermediate',
                         topSkills: (m is Map)
                             ? ((m['skills'] as List?)
-                                    ?.map((s) => s.toString())
-                                    .toList() ??
-                                [])
+                                      ?.map((s) => s.toString())
+                                      .toList() ??
+                                  [])
                             : [],
                         email:
                             '${mName.toLowerCase().replaceAll(' ', '.')}@student.edu',
@@ -278,25 +444,29 @@ class _ProfessorDashboardScreenState extends State<ProfessorDashboardScreen> {
             .toSet();
         _unassignedStudents = _allStudents
             .where((s) => !assignedNames.contains(s.name.toLowerCase()))
-            .map((s) => UnassignedStudent(
-                  id: s.id,
-                  name: s.name,
-                  studentId: s.studentId,
-                  block: s.block,
-                  preferredRole: s.primaryRole ?? 'Collaborator',
-                  skillLevel: s.skillLevel ?? 'Intermediate',
-                  skills: s.topSkills,
-                  recommendedGroups: _teams
-                      .where((t) => t.members.length < t.maxMembers)
-                      .take(2)
-                      .map((t) => RecommendedGroupMatch(
-                            teamId: t.id,
-                            teamName: t.name,
-                            matchPercentage: 88,
-                            reason: 'Open slot available in ${t.name}',
-                          ))
-                      .toList(),
-                ))
+            .map(
+              (s) => UnassignedStudent(
+                id: s.id,
+                name: s.name,
+                studentId: s.studentId,
+                block: s.block,
+                preferredRole: s.primaryRole ?? 'Collaborator',
+                skillLevel: s.skillLevel ?? 'Intermediate',
+                skills: s.topSkills,
+                recommendedGroups: _teams
+                    .where((t) => t.members.length < t.maxMembers)
+                    .take(2)
+                    .map(
+                      (t) => RecommendedGroupMatch(
+                        teamId: t.id,
+                        teamName: t.name,
+                        matchPercentage: 88,
+                        reason: 'Open slot available in ${t.name}',
+                      ),
+                    )
+                    .toList(),
+              ),
+            )
             .toList();
       });
     } catch (_) {
@@ -614,6 +784,13 @@ class _ProfessorDashboardScreenState extends State<ProfessorDashboardScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // Top Action Row
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: const [PortalTopActions()],
+                      ),
+                      const SizedBox(height: 12),
+
                       // Header Section
                       _buildWelcomeHeader(),
                       const SizedBox(height: 20),
@@ -668,8 +845,8 @@ class _ProfessorDashboardScreenState extends State<ProfessorDashboardScreen> {
     final profInitial = profName.isNotEmpty ? profName[0].toUpperCase() : 'P';
     final department =
         (AuthService.currentUser?.departmentOrSection?.isNotEmpty == true)
-            ? AuthService.currentUser!.departmentOrSection!
-            : 'College of Information and Computing Sciences';
+        ? AuthService.currentUser!.departmentOrSection!
+        : 'College of Information and Computing Sciences';
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
@@ -1356,175 +1533,178 @@ class _ProfessorDashboardScreenState extends State<ProfessorDashboardScreen> {
         else
           LayoutBuilder(
             builder: (context, constraints) {
-            final crossAxisCount = constraints.maxWidth >= 900
-                ? 3
-                : (constraints.maxWidth >= 600 ? 2 : 1);
-            return GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: crossAxisCount,
-                crossAxisSpacing: 16,
-                mainAxisSpacing: 16,
-                mainAxisExtent: 250,
-              ),
-              itemCount: _teams.length,
-              itemBuilder: (context, index) {
-                final team = _teams[index];
-                return Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: const Color(0xFFE2E8F0)),
-                    boxShadow: const [
-                      BoxShadow(
-                        color: Color(0x06000000),
-                        blurRadius: 6,
-                        offset: Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Expanded(
-                            child: Text(
-                              team.name,
-                              style: const TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFF0F172A),
+              final crossAxisCount = constraints.maxWidth >= 900
+                  ? 3
+                  : (constraints.maxWidth >= 600 ? 2 : 1);
+              return GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: crossAxisCount,
+                  crossAxisSpacing: 16,
+                  mainAxisSpacing: 16,
+                  mainAxisExtent: 250,
+                ),
+                itemCount: _teams.length,
+                itemBuilder: (context, index) {
+                  final team = _teams[index];
+                  return Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Color(0x06000000),
+                          blurRadius: 6,
+                          offset: Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Expanded(
+                              child: Text(
+                                team.name,
+                                style: const TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF0F172A),
+                                ),
+                                overflow: TextOverflow.ellipsis,
                               ),
-                              overflow: TextOverflow.ellipsis,
                             ),
-                          ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 6,
-                              vertical: 2,
-                            ),
-                            decoration: BoxDecoration(
-                              color: team.members.length >= team.maxMembers
-                                  ? const Color(0xFFECFDF5)
-                                  : const Color(0xFFEFF6FF),
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: Text(
-                              team.status,
-                              style: TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
                                 color: team.members.length >= team.maxMembers
-                                    ? const Color(0xFF047857)
-                                    : const Color(0xFF1D4ED8),
+                                    ? const Color(0xFFECFDF5)
+                                    : const Color(0xFFEFF6FF),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                team.status,
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  color: team.members.length >= team.maxMembers
+                                      ? const Color(0xFF047857)
+                                      : const Color(0xFF1D4ED8),
+                                ),
                               ),
                             ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          team.course,
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: Color(0xFF64748B),
                           ),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        team.course,
-                        style: const TextStyle(
-                          fontSize: 11,
-                          color: Color(0xFF64748B),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      Text(
-                        team.activityName,
-                        style: const TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          color: Color(0xFF2563EB),
+                        Text(
+                          team.activityName,
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF2563EB),
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 12),
-                      const Divider(color: Color(0xFFF1F5F9), height: 1),
-                      const SizedBox(height: 8),
+                        const SizedBox(height: 12),
+                        const Divider(color: Color(0xFFF1F5F9), height: 1),
+                        const SizedBox(height: 8),
 
-                      const Text(
-                        'Team Members:',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF475569),
+                        const Text(
+                          'Team Members:',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF475569),
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 6),
-                      Expanded(
-                        child: ListView.separated(
-                          physics: const NeverScrollableScrollPhysics(),
-                          itemCount: team.members.length,
-                          separatorBuilder: (_, _) => const SizedBox(height: 6),
-                          itemBuilder: (context, mi) {
-                            final m = team.members[mi];
-                            return InkWell(
-                              onTap: () => _showStudentProfileDialog(m),
-                              borderRadius: BorderRadius.circular(6),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 6,
-                                  vertical: 4,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFF8FAFC),
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: Row(
-                                  children: [
-                                    CircleAvatar(
-                                      radius: 10,
-                                      backgroundColor: const Color(0xFF1E40AF),
-                                      child: Text(
-                                        m.name[0],
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 9,
-                                          fontWeight: FontWeight.bold,
+                        const SizedBox(height: 6),
+                        Expanded(
+                          child: ListView.separated(
+                            physics: const NeverScrollableScrollPhysics(),
+                            itemCount: team.members.length,
+                            separatorBuilder: (_, _) =>
+                                const SizedBox(height: 6),
+                            itemBuilder: (context, mi) {
+                              final m = team.members[mi];
+                              return InkWell(
+                                onTap: () => _showStudentProfileDialog(m),
+                                borderRadius: BorderRadius.circular(6),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 6,
+                                    vertical: 4,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFF8FAFC),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      CircleAvatar(
+                                        radius: 10,
+                                        backgroundColor: const Color(
+                                          0xFF1E40AF,
+                                        ),
+                                        child: Text(
+                                          m.name[0],
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 9,
+                                            fontWeight: FontWeight.bold,
+                                          ),
                                         ),
                                       ),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Expanded(
-                                      child: Text(
-                                        m.name,
-                                        style: const TextStyle(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w600,
-                                          color: Color(0xFF0F172A),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Text(
+                                          m.name,
+                                          style: const TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w600,
+                                            color: Color(0xFF0F172A),
+                                          ),
+                                          overflow: TextOverflow.ellipsis,
                                         ),
-                                        overflow: TextOverflow.ellipsis,
                                       ),
-                                    ),
-                                    Text(
-                                      m.primaryRole ?? 'Member',
-                                      style: const TextStyle(
-                                        fontSize: 10,
-                                        color: Color(0xFF64748B),
+                                      Text(
+                                        m.primaryRole ?? 'Member',
+                                        style: const TextStyle(
+                                          fontSize: 10,
+                                          color: Color(0xFF64748B),
+                                        ),
                                       ),
-                                    ),
-                                  ],
+                                    ],
+                                  ),
                                 ),
-                              ),
-                            );
-                          },
+                              );
+                            },
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-                );
-              },
-            );
-          },
-        ),
+                      ],
+                    ),
+                  );
+                },
+              );
+            },
+          ),
       ],
     );
   }
@@ -1643,68 +1823,68 @@ class _ProfessorDashboardScreenState extends State<ProfessorDashboardScreen> {
           else
             // Students Table
             ListView.separated(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: students.length,
-            separatorBuilder: (_, _) =>
-                const Divider(color: Color(0xFFF1F5F9), height: 1),
-            itemBuilder: (context, index) {
-              final s = students[index];
-              return InkWell(
-                onTap: () => _showStudentProfileDialog(s),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 10),
-                  child: Row(
-                    children: [
-                      CircleAvatar(
-                        radius: 16,
-                        backgroundColor: const Color(0xFF1E40AF),
-                        child: Text(
-                          s.name[0],
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 12,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: students.length,
+              separatorBuilder: (_, _) =>
+                  const Divider(color: Color(0xFFF1F5F9), height: 1),
+              itemBuilder: (context, index) {
+                final s = students[index];
+                return InkWell(
+                  onTap: () => _showStudentProfileDialog(s),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    child: Row(
+                      children: [
+                        CircleAvatar(
+                          radius: 16,
+                          backgroundColor: const Color(0xFF1E40AF),
+                          child: Text(
+                            s.name[0],
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                            ),
                           ),
                         ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              s.name,
-                              style: const TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFF0F172A),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                s.name,
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF0F172A),
+                                ),
                               ),
-                            ),
-                            Text(
-                              '${s.studentId} • ${s.block} • ${s.email}',
-                              style: const TextStyle(
-                                fontSize: 11,
-                                color: Color(0xFF64748B),
+                              Text(
+                                '${s.studentId} • ${s.block} • ${s.email}',
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  color: Color(0xFF64748B),
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 8),
-                      _buildStatusBadge(s.status),
-                      const SizedBox(width: 8),
-                      const Icon(
-                        Icons.chevron_right,
-                        size: 18,
-                        color: Color(0xFF94A3B8),
-                      ),
-                    ],
+                        const SizedBox(width: 8),
+                        _buildStatusBadge(s.status),
+                        const SizedBox(width: 8),
+                        const Icon(
+                          Icons.chevron_right,
+                          size: 18,
+                          color: Color(0xFF94A3B8),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-              );
-            },
-          ),
+                );
+              },
+            ),
         ],
       ),
     );
@@ -1729,74 +1909,6 @@ class _ProfessorDashboardScreenState extends State<ProfessorDashboardScreen> {
       backgroundColor: const Color(0xFFF1F5F9),
       side: BorderSide.none,
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 0),
-    );
-  }
-
-  void _showAddSkillDialog() {
-    final nameCtrl = TextEditingController();
-    final studentNameCtrl = TextEditingController(text: 'Sample Student');
-    final domainCtrl = TextEditingController(text: 'Web Development');
-
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Add Custom Skill Request'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: nameCtrl,
-              decoration: const InputDecoration(
-                labelText: 'Skill Name (e.g. GraphQL, Flutter)',
-              ),
-            ),
-            const SizedBox(height: 10),
-            TextField(
-              controller: domainCtrl,
-              decoration: const InputDecoration(
-                labelText: 'Domain (e.g. API Development, Mobile)',
-              ),
-            ),
-            const SizedBox(height: 10),
-            TextField(
-              controller: studentNameCtrl,
-              decoration: const InputDecoration(
-                labelText: 'Requesting Student Name',
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF1E40AF),
-              foregroundColor: Colors.white,
-            ),
-            onPressed: () {
-              final skill = nameCtrl.text.trim();
-              if (skill.isEmpty) return;
-              _skillService.submitRequest(
-                studentName: studentNameCtrl.text.trim().isNotEmpty
-                    ? studentNameCtrl.text.trim()
-                    : 'Student',
-                studentId: '2026-001',
-                block: 'General',
-                skillName: skill,
-                domain: domainCtrl.text.trim().isNotEmpty
-                    ? domainCtrl.text.trim()
-                    : 'General',
-              );
-              Navigator.pop(ctx);
-            },
-            child: const Text('Submit Request'),
-          ),
-        ],
-      ),
     );
   }
 
@@ -1863,22 +1975,6 @@ class _ProfessorDashboardScreenState extends State<ProfessorDashboardScreen> {
                         SkillApprovalStatus.rejected,
                       ),
                     ],
-                  ),
-                  ElevatedButton.icon(
-                    onPressed: _showAddSkillDialog,
-                    icon: const Icon(Icons.add, size: 14),
-                    label: const Text('Add Skill Request'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF1E40AF),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 6,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                    ),
                   ),
                 ],
               ),
@@ -1993,18 +2089,10 @@ class _ProfessorDashboardScreenState extends State<ProfessorDashboardScreen> {
                         if (req.status == SkillApprovalStatus.pending ||
                             req.status == SkillApprovalStatus.underReview) ...[
                           OutlinedButton(
-                            onPressed: () {
-                              _skillService.updateStatus(
-                                req.id,
-                                SkillApprovalStatus.approved,
-                                remarks: 'Verified syllabus alignment.',
-                              );
-                              AppNotification.showMessage(
-                                context,
-                                'Skill Approved',
-                                'Approved "${req.skillName}". Added to official skill catalog!',
-                              );
-                            },
+                            onPressed: () => _confirmSkillDecision(
+                              req,
+                              SkillApprovalStatus.approved,
+                            ),
                             style: OutlinedButton.styleFrom(
                               foregroundColor: const Color(0xFF16A34A),
                               side: const BorderSide(color: Color(0xFF86EFAC)),
@@ -2023,13 +2111,10 @@ class _ProfessorDashboardScreenState extends State<ProfessorDashboardScreen> {
                             ),
                           ),
                           OutlinedButton(
-                            onPressed: () {
-                              _skillService.updateStatus(
-                                req.id,
-                                SkillApprovalStatus.rejected,
-                                remarks: 'Out of scope for current curriculum.',
-                              );
-                            },
+                            onPressed: () => _confirmSkillDecision(
+                              req,
+                              SkillApprovalStatus.rejected,
+                            ),
                             style: OutlinedButton.styleFrom(
                               foregroundColor: const Color(0xFFDC2626),
                               side: const BorderSide(color: Color(0xFFFECACA)),

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'widgets/portal_top_actions.dart';
+
 import 'widgets/professor_sidebar.dart';
 
 // Professor Evaluation: "Modification Requests"
@@ -262,8 +264,9 @@ class _ProfessorEvaluationScreenState extends State<ProfessorEvaluationScreen> {
               children: [
                 TextField(
                   controller: studentNameCtrl,
-                  decoration:
-                      _fieldDecoration('Student Name (e.g. Maria Santos)'),
+                  decoration: _fieldDecoration(
+                    'Student Name (e.g. Maria Santos)',
+                  ),
                 ),
                 const SizedBox(height: 12),
                 TextField(
@@ -273,32 +276,35 @@ class _ProfessorEvaluationScreenState extends State<ProfessorEvaluationScreen> {
                 const SizedBox(height: 12),
                 TextField(
                   controller: programCtrl,
-                  decoration:
-                      _fieldDecoration('Program / Section (e.g. BSIT 3A)'),
+                  decoration: _fieldDecoration(
+                    'Program / Section (e.g. BSIT 3A)',
+                  ),
                 ),
                 const SizedBox(height: 12),
                 TextField(
                   controller: titleCtrl,
                   decoration: _fieldDecoration(
-                      'Request Title (e.g. Change of surname)'),
+                    'Request Title (e.g. Change of surname)',
+                  ),
                 ),
                 const SizedBox(height: 12),
                 TextField(
                   controller: fieldCtrl,
-                  decoration:
-                      _fieldDecoration('Field to Modify (e.g. Last name)'),
+                  decoration: _fieldDecoration(
+                    'Field to Modify (e.g. Last name)',
+                  ),
                 ),
                 const SizedBox(height: 12),
                 TextField(
                   controller: currentValCtrl,
-                  decoration:
-                      _fieldDecoration('Current Value (e.g. Santos)'),
+                  decoration: _fieldDecoration('Current Value (e.g. Santos)'),
                 ),
                 const SizedBox(height: 12),
                 TextField(
                   controller: requestedValCtrl,
-                  decoration:
-                      _fieldDecoration('Requested Value (e.g. Santos-Reyes)'),
+                  decoration: _fieldDecoration(
+                    'Requested Value (e.g. Santos-Reyes)',
+                  ),
                 ),
               ],
             ),
@@ -424,21 +430,28 @@ class _ProfessorEvaluationScreenState extends State<ProfessorEvaluationScreen> {
                             color: _C.text,
                           ),
                         ),
-                        ElevatedButton.icon(
-                          onPressed: _showCreateRequestDialog,
-                          icon: const Icon(Icons.add, size: 16),
-                          label: const Text('New Request'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: _C.primary,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 14,
-                              vertical: 10,
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            ElevatedButton.icon(
+                              onPressed: _showCreateRequestDialog,
+                              icon: const Icon(Icons.add, size: 16),
+                              label: const Text('New Request'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: _C.primary,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 14,
+                                  vertical: 10,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                              ),
                             ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                          ),
+                            const SizedBox(width: 12),
+                            const PortalTopActions(),
+                          ],
                         ),
                       ],
                     ),

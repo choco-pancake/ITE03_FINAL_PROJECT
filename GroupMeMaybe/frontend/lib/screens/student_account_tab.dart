@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import '../services/skill_approval_service.dart';
 import 'landing_screen.dart';
-import 'widgets/google_auth_button.dart';
 
 class StudentAccountTab extends StatefulWidget {
   const StudentAccountTab({super.key, required this.studentId});
@@ -17,29 +16,22 @@ class StudentAccountTab extends StatefulWidget {
 class _StudentAccountTabState extends State<StudentAccountTab> {
   String? _error;
 
-  Future<Map<String, String>?> _askProof({
-    bool changingPassword = false,
-  }) async {
+  Future<Map<String, String>?> _askProof() async {
     final current = TextEditingController();
     final next = TextEditingController();
     final confirm = TextEditingController();
-    String? googleToken;
     String? dialogError;
     final result = await showDialog<Map<String, String>>(
       context: context,
       builder: (dialogContext) => StatefulBuilder(
         builder: (context, refresh) => AlertDialog(
-          title: Text(changingPassword ? 'Change Password' : 'Delete Account'),
+          title: const Text('Change Password'),
           content: SizedBox(
             width: 380,
             child: SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  if (!changingPassword)
-                    const Text(
-                      'This permanently removes your account and saved profile.',
-                    ),
                   TextField(
                     controller: current,
                     obscureText: true,
@@ -47,40 +39,20 @@ class _StudentAccountTabState extends State<StudentAccountTab> {
                       labelText: 'Current password',
                     ),
                   ),
-                  if (!changingPassword) ...[
-                    const SizedBox(height: 12),
-                    const Text('Or verify with your linked Google account:'),
-                    GoogleAuthButton(
-                      onIdToken: (token) async {
-                        refresh(() {
-                          googleToken = token;
-                          dialogError = null;
-                        });
-                      },
-                      onError: (message) => refresh(() => dialogError = message),
+                  TextField(
+                    controller: next,
+                    obscureText: true,
+                    decoration: const InputDecoration(
+                      labelText: 'New password',
                     ),
-                    if (googleToken != null)
-                      const Text(
-                        'Google account verified',
-                        style: TextStyle(color: Colors.green),
-                      ),
-                  ],
-                  if (changingPassword) ...[
-                    TextField(
-                      controller: next,
-                      obscureText: true,
-                      decoration: const InputDecoration(
-                        labelText: 'New password',
-                      ),
+                  ),
+                  TextField(
+                    controller: confirm,
+                    obscureText: true,
+                    decoration: const InputDecoration(
+                      labelText: 'Confirm new password',
                     ),
-                    TextField(
-                      controller: confirm,
-                      obscureText: true,
-                      decoration: const InputDecoration(
-                        labelText: 'Confirm new password',
-                      ),
-                    ),
-                  ],
+                  ),
                   if (dialogError != null)
                     Text(
                       dialogError!,
@@ -97,15 +69,11 @@ class _StudentAccountTabState extends State<StudentAccountTab> {
             ),
             FilledButton(
               onPressed: () {
-                if (current.text.isEmpty && googleToken == null) {
-                  refresh(
-                    () => dialogError =
-                        'Enter your current password or verify with Google.',
-                  );
+                if (current.text.isEmpty) {
+                  refresh(() => dialogError = 'Enter your current password.');
                   return;
                 }
-                if (changingPassword &&
-                    (next.text.length < 8 || next.text != confirm.text)) {
+                if (next.text.length < 8 || next.text != confirm.text) {
                   refresh(
                     () => dialogError =
                         'Use at least 8 characters and matching passwords.',
@@ -114,13 +82,10 @@ class _StudentAccountTabState extends State<StudentAccountTab> {
                 }
                 Navigator.pop(dialogContext, {
                   'current_password': current.text,
-                  'id_token': googleToken ?? '',
-                  if (changingPassword) 'password': next.text,
+                  'password': next.text,
                 });
               },
-              child: Text(
-                changingPassword ? 'Change Password' : 'Delete Account',
-              ),
+              child: const Text('Change Password'),
             ),
           ],
         ),
@@ -133,7 +98,7 @@ class _StudentAccountTabState extends State<StudentAccountTab> {
   }
 
   Future<void> _changePassword() async {
-    final proof = await _askProof(changingPassword: true);
+    final proof = await _askProof();
     if (proof == null) return;
     try {
       await AuthService().changePassword(
@@ -153,13 +118,73 @@ class _StudentAccountTabState extends State<StudentAccountTab> {
   }
 
   Future<void> _deleteAccount() async {
-    final proof = await _askProof();
-    if (proof == null) return;
+    final emailController = TextEditingController();
+    String? emailError;
+    final email = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, refresh) => AlertDialog(
+          title: const Text('Confirm your email'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('Enter your account email to continue with deletion.'),
+              TextField(
+                controller: emailController,
+                keyboardType: TextInputType.emailAddress,
+                decoration: const InputDecoration(labelText: 'Account email'),
+              ),
+              if (emailError != null)
+                Text(emailError!, style: const TextStyle(color: Colors.red)),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () {
+                final entered = emailController.text.trim();
+                if (entered.toLowerCase() !=
+                    AuthService.currentUser?.email.toLowerCase()) {
+                  refresh(
+                    () => emailError = 'Enter the email for this account.',
+                  );
+                  return;
+                }
+                Navigator.pop(dialogContext, entered);
+              },
+              child: const Text('Continue'),
+            ),
+          ],
+        ),
+      ),
+    );
+    emailController.dispose();
+    if (email == null || !mounted) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Delete account permanently?'),
+        content: const Text(
+          'Your account, saved profile, and skill requests will be deleted.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Delete Account'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
     try {
-      await AuthService().deleteAccount(
-        currentPassword: proof['current_password'],
-        idToken: proof['id_token'],
-      );
+      await AuthService().deleteAccount(email: email);
       SkillApprovalService().removeRequestsForStudent(widget.studentId);
       if (mounted) {
         Navigator.pushAndRemoveUntil(
@@ -179,28 +204,20 @@ class _StudentAccountTabState extends State<StudentAccountTab> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Row(
           children: [
             Icon(Icons.logout, color: Color(0xFFDC2626), size: 22),
             SizedBox(width: 10),
             Text(
               'Log Out',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
           ],
         ),
         content: const Text(
           'Are you sure you want to log out of GroupMeMaybe?',
-          style: TextStyle(
-            fontSize: 14,
-            color: Color(0xFF475569),
-          ),
+          style: TextStyle(fontSize: 14, color: Color(0xFF475569)),
         ),
         actions: [
           TextButton(
@@ -289,10 +306,7 @@ class _StudentAccountTabState extends State<StudentAccountTab> {
                     ),
                     Text(
                       'Manage your credentials, active session, and account access.',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: Color(0xFF64748B),
-                      ),
+                      style: TextStyle(fontSize: 13, color: Color(0xFF64748B)),
                     ),
                   ],
                 ),
@@ -311,12 +325,19 @@ class _StudentAccountTabState extends State<StudentAccountTab> {
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.error_outline, color: Color(0xFFDC2626), size: 18),
+                  const Icon(
+                    Icons.error_outline,
+                    color: Color(0xFFDC2626),
+                    size: 18,
+                  ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       _error!,
-                      style: const TextStyle(color: Color(0xFFDC2626), fontSize: 13),
+                      style: const TextStyle(
+                        color: Color(0xFFDC2626),
+                        fontSize: 13,
+                      ),
                     ),
                   ),
                 ],
@@ -333,8 +354,13 @@ class _StudentAccountTabState extends State<StudentAccountTab> {
               style: OutlinedButton.styleFrom(
                 foregroundColor: const Color(0xFF1E40AF),
                 side: const BorderSide(color: Color(0xFF93C5FD)),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
               ),
               child: const Text('Change Password'),
             ),
@@ -347,13 +373,22 @@ class _StudentAccountTabState extends State<StudentAccountTab> {
             description: 'Sign out of your active session on this device. You will need to log back in.',
             button: OutlinedButton.icon(
               onPressed: _logOut,
-              icon: const Icon(Icons.logout, size: 16, color: Color(0xFFDC2626)),
+              icon: const Icon(
+                Icons.logout,
+                size: 16,
+                color: Color(0xFFDC2626),
+              ),
               label: const Text('Log Out'),
               style: OutlinedButton.styleFrom(
                 foregroundColor: const Color(0xFFDC2626),
                 side: const BorderSide(color: Color(0xFFFCA5A5)),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
               ),
             ),
           ),
@@ -368,8 +403,13 @@ class _StudentAccountTabState extends State<StudentAccountTab> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFFDC2626),
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
               ),
               child: const Text('Delete Account'),
             ),
@@ -401,10 +441,7 @@ class _StudentAccountTabState extends State<StudentAccountTab> {
               const SizedBox(height: 4),
               Text(
                 description,
-                style: const TextStyle(
-                  fontSize: 13,
-                  color: Color(0xFF64748B),
-                ),
+                style: const TextStyle(fontSize: 13, color: Color(0xFF64748B)),
               ),
               const SizedBox(height: 12),
               button,

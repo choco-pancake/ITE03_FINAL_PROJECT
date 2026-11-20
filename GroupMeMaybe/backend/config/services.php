@@ -37,6 +37,7 @@ return [
 
     'google' => [
         'client_id' => env('GOOGLE_CLIENT_ID'),
+        'ca_bundle' => env('GOOGLE_CA_BUNDLE'),
     ],
 
 ];

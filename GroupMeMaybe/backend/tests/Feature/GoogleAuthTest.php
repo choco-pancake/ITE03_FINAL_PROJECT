@@ -4,12 +4,18 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use App\Services\GoogleTokenVerifier;
+use Google\Client;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Tests\TestCase;
 
 class GoogleAuthTest extends TestCase
 {
     use LazilyRefreshDatabase;
+
+    public function test_google_client_library_is_autoloadable(): void
+    {
+        $this->assertTrue(class_exists(Client::class));
+    }
 
     protected function setUp(): void
     {
@@ -131,6 +137,28 @@ class GoogleAuthTest extends TestCase
 
         $this->postJson('/api/google-auth', [
             'id_token' => 'maria@gmail.com',
+            'intent' => 'login',
+        ])->assertUnauthorized();
+
+        $this->assertDatabaseCount('users', 0);
+    }
+
+    public function test_unsigned_google_claims_cannot_create_an_account(): void
+    {
+        $claims = rtrim(strtr(base64_encode(json_encode([
+            'sub' => 'attacker',
+            'email' => 'attacker@example.com',
+            'email_verified' => true,
+        ])), '+/', '-_'), '=');
+        $token = 'header.'.$claims.'.signature';
+        $this->mock(GoogleTokenVerifier::class)
+            ->shouldReceive('verify')
+            ->once()
+            ->with($token, 'test-client-id')
+            ->andReturn(null);
+
+        $this->postJson('/api/google-auth', [
+            'id_token' => $token,
             'intent' => 'login',
         ])->assertUnauthorized();
 

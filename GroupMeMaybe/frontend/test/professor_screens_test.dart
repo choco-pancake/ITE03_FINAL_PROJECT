@@ -76,7 +76,7 @@ void main() {
         find.text('No custom skill requests found in this category.'),
         findsOneWidget,
       );
-      expect(find.text('Add Skill Request'), findsOneWidget);
+      expect(find.text('Add Skill Request'), findsNothing);
 
       // Tap Review Requests & Evaluations button to navigate
       await tester.tap(find.text('Review Requests & Evaluations'));
@@ -110,7 +110,7 @@ void main() {
       expect(find.text('Formed Teams & Groups'), findsOneWidget);
 
       // Initial tab content: Activities
-      expect(find.text('+ Create Activity'), findsOneWidget);
+      expect(find.text('Create New Project'), findsOneWidget);
 
       // Switch to Formed Teams & Groups tab
       await tester.tap(find.text('Formed Teams & Groups'));

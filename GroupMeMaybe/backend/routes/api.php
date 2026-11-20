@@ -2,7 +2,9 @@
 
 use App\Http\Controllers\AcademicClassController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\CustomSkillRequestController;
 use App\Http\Controllers\GroupingActivityController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 
@@ -17,6 +19,13 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/account', [AuthController::class, 'deleteAccount']);
     Route::get('/profile', [ProfileController::class, 'mine']);
     Route::put('/profile', [ProfileController::class, 'saveMine']);
+    Route::get('/custom-skill-requests', [CustomSkillRequestController::class, 'index']);
+    Route::post('/custom-skill-requests', [CustomSkillRequestController::class, 'store']);
+    Route::patch('/custom-skill-requests/{skillRequest}', [CustomSkillRequestController::class, 'update']);
+    Route::get('/notifications', [NotificationController::class, 'index']);
+    Route::patch('/notifications/{notification}/read', [NotificationController::class, 'markRead']);
+    Route::get('/notification-preferences', [NotificationController::class, 'preferences']);
+    Route::put('/notification-preferences', [NotificationController::class, 'updatePreferences']);
 });
 
 Route::get('/test', function () {

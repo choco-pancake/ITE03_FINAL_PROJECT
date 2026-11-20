@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'widgets/portal_top_actions.dart';
+
 import '../models/grouping_activity.dart';
 import '../models/profile.dart';
 import '../services/activity_service.dart';
@@ -824,24 +826,7 @@ class _StudentGroupsScreenState extends State<StudentGroupsScreen> {
             const SizedBox(width: 8),
           ],
 
-          // Student user profile avatar preview
-          const CircleAvatar(
-            radius: 14,
-            backgroundColor: Color(0xFF059669),
-            child: Text(
-              'A',
-              style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-                fontSize: 12,
-              ),
-            ),
-          ),
-          const SizedBox(width: 6),
-          const Text(
-            'Alex Santos',
-            style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-          ),
+          const PortalTopActions(),
         ],
       ),
     );

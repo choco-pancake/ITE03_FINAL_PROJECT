@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../services/notification_service.dart';
+import 'widgets/portal_top_actions.dart';
+
 import 'widgets/professor_sidebar.dart';
 
 class ProfessorSettingsScreen extends StatefulWidget {
@@ -24,6 +27,37 @@ class _ProfessorSettingsScreenState extends State<ProfessorSettingsScreen> {
   bool _notifySwapRequests = true;
   bool _notifyCustomSkills = true;
   bool _autoLockOnDeadline = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadNotificationPreferences();
+  }
+
+  Future<void> _loadNotificationPreferences() async {
+    try {
+      final values = await NotificationService().getPreferences();
+      if (mounted) {
+        setState(() => _notifyCustomSkills = values['custom_skills'] ?? true);
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _setCustomSkillNotifications(bool value) async {
+    setState(() => _notifyCustomSkills = value);
+    try {
+      await NotificationService().updatePreferences(customSkills: value);
+    } catch (_) {
+      if (mounted) {
+        setState(() => _notifyCustomSkills = !value);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Could not save notification preference.'),
+          ),
+        );
+      }
+    }
+  }
 
   @override
   void dispose() {
@@ -65,13 +99,19 @@ class _ProfessorSettingsScreenState extends State<ProfessorSettingsScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'Faculty Settings',
-                        style: TextStyle(
-                          fontSize: 28,
-                          fontWeight: FontWeight.w800,
-                          color: Color(0xFF0F172A),
-                        ),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            'Faculty Settings',
+                            style: TextStyle(
+                              fontSize: 28,
+                              fontWeight: FontWeight.w800,
+                              color: Color(0xFF0F172A),
+                            ),
+                          ),
+                          PortalTopActions(onProfile: () {}),
+                        ],
                       ),
                       const SizedBox(height: 4),
                       const Text(
@@ -255,8 +295,7 @@ class _ProfessorSettingsScreenState extends State<ProfessorSettingsScreen> {
                                 ),
                                 value: _notifyCustomSkills,
                                 activeThumbColor: const Color(0xFF1E40AF),
-                                onChanged: (val) =>
-                                    setState(() => _notifyCustomSkills = val),
+                                onChanged: _setCustomSkillNotifications,
                               ),
                               const Divider(height: 1),
 

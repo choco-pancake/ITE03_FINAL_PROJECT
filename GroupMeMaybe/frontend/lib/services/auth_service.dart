@@ -68,6 +68,23 @@ class AuthUser {
   };
 }
 
+class StoredAccount {
+  final AuthUser user;
+  final String token;
+
+  const StoredAccount({required this.user, required this.token});
+
+  Map<String, dynamic> toJson() => {
+    'user': user.toJson(),
+    'token': token,
+  };
+
+  factory StoredAccount.fromJson(Map<String, dynamic> json) => StoredAccount(
+    user: AuthUser.fromJson(json['user'] as Map<String, dynamic>),
+    token: (json['token'] ?? '').toString(),
+  );
+}
+
 class AuthService {
   static const String baseUrl = 'http://127.0.0.1:8000/api';
   static AuthUser? currentUser;
@@ -79,6 +96,7 @@ class AuthService {
   static const String _prefKeySavedUser = 'gmm_saved_user';
   static const String _prefKeyActiveToken = 'gmm_active_token';
   static const String _prefKeyActiveUser = 'gmm_active_user';
+  static const String _prefKeyKnownAccounts = 'gmm_known_accounts';
 
   static const Map<String, String> _headers = {
     'Content-Type': 'application/json',
@@ -91,6 +109,58 @@ class AuthService {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_prefKeyActiveToken, token);
       await prefs.setString(_prefKeyActiveUser, jsonEncode(user.toJson()));
+      await saveKnownAccount(user, token);
+    } catch (_) {}
+  }
+
+  /// Retrieve list of known accounts saved on this device/browser
+  static Future<List<StoredAccount>> getKnownAccounts() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final listJson = prefs.getStringList(_prefKeyKnownAccounts) ?? [];
+      final accounts = <StoredAccount>[];
+      for (final raw in listJson) {
+        try {
+          accounts.add(StoredAccount.fromJson(jsonDecode(raw) as Map<String, dynamic>));
+        } catch (_) {}
+      }
+      return accounts;
+    } catch (_) {
+      return [];
+    }
+  }
+
+  /// Record or update an account in the known accounts list
+  static Future<void> saveKnownAccount(AuthUser user, String token) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final existing = await getKnownAccounts();
+      final updated = existing
+          .where((a) => a.user.email.trim().toLowerCase() != user.email.trim().toLowerCase())
+          .toList();
+      updated.insert(0, StoredAccount(user: user, token: token));
+      final serialized = updated.map((a) => jsonEncode(a.toJson())).toList();
+      await prefs.setStringList(_prefKeyKnownAccounts, serialized);
+    } catch (_) {}
+  }
+
+  /// Switch active session to another previously stored account
+  static Future<void> switchToAccount(StoredAccount account) async {
+    currentUser = account.user;
+    authToken = account.token;
+    await saveActiveSession(account.user, account.token);
+  }
+
+  /// Remove an account from known accounts list
+  static Future<void> removeKnownAccount(String email) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final existing = await getKnownAccounts();
+      final updated = existing
+          .where((a) => a.user.email.trim().toLowerCase() != email.trim().toLowerCase())
+          .toList();
+      final serialized = updated.map((a) => jsonEncode(a.toJson())).toList();
+      await prefs.setStringList(_prefKeyKnownAccounts, serialized);
     } catch (_) {}
   }
 
@@ -120,9 +190,11 @@ class AuthService {
   static Future<AuthUser?> restoreSession() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString(_prefKeyActiveToken) ??
+      final token =
+          prefs.getString(_prefKeyActiveToken) ??
           prefs.getString(_prefKeySavedToken);
-      final userJson = prefs.getString(_prefKeyActiveUser) ??
+      final userJson =
+          prefs.getString(_prefKeyActiveUser) ??
           prefs.getString(_prefKeySavedUser);
       if (token != null && userJson != null) {
         final user = AuthUser.fromJson(jsonDecode(userJson));
@@ -307,7 +379,7 @@ class AuthService {
       throw Exception(_responseMessage(res, 'Google authentication failed'));
     } on TimeoutException {
       throw Exception(
-        'Google sign-in timed out. Check that the server is running.',
+        'Google sign-in request timed out. The server is running, but did not finish verification. Please try again.',
       );
     } on http.ClientException {
       throw Exception('Cannot reach the server. Check your connection.');
@@ -355,16 +427,13 @@ class AuthService {
     }
   }
 
-  Future<void> deleteAccount({String? currentPassword, String? idToken}) async {
+  Future<void> deleteAccount({required String email}) async {
     final preferencePrefix =
         'gmm_notifications_${currentUser?.id ?? currentUser?.email ?? 'guest'}';
     final res = await http.delete(
       Uri.parse('$baseUrl/account'),
       headers: {..._headers, 'Authorization': 'Bearer $authToken'},
-      body: jsonEncode({
-        'current_password': currentPassword,
-        'id_token': idToken,
-      }),
+      body: jsonEncode({'email': email}),
     );
     if (res.statusCode != 200) {
       throw Exception(_responseMessage(res, 'Account deletion failed'));

@@ -107,7 +107,9 @@ class StudentAccountTest extends TestCase
             'availability' => '21-ITEM-03', 'details' => ['block' => '21-ITEM-03'],
         ])->assertOk();
 
-        $this->deleteJson('/api/account', ['current_password' => 'old-password'])->assertOk();
+        $this->deleteJson('/api/account', ['email' => 'someone@example.com'])->assertForbidden();
+        $this->assertDatabaseHas('users', ['id' => $user->id]);
+        $this->deleteJson('/api/account', ['email' => strtoupper($user->email)])->assertOk();
         $this->assertDatabaseMissing('users', ['id' => $user->id]);
         $this->assertDatabaseMissing('profiles', ['email' => $user->email]);
     }

@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+
+import 'widgets/portal_top_actions.dart';
+
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/academic_class.dart';
@@ -7,6 +10,7 @@ import '../models/profile.dart';
 import '../services/activity_service.dart';
 import '../services/auth_service.dart';
 import '../services/profile_service.dart';
+import '../services/notification_service.dart';
 import 'student_classes_screen.dart';
 import 'student_groups_screen.dart';
 import 'student_settings_screen.dart';
@@ -81,11 +85,21 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
   }
 
   Future<void> _loadAlertPreference() async {
-    final prefs = await SharedPreferences.getInstance();
-    final user = AuthService.currentUser;
-    final key = 'gmm_notifications_${user?.id ?? user?.email ?? 'guest'}_group';
-    if (mounted) {
-      setState(() => _showGroupActivityAlerts = prefs.getBool(key) ?? true);
+    try {
+      final values = await NotificationService().getPreferences();
+      if (mounted) {
+        setState(
+          () => _showGroupActivityAlerts = values['group_activity'] ?? true,
+        );
+      }
+    } catch (_) {
+      final prefs = await SharedPreferences.getInstance();
+      final user = AuthService.currentUser;
+      final key =
+          'gmm_notifications_${user?.id ?? user?.email ?? 'guest'}_group';
+      if (mounted) {
+        setState(() => _showGroupActivityAlerts = prefs.getBool(key) ?? true);
+      }
     }
   }
 
@@ -302,6 +316,13 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
+                              // Top Actions Row
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.end,
+                                children: const [PortalTopActions()],
+                              ),
+                              const SizedBox(height: 12),
+
                               // Top Greeting Banner
                               _buildWelcomeHeader(),
                               const SizedBox(height: 20),

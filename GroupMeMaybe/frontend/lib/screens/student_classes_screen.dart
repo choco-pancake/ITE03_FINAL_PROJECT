@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'widgets/portal_top_actions.dart';
+
 import '../models/academic_class.dart';
 import '../services/activity_service.dart';
 import 'student_groups_screen.dart';
@@ -169,6 +171,13 @@ class _StudentClassesScreenState extends State<StudentClassesScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
+                              // Top Actions Row
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.end,
+                                children: const [PortalTopActions()],
+                              ),
+                              const SizedBox(height: 12),
+
                               // Top Bar
                               LayoutBuilder(
                                 builder: (context, constraints) {

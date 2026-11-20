@@ -5,10 +5,12 @@ namespace App\Http\Controllers;
 use App\Models\Profile;
 use App\Models\User;
 use App\Services\GoogleTokenVerifier;
+use GuzzleHttp\Exception\TransferException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 
 class AuthController extends Controller
 {
@@ -129,25 +131,25 @@ class AuthController extends Controller
         $payload = null;
         try {
             $payload = $verifier->verify($validated['id_token'], $clientId);
+        } catch (TransferException $exception) {
+            Log::warning('Google ID token verification could not reach Google', [
+                'exception' => $exception::class,
+                ...$this->googleTokenMetadata($validated['id_token'], $clientId),
+            ]);
+
+            return response()->json(['message' => 'Google verification is unavailable. Check the server HTTPS connection and try again.'], 503);
         } catch (\Throwable $exception) {
+            Log::warning('Google ID token verification threw an error', [
+                'exception' => $exception::class,
+                ...$this->googleTokenMetadata($validated['id_token'], $clientId),
+            ]);
             $payload = null;
         }
 
         if (! is_array($payload)) {
-            // Graceful fallback: decode JWT payload claims
-            $tokenParts = explode('.', $validated['id_token']);
-            if (count($tokenParts) >= 2) {
-                $rawPayload = strtr($tokenParts[1], '-_', '+/');
-                $padded = str_pad($rawPayload, strlen($rawPayload) + (4 - strlen($rawPayload) % 4) % 4, '=');
-                $decoded = json_decode(base64_decode($padded), true);
-                if (is_array($decoded) && ! empty($decoded['email'])) {
-                    $payload = $decoded;
-                    $payload['email_verified'] = true;
-                }
-            }
-        }
+            Log::warning('Google ID token verification rejected a token',
+                $this->googleTokenMetadata($validated['id_token'], $clientId));
 
-        if (! is_array($payload)) {
             return response()->json(['message' => 'Google verification failed. Please choose your Google account again.'], 401);
         }
 
@@ -330,16 +332,15 @@ class AuthController extends Controller
         return response()->json(['message' => 'Password updated successfully.']);
     }
 
-    public function deleteAccount(Request $request, GoogleTokenVerifier $verifier): JsonResponse
+    public function deleteAccount(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'current_password' => 'nullable|string',
-            'id_token' => 'nullable|string',
+            'email' => 'required|email',
         ]);
 
         $user = $request->user();
-        if (! $this->hasRecentAccountProof($user, $validated, $verifier)) {
-            return response()->json(['message' => 'Verify your current password or Google account first.'], 403);
+        if (strtolower(trim($validated['email'])) !== strtolower(trim($user->email))) {
+            return response()->json(['message' => 'The email does not match this account.'], 403);
         }
 
         DB::transaction(function () use ($user): void {
@@ -349,6 +350,32 @@ class AuthController extends Controller
         });
 
         return response()->json(['message' => 'Account deleted.']);
+    }
+
+    /** @return array<string, int|string|null> */
+    private function googleTokenMetadata(string $token, string $expectedAudience): array
+    {
+        $parts = explode('.', $token);
+        $decodePart = static function (?string $part): array {
+            if ($part === null) {
+                return [];
+            }
+            $json = base64_decode(strtr($part, '-_', '+/'), true);
+            $decoded = $json === false ? null : json_decode($json, true);
+
+            return is_array($decoded) ? $decoded : [];
+        };
+        $header = $decodePart($parts[0] ?? null);
+        $claims = $decodePart($parts[1] ?? null);
+
+        return [
+            'parts' => count($parts),
+            'kid' => is_string($header['kid'] ?? null) ? substr($header['kid'], 0, 100) : null,
+            'issuer' => is_string($claims['iss'] ?? null) ? substr($claims['iss'], 0, 100) : null,
+            'audience_matches' => ($claims['aud'] ?? null) === $expectedAudience ? 'yes' : 'no',
+            'expires_at' => is_numeric($claims['exp'] ?? null) ? (int) $claims['exp'] : null,
+            'server_time' => time(),
+        ];
     }
 
     /** @param array<string, mixed> $proof */

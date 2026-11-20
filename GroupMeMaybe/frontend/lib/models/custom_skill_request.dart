@@ -32,6 +32,27 @@ class CustomSkillRequest {
     this.remarks,
   });
 
+  factory CustomSkillRequest.fromJson(Map<String, dynamic> json) =>
+      CustomSkillRequest(
+        id: (json['id'] ?? '').toString(),
+        studentName: (json['student_name'] ?? '').toString(),
+        studentId: (json['student_id'] ?? '').toString(),
+        block: (json['block'] ?? '').toString(),
+        skillName: (json['skill_name'] ?? '').toString(),
+        domain: (json['domain'] ?? '').toString(),
+        submittedAt: DateTime.tryParse(json['created_at']?.toString() ?? '') ??
+            DateTime.now(),
+        status: SkillApprovalStatus.values.firstWhere(
+          (value) =>
+              value.name.toLowerCase() ==
+              (json['status']?.toString() ?? 'pending')
+                  .replaceAll('_', '')
+                  .toLowerCase(),
+          orElse: () => SkillApprovalStatus.pending,
+        ),
+        remarks: json['remarks'] as String?,
+      );
+
   CustomSkillRequest copyWith({SkillApprovalStatus? status, String? remarks}) {
     return CustomSkillRequest(
       id: id,

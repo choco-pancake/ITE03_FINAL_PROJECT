@@ -84,11 +84,15 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
   ];
 
   // Options catalogs
-  List<String> get _blocks => [
-    ...ClassSections.byYear[_selectedYearLevel]!,
-    if (!ClassSections.byYear[_selectedYearLevel]!.contains(_selectedBlock))
-      _selectedBlock,
-  ];
+  List<String> get _blocks {
+    final list = ClassSections.byYear[_selectedYearLevel] ??
+        ClassSections.byYear['2nd Year'] ??
+        ['21-ITEW-01'];
+    return {
+      ...list,
+      if (_selectedBlock.trim().isNotEmpty) _selectedBlock.trim(),
+    }.toList();
+  }
 
   static const List<String> _allTechnicalSkills = [
     'Frontend Development',
@@ -1898,8 +1902,12 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
                                           ),
                                           const SizedBox(height: 6),
                                           DropdownButtonFormField<String>(
-                                            key: ValueKey(_selectedYearLevel),
-                                            initialValue: _selectedYearLevel,
+                                            key: ValueKey('year:$_selectedYearLevel'),
+                                            initialValue: ClassSections.byYear.containsKey(_selectedYearLevel)
+                                                ? _selectedYearLevel
+                                                : (ClassSections.byYear.keys.isNotEmpty
+                                                    ? ClassSections.byYear.keys.first
+                                                    : '2nd Year'),
                                             isExpanded: true,
                                             items: ClassSections.byYear.keys
                                                 .map(
@@ -1913,9 +1921,7 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
                                               if (year == null) return;
                                               setState(() {
                                                 _selectedYearLevel = year;
-                                                _selectedBlock = ClassSections
-                                                    .byYear[year]!
-                                                    .first;
+                                                _selectedBlock = (ClassSections.byYear[year] ?? ['21-ITEW-01']).first;
                                                 _isDirty = true;
                                               });
                                             },
@@ -1940,9 +1946,11 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
                                           ),
                                           const SizedBox(height: 6),
                                           DropdownButtonFormField<String>(
-                                            key: ValueKey(_selectedBlock),
+                                            key: ValueKey('block:$_selectedYearLevel:$_selectedBlock'),
                                             isExpanded: true,
-                                            initialValue: _selectedBlock,
+                                            initialValue: _blocks.contains(_selectedBlock)
+                                                ? _selectedBlock
+                                                : (_blocks.isNotEmpty ? _blocks.first : '21-ITEW-01'),
                                             decoration: InputDecoration(
                                               contentPadding:
                                                   const EdgeInsets.symmetric(
@@ -2432,8 +2440,11 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
                                           ),
                                           const SizedBox(height: 6),
                                           DropdownButtonFormField<String>(
+                                            key: ValueKey('start:$_startMeetingHour'),
                                             isExpanded: true,
-                                            initialValue: _startMeetingHour,
+                                            initialValue: (_startMeetingHour != null && _meetingHours.contains(_startMeetingHour))
+                                                ? _startMeetingHour
+                                                : null,
                                             hint: const Text(
                                               'Select start hour...',
                                               style: TextStyle(fontSize: 13),
@@ -2449,19 +2460,24 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
                                                     BorderRadius.circular(8),
                                               ),
                                             ),
-                                            items: _meetingHours
-                                                .map(
-                                                  (h) => DropdownMenuItem(
-                                                    value: h,
-                                                    child: Text(
-                                                      h,
-                                                      style: const TextStyle(
-                                                        fontSize: 13,
-                                                      ),
+                                            items: [
+                                              if (_startMeetingHour != null && !_meetingHours.contains(_startMeetingHour))
+                                                DropdownMenuItem(
+                                                  value: _startMeetingHour,
+                                                  child: Text(_startMeetingHour!, style: const TextStyle(fontSize: 13)),
+                                                ),
+                                              ..._meetingHours.map(
+                                                (h) => DropdownMenuItem(
+                                                  value: h,
+                                                  child: Text(
+                                                    h,
+                                                    style: const TextStyle(
+                                                      fontSize: 13,
                                                     ),
                                                   ),
-                                                )
-                                                .toList(),
+                                                ),
+                                              ),
+                                            ],
                                             onChanged: (val) {
                                               setState(() {
                                                 _startMeetingHour = val;
@@ -2490,8 +2506,11 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
                                           ),
                                           const SizedBox(height: 6),
                                           DropdownButtonFormField<String>(
+                                            key: ValueKey('end:$_endMeetingHour'),
                                             isExpanded: true,
-                                            initialValue: _endMeetingHour,
+                                            initialValue: (_endMeetingHour != null && _meetingHours.contains(_endMeetingHour))
+                                                ? _endMeetingHour
+                                                : null,
                                             hint: const Text(
                                               'Select end hour...',
                                               style: TextStyle(fontSize: 13),
@@ -2507,19 +2526,24 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
                                                     BorderRadius.circular(8),
                                               ),
                                             ),
-                                            items: _meetingHours
-                                                .map(
-                                                  (h) => DropdownMenuItem(
-                                                    value: h,
-                                                    child: Text(
-                                                      h,
-                                                      style: const TextStyle(
-                                                        fontSize: 13,
-                                                      ),
+                                            items: [
+                                              if (_endMeetingHour != null && !_meetingHours.contains(_endMeetingHour))
+                                                DropdownMenuItem(
+                                                  value: _endMeetingHour,
+                                                  child: Text(_endMeetingHour!, style: const TextStyle(fontSize: 13)),
+                                                ),
+                                              ..._meetingHours.map(
+                                                (h) => DropdownMenuItem(
+                                                  value: h,
+                                                  child: Text(
+                                                    h,
+                                                    style: const TextStyle(
+                                                      fontSize: 13,
                                                     ),
                                                   ),
-                                                )
-                                                .toList(),
+                                                ),
+                                              ),
+                                            ],
                                             onChanged: (val) {
                                               setState(() {
                                                 _endMeetingHour = val;
@@ -2548,42 +2572,50 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
                                     ),
                                     const SizedBox(height: 6),
                                     DropdownButtonFormField<String>(
-                                      isExpanded: true,
-                                      initialValue: _collaborationMode,
-                                      decoration: InputDecoration(
-                                        contentPadding:
-                                            const EdgeInsets.symmetric(
-                                              horizontal: 12,
-                                              vertical: 10,
+                                        key: ValueKey('collab:$_collaborationMode'),
+                                        isExpanded: true,
+                                        initialValue: ['On-campus', 'Online', 'Hybrid'].contains(_collaborationMode)
+                                            ? _collaborationMode
+                                            : 'Hybrid',
+                                        decoration: InputDecoration(
+                                          contentPadding:
+                                              const EdgeInsets.symmetric(
+                                                horizontal: 12,
+                                                vertical: 10,
+                                              ),
+                                          border: OutlineInputBorder(
+                                            borderRadius: BorderRadius.circular(
+                                              8,
                                             ),
-                                        border: OutlineInputBorder(
-                                          borderRadius: BorderRadius.circular(
-                                            8,
                                           ),
                                         ),
-                                      ),
-                                      items: ['On-campus', 'Online', 'Hybrid']
-                                          .map(
-                                            (m) => DropdownMenuItem(
-                                              value: m,
-                                              child: Text(
-                                                m,
-                                                style: const TextStyle(
-                                                  fontSize: 13,
+                                        items: {
+                                          'On-campus',
+                                          'Online',
+                                          'Hybrid',
+                                          if (_collaborationMode.trim().isNotEmpty) _collaborationMode.trim(),
+                                        }
+                                            .map(
+                                              (m) => DropdownMenuItem(
+                                                value: m,
+                                                child: Text(
+                                                  m,
+                                                  style: const TextStyle(
+                                                    fontSize: 13,
+                                                  ),
                                                 ),
                                               ),
-                                            ),
-                                          )
-                                          .toList(),
-                                      onChanged: (val) {
-                                        if (val != null) {
-                                          setState(() {
-                                            _collaborationMode = val;
-                                            _isDirty = true;
-                                          });
-                                        }
-                                      },
-                                    ),
+                                            )
+                                            .toList(),
+                                        onChanged: (val) {
+                                          if (val != null) {
+                                            setState(() {
+                                              _collaborationMode = val;
+                                              _isDirty = true;
+                                            });
+                                          }
+                                        },
+                                      ),
                                   ],
                                 ),
                               ],
@@ -2942,14 +2974,9 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
         ),
         const SizedBox(height: 6),
         DropdownButtonFormField<String>(
-          key: ValueKey('$priorityLabel:$value'),
+          key: ValueKey('$priorityLabel:${value?.trim()}'),
           isExpanded: true,
-          initialValue:
-              (value != null &&
-                  value.isNotEmpty &&
-                  _allProjectRoles.contains(value))
-              ? value
-              : null,
+          initialValue: (value != null && value.trim().isNotEmpty) ? value.trim() : null,
           decoration: InputDecoration(
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 12,
@@ -2970,7 +2997,10 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
                   style: TextStyle(fontSize: 13, color: Colors.grey),
                 ),
               ),
-            ...{..._allProjectRoles, ?value}.map(
+            ...{
+              ..._allProjectRoles,
+              if (value != null && value.trim().isNotEmpty) value.trim(),
+            }.map(
               (r) => DropdownMenuItem(
                 value: r,
                 child: Text(

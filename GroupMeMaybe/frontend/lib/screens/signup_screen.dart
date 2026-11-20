@@ -584,7 +584,10 @@ class _SignupScreenState extends State<SignupScreen> {
                                       ),
                                       const SizedBox(height: 6),
                                       DropdownButtonFormField<String>(
-                                        initialValue: _selectedYearLevel,
+                                        key: ValueKey('signup:year:$_selectedYearLevel'),
+                                        initialValue: _yearSections.containsKey(_selectedYearLevel)
+                                            ? _selectedYearLevel
+                                            : _yearSections.keys.first,
                                         isExpanded: true,
                                         decoration: InputDecoration(
                                           contentPadding:
@@ -638,7 +641,12 @@ class _SignupScreenState extends State<SignupScreen> {
                                       ),
                                       const SizedBox(height: 6),
                                       DropdownButtonFormField<String>(
-                                        initialValue: _selectedSection,
+                                        key: ValueKey('signup:sec:$_selectedYearLevel:$_selectedSection'),
+                                        initialValue: (_yearSections[_selectedYearLevel] ?? []).contains(_selectedSection)
+                                            ? _selectedSection
+                                            : ((_yearSections[_selectedYearLevel] ?? []).isNotEmpty
+                                                ? (_yearSections[_selectedYearLevel] ?? []).first
+                                                : _selectedSection),
                                         isExpanded: true,
                                         decoration: InputDecoration(
                                           contentPadding:
@@ -657,21 +665,22 @@ class _SignupScreenState extends State<SignupScreen> {
                                             ),
                                           ),
                                         ),
-                                        items:
-                                            (_yearSections[_selectedYearLevel] ??
-                                                    ['BSIT 2A'])
-                                                .map(
-                                                  (sec) => DropdownMenuItem(
-                                                    value: sec,
-                                                    child: Text(
-                                                      sec,
-                                                      style: const TextStyle(
-                                                        fontSize: 13,
-                                                      ),
-                                                    ),
+                                        items: {
+                                          ...(_yearSections[_selectedYearLevel] ?? ['BSIT 2A']),
+                                          if (_selectedSection.trim().isNotEmpty) _selectedSection.trim(),
+                                        }
+                                            .map(
+                                              (sec) => DropdownMenuItem(
+                                                value: sec,
+                                                child: Text(
+                                                  sec,
+                                                  style: const TextStyle(
+                                                    fontSize: 13,
                                                   ),
-                                                )
-                                                .toList(),
+                                                ),
+                                              ),
+                                            )
+                                            .toList(),
                                         onChanged: (val) {
                                           if (val != null) {
                                             setState(
@@ -698,7 +707,10 @@ class _SignupScreenState extends State<SignupScreen> {
                             ),
                             const SizedBox(height: 6),
                             DropdownButtonFormField<String>(
-                              initialValue: _preferredProjectRole,
+                              key: ValueKey('signup:role:$_preferredProjectRole'),
+                              initialValue: _studentRoles.contains(_preferredProjectRole)
+                                  ? _preferredProjectRole
+                                  : (_studentRoles.isNotEmpty ? _studentRoles.first : _preferredProjectRole),
                               isExpanded: true,
                               decoration: InputDecoration(
                                 contentPadding: const EdgeInsets.symmetric(
@@ -714,7 +726,10 @@ class _SignupScreenState extends State<SignupScreen> {
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                               ),
-                              items: _studentRoles
+                              items: {
+                                ..._studentRoles,
+                                if (_preferredProjectRole.trim().isNotEmpty) _preferredProjectRole.trim(),
+                              }
                                   .map(
                                     (role) => DropdownMenuItem(
                                       value: role,

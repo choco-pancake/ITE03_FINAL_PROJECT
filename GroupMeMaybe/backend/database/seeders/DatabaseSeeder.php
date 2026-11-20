@@ -77,6 +77,14 @@ class DatabaseSeeder extends Seeder
         // 2. Seed 30 Realistic Student Profiles
         $profilesData = [
             [
+                'name' => 'Carlos Mendoza',
+                'email' => 'carlos.mendoza@student.edu',
+                'skills' => ['Frontend Development', 'UI/UX Design', 'Flutter', 'Dart', 'JavaScript'],
+                'interests' => ['Web Development', 'Mobile Engineering', 'UI/UX and Creative Design'],
+                'preferred_role' => 'Frontend Developer',
+                'availability' => 'Mon, Wed, Fri afternoon (1-5 PM)',
+            ],
+            [
                 'name' => 'Alex Santos',
                 'email' => 'alex.santos@student.edu',
                 'skills' => ['Frontend Development', 'UI/UX Design', 'JavaScript'],
@@ -325,7 +333,7 @@ class DatabaseSeeder extends Seeder
         // 3. Seed Grouping Activities (Aivhan's Module)
 
         // Activity 1: Hybrid mode with a partially formed student team (Alex's team)
-        GroupingActivity::create([
+        $act1 = GroupingActivity::create([
             'academic_class_id' => $class1->id,
             'class_name' => $class1->display_name,
             'title' => 'Final Capstone Project',
@@ -348,43 +356,11 @@ class DatabaseSeeder extends Seeder
             'student_modification_deadline' => now()->addDays(23),
             'status' => 'open',
             'students_count' => 30,
-            'formed_teams' => [
-                [
-                    'name' => 'Team Alpha Web',
-                    'is_auto_assigned' => false,
-                    'leader_email' => 'alex.santos@student.edu',
-                    'members' => [
-                        [
-                            'name' => 'Alex Santos (You)',
-                            'email' => 'alex.santos@student.edu',
-                            'role' => 'Team Leader & Frontend Dev',
-                            'block' => 'BSIT 2A',
-                            'avatar' => 'A',
-                            'is_leader' => true,
-                        ],
-                        [
-                            'name' => 'Carl Reyes',
-                            'email' => 'carl.reyes@student.edu',
-                            'role' => 'UI/UX Designer',
-                            'block' => 'BSIT 2A',
-                            'avatar' => 'C',
-                            'is_leader' => false,
-                        ],
-                        [
-                            'name' => 'Dani Garcia',
-                            'email' => 'dani.garcia@student.edu',
-                            'role' => 'QA & Documentation',
-                            'block' => 'BSIT 2A',
-                            'avatar' => 'D',
-                            'is_leader' => false,
-                        ],
-                    ],
-                ],
-            ],
+            'formed_teams' => null,
         ]);
 
         // Activity 2: Auto mode, grouping in progress (not completed yet, no formed teams yet)
-        GroupingActivity::create([
+        $act2 = GroupingActivity::create([
             'academic_class_id' => $class2->id,
             'class_name' => $class2->display_name,
             'title' => 'Cross-Platform Mobile App Sprint',
@@ -411,7 +387,7 @@ class DatabaseSeeder extends Seeder
         ]);
 
         // Activity 3: Completed activity with finalized teams
-        GroupingActivity::create([
+        $act3 = GroupingActivity::create([
             'academic_class_id' => $class3->id,
             'class_name' => $class3->display_name,
             'title' => 'Enterprise Schema Modeling & Query Optimization',
@@ -434,51 +410,11 @@ class DatabaseSeeder extends Seeder
             'student_modification_deadline' => now()->subDays(3),
             'status' => 'completed',
             'students_count' => 32,
-            'formed_teams' => [
-                [
-                    'name' => 'Query Masters',
-                    'is_auto_assigned' => false,
-                    'leader_email' => 'ethan.lim@student.edu',
-                    'members' => [
-                        [
-                            'name' => 'Ethan Lim',
-                            'email' => 'ethan.lim@student.edu',
-                            'role' => 'Team Leader & SQL Engineer',
-                            'block' => 'BSIT 2B',
-                            'avatar' => 'E',
-                            'is_leader' => true,
-                        ],
-                        [
-                            'name' => 'Alex Santos (You)',
-                            'email' => 'alex.santos@student.edu',
-                            'role' => 'Database Analyst',
-                            'block' => 'BSIT 2B',
-                            'avatar' => 'A',
-                            'is_leader' => false,
-                        ],
-                        [
-                            'name' => 'Hana Cruz',
-                            'email' => 'hana.cruz@student.edu',
-                            'role' => 'System Analyst',
-                            'block' => 'BSIT 2B',
-                            'avatar' => 'H',
-                            'is_leader' => false,
-                        ],
-                        [
-                            'name' => 'Bea Cruz',
-                            'email' => 'bea.cruz@student.edu',
-                            'role' => 'Data Modeler',
-                            'block' => 'BSIT 2B',
-                            'avatar' => 'B',
-                            'is_leader' => false,
-                        ],
-                    ],
-                ],
-            ],
+            'formed_teams' => null,
         ]);
 
         // Activity 4: Draft mode
-        GroupingActivity::create([
+        $act4 = GroupingActivity::create([
             'academic_class_id' => $class4->id,
             'class_name' => $class4->display_name,
             'title' => 'Network Vulnerability Audit & Defense Plan',
@@ -502,5 +438,11 @@ class DatabaseSeeder extends Seeder
             'students_count' => 25,
             'formed_teams' => null,
         ]);
+
+        $groupingController = app(\App\Http\Controllers\GroupingActivityController::class);
+        $groupingController->generateBalancedTeams($act1);
+        $groupingController->generateBalancedTeams($act2);
+        $groupingController->generateBalancedTeams($act3);
+        $groupingController->generateBalancedTeams($act4);
     }
 }

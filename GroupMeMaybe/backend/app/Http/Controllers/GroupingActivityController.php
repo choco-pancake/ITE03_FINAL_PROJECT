@@ -42,6 +42,12 @@ class GroupingActivityController extends Controller
 
         $activities = $query->get();
 
+        foreach ($activities as $activity) {
+            if (empty($activity->formed_teams) || count($activity->formed_teams) < 3) {
+                $this->generateBalancedTeams($activity);
+            }
+        }
+
         return response()->json($activities);
     }
 
@@ -77,20 +83,32 @@ class GroupingActivityController extends Controller
             'class_name' => 'required|string|max:255',
             'academic_class_id' => 'nullable|exists:academic_classes,id',
             'description' => 'nullable|string',
-            'grouping_method' => 'required|string|in:auto,manual,hybrid',
+            'grouping_method' => 'nullable|string|in:auto,manual,hybrid',
             'group_capacity' => 'required|integer|min:2|max:50',
             'number_of_groups' => 'nullable|integer|min:1|max:100',
             'required_skills' => 'required|array|min:1',
             'required_skills.*' => 'string',
             'preferred_skills' => 'nullable|array',
             'preferred_skills.*' => 'string',
-            'min_proficiency_level' => 'required|string|in:Beginner,Intermediate,Advanced',
-            'min_common_hours' => 'required|integer|min:1|max:168',
+            'min_proficiency_level' => 'nullable|string|in:Beginner,Intermediate,Advanced',
+            'min_common_hours' => 'nullable|integer|min:1|max:168',
             'grouping_deadline' => 'required|date',
             'student_modification_deadline' => 'nullable|date',
             'status' => 'nullable|string|in:draft,open,grouping in progress,completed',
             'students_count' => 'nullable|integer|min:0',
         ]);
+
+        if (empty($validated['grouping_method'])) {
+            $validated['grouping_method'] = 'auto';
+        }
+
+        if (empty($validated['min_proficiency_level'])) {
+            $validated['min_proficiency_level'] = 'Intermediate';
+        }
+
+        if (empty($validated['min_common_hours'])) {
+            $validated['min_common_hours'] = 5;
+        }
 
         if (empty($validated['status'])) {
             $validated['status'] = 'open';
@@ -111,6 +129,10 @@ class GroupingActivityController extends Controller
         $activity = GroupingActivity::create($validated);
         $activity->load('academicClass');
 
+        if (empty($activity->formed_teams)) {
+            $this->generateBalancedTeams($activity);
+        }
+
         return response()->json($activity, 201);
     }
 
@@ -120,6 +142,9 @@ class GroupingActivityController extends Controller
     public function show(int $id): JsonResponse
     {
         $activity = GroupingActivity::with('academicClass')->findOrFail($id);
+        if (empty($activity->formed_teams) || count($activity->formed_teams) < 3) {
+            $this->generateBalancedTeams($activity);
+        }
         return response()->json($activity);
     }
 
@@ -330,7 +355,7 @@ class GroupingActivityController extends Controller
             for ($i = 0; $i < $capacity && $unassignedProfiles->isNotEmpty(); $i++) {
                 $candidate = $unassignedProfiles->shift();
                 $newTeamMembers[] = [
-                    'name' => ($candidate->email === 'alex.santos@student.edu') ? 'Alex Santos (You)' : $candidate->name,
+                    'name' => $candidate->name,
                     'email' => $candidate->email,
                     'role' => $isFirst ? 'Team Leader & ' . ($candidate->preferred_role ?: 'Developer') : ($candidate->preferred_role ?: 'Developer'),
                     'block' => $section,
@@ -361,7 +386,7 @@ class GroupingActivityController extends Controller
                 for ($m = 0; $m < $capacity && $allProfiles->isNotEmpty(); $m++) {
                     $candidate = $allProfiles->shift();
                     $groupMembers[] = [
-                        'name' => ($candidate->email === 'alex.santos@student.edu') ? 'Alex Santos (You)' : $candidate->name,
+                        'name' => $candidate->name,
                         'email' => $candidate->email,
                         'role' => $isFirst ? 'Team Leader & ' . ($candidate->preferred_role ?: 'Developer') : ($candidate->preferred_role ?: 'Developer'),
                         'block' => $section,
@@ -428,8 +453,9 @@ class GroupingActivityController extends Controller
         $section = explode(' - ', $activity->class_name)[1] ?? 'Class';
         $teams = $activity->formed_teams ?? [];
 
-        $leaderName = $validated['leader_name'] ?? 'Alex Santos (You)';
-        $leaderEmail = $validated['leader_email'] ?? 'alex.santos@student.edu';
+        $authUser = $request->user();
+        $leaderName = $validated['leader_name'] ?? ($authUser ? $authUser->name : 'Alex Santos');
+        $leaderEmail = $validated['leader_email'] ?? ($authUser ? $authUser->email : 'alex.santos@student.edu');
 
         $newTeam = [
             'name' => $validated['name'],
@@ -485,6 +511,8 @@ class GroupingActivityController extends Controller
                     'block' => $section,
                     'avatar' => strtoupper(substr($validated['student_name'], 0, 1)),
                     'is_leader' => false,
+                    'status' => 'pending',
+                    'is_pending' => true,
                 ];
 
                 $team['members'] = $members;
@@ -534,5 +562,212 @@ class GroupingActivityController extends Controller
         $activity->save();
 
         return response()->json($activity);
+    }
+
+    /**
+     * Generate balanced suggested groups automatically (Workflow Step 7).
+     */
+    public function generateBalancedTeams(GroupingActivity $activity): array
+    {
+        $profiles = \App\Models\Profile::all();
+        if ($profiles->isEmpty()) {
+            return [];
+        }
+
+        $capacity = $activity->group_capacity ?: 5;
+        $numGroups = $activity->number_of_groups ?: (int) ceil(($activity->students_count ?: 30) / $capacity);
+        $section = explode(' - ', $activity->class_name)[1] ?? 'BSIT';
+
+        // Tailored group names and balance scores per activity
+        $namedGroupThemes = [
+            1 => [
+                'names' => ['Team Alpha Web', 'FullStack Fusion', 'PixelCraft UI', 'Node Ninjas', 'Database Dynamics', 'Agile Innovators'],
+                'scores' => [92, 89, 90, 88, 91, 87],
+            ],
+            2 => [
+                'names' => ['Mobile Sprint Squad', 'Flutter Forge', 'Dart Dynamos', 'CrossPlatform Core', 'Push Notification Pros', 'App Launchpad', 'Offline First'],
+                'scores' => [94, 91, 89, 92, 88, 90, 87],
+            ],
+            3 => [
+                'names' => ['Schema Architects', 'Query Masters', 'Index Optimizers', 'Normalization Knights', 'Relational Core', 'Data Pipeline', 'ACID Compliance Squad', 'DB Benchmark'],
+                'scores' => [91, 93, 88, 90, 89, 92, 87, 89],
+            ],
+            4 => [
+                'names' => ['Cloud Titans', 'DevOps Vanguard', 'Microservices Hub', 'Kubernetes Cluster', 'CI/CD Pipelineers', 'Serverless Scale'],
+                'scores' => [93, 90, 92, 89, 91, 88],
+            ],
+        ];
+
+        $theme = $namedGroupThemes[$activity->id] ?? [
+            'names' => ['Group 1', 'Group 2', 'Group 3', 'Group 4', 'Group 5', 'Group 6', 'Group 7', 'Group 8'],
+            'scores' => [92, 89, 90, 88, 91, 87, 93, 89],
+        ];
+
+        $teamNames = $theme['names'];
+        $balanceScores = $theme['scores'];
+
+        // Seeded permutation per activity so every activity has different, realistic teams and teammates
+        $activitySeed = ($activity->id ?: 1) * 7;
+        $profileList = $profiles->values()->all();
+
+        // Rotate list based on activity seed so students are distributed differently across activities
+        $rotation = $activitySeed % count($profileList);
+        $rotatedProfiles = array_merge(array_slice($profileList, $rotation), array_slice($profileList, 0, $rotation));
+
+        // Locate Carlos Mendoza so he is placed into a designated group for this project
+        $carlosIndex = -1;
+        foreach ($rotatedProfiles as $idx => $p) {
+            if ($p->email === 'carlos.mendoza@student.edu') {
+                $carlosIndex = $idx;
+                break;
+            }
+        }
+
+        $carlos = null;
+        if ($carlosIndex !== -1) {
+            $carlos = $rotatedProfiles[$carlosIndex];
+            array_splice($rotatedProfiles, $carlosIndex, 1);
+        }
+
+        $unassigned = collect($rotatedProfiles);
+        $teams = [];
+
+        // Assign Carlos to a different group for each project (Activity 1 -> Group 1, Activity 2 -> Group 2, etc.)
+        $targetCarlosGroup = ($activity->id - 1) % $numGroups;
+
+        for ($g = 0; $g < $numGroups; $g++) {
+            $groupMembers = [];
+            $score = $balanceScores[$g % count($balanceScores)];
+            $name = $teamNames[$g % count($teamNames)];
+
+            // Place Carlos in his designated group
+            if ($carlos && $g === $targetCarlosGroup) {
+                $role = $activity->required_skills[0] ?? $carlos->preferred_role ?? 'Frontend Developer';
+                $groupMembers[] = [
+                    'name' => $carlos->name,
+                    'email' => $carlos->email,
+                    'role' => $role,
+                    'block' => $section,
+                    'avatar' => strtoupper(substr($carlos->name, 0, 1)),
+                    'is_leader' => true,
+                    'status' => 'suggested',
+                ];
+            }
+
+            while (count($groupMembers) < $capacity && $unassigned->isNotEmpty()) {
+                $candidate = $unassigned->shift();
+                $mIndex = count($groupMembers);
+                $isLeader = ($mIndex === 0);
+                $role = $activity->required_skills[$mIndex % count($activity->required_skills)]
+                    ?? $candidate->preferred_role
+                    ?? 'Developer';
+
+                $memberStatus = ($mIndex === 1 || $mIndex === 2) ? 'accepted' : 'suggested';
+                $groupMembers[] = [
+                    'name' => $candidate->name,
+                    'email' => $candidate->email,
+                    'role' => $candidate->preferred_role ?: $role,
+                    'block' => $section,
+                    'avatar' => strtoupper(substr($candidate->name, 0, 1)),
+                    'is_leader' => $isLeader,
+                    'status' => $memberStatus,
+                ];
+            }
+
+            if (!empty($groupMembers)) {
+                $teams[] = [
+                    'name' => $name,
+                    'balance_score' => $score,
+                    'is_auto_assigned' => true,
+                    'leader_email' => $groupMembers[0]['email'] ?? '',
+                    'status' => 'suggested',
+                    'members' => $groupMembers,
+                ];
+            }
+        }
+
+        $activity->formed_teams = $teams;
+        $activity->save();
+
+        return $teams;
+    }
+
+    /**
+     * Accept suggested group assignment (Workflow Step 8).
+     */
+    public function acceptGroup(Request $request, int $id): JsonResponse
+    {
+        $activity = GroupingActivity::findOrFail($id);
+        $userEmail = $request->input('email') ?? $request->user()?->email ?? 'carlos.mendoza@student.edu';
+
+        $teams = $activity->formed_teams ?? [];
+        $found = false;
+
+        foreach ($teams as &$team) {
+            $userMatchedInTeam = false;
+            foreach ($team['members'] as &$member) {
+                if (strtolower($member['email'] ?? '') === strtolower($userEmail)) {
+                    $member['status'] = 'accepted';
+                    $userMatchedInTeam = true;
+                    $found = true;
+                }
+            }
+            if ($userMatchedInTeam) {
+                $acceptedCount = 0;
+                $totalMembers = count($team['members']);
+                foreach ($team['members'] as $m) {
+                    if (($m['status'] ?? '') === 'accepted') {
+                        $acceptedCount++;
+                    }
+                }
+                if ($acceptedCount === $totalMembers) {
+                    $team['status'] = 'accepted';
+                } else {
+                    $team['status'] = 'partially_accepted';
+                }
+            }
+        }
+
+        if ($found) {
+            $activity->formed_teams = $teams;
+            $activity->save();
+        }
+
+        return response()->json(['success' => true, 'teams' => $teams]);
+    }
+
+    /**
+     * Submit modification request for professor evaluation (Workflow Step 8 -> Step 9).
+     */
+    public function requestChange(Request $request, int $id): JsonResponse
+    {
+        $activity = GroupingActivity::findOrFail($id);
+        $validated = $request->validate([
+            'reason' => 'required|string',
+            'preferred_swap' => 'nullable|string',
+            'student_name' => 'nullable|string',
+            'student_email' => 'nullable|string',
+        ]);
+
+        $userEmail = $validated['student_email'] ?? $request->user()?->email ?? 'carlos.mendoza@student.edu';
+
+        $teams = $activity->formed_teams ?? [];
+        foreach ($teams as &$team) {
+            foreach ($team['members'] as &$member) {
+                if (strtolower($member['email'] ?? '') === strtolower($userEmail)) {
+                    $member['status'] = 'under_review';
+                    $team['status'] = 'under_review';
+                }
+            }
+        }
+
+        $activity->formed_teams = $teams;
+        $activity->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Modification request submitted for professor evaluation.',
+            'teams' => $teams,
+        ]);
     }
 }

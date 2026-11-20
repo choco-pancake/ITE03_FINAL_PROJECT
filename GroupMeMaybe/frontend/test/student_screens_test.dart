@@ -112,6 +112,54 @@ void main() {
     expect(find.text('Enroll with Class Code'), findsWidgets);
   });
 
+  testWidgets('StudentClassesScreen validates class code on enrollment', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1280, 800);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
+    await tester.pumpWidget(const MaterialApp(home: StudentClassesScreen()));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Enroll with Class Code').first);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Enroll Now'), findsOneWidget);
+
+    await tester.enterText(find.byType(TextField).last, 'INVALID-CODE');
+    await tester.tap(find.text('Enroll Now'));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('not found'), findsOneWidget);
+  });
+
+  testWidgets('StudentGroupsScreen accepts initialClassId and initialClassName', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1280, 800);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: StudentGroupsScreen(
+          initialClassId: 1,
+          initialClassName: 'Web Development - BSIT 2A',
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.byType(StudentGroupsScreen), findsOneWidget);
+  });
+
   testWidgets(
     'StudentSettingsScreen renders setup cards and technical skills',
     (tester) async {

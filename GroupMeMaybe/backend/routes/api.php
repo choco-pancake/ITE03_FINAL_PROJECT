@@ -50,5 +50,7 @@ Route::post('activities/{id}/teams', [GroupingActivityController::class, 'create
 Route::post('activities/{id}/teams/invite', [GroupingActivityController::class, 'inviteStudent']);
 Route::post('activities/{id}/auto-form', [GroupingActivityController::class, 'autoFormUnassigned']);
 Route::post('activities/{id}/add-skill', [GroupingActivityController::class, 'addSkill']);
+Route::post('activities/{id}/accept-group', [GroupingActivityController::class, 'acceptGroup']);
+Route::post('activities/{id}/request-change', [GroupingActivityController::class, 'requestChange']);
 Route::apiResource('activities', GroupingActivityController::class);
 Route::apiResource('classes', AcademicClassController::class);

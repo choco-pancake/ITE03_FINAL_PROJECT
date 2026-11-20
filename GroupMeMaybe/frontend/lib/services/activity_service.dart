@@ -322,4 +322,42 @@ class ActivityService {
       );
     }
   }
+
+  /// Accept suggested group (Step 8)
+  Future<void> acceptGroup(int activityId, {String? email}) async {
+    final uri = Uri.parse('${ApiService.baseUrl}/activities/$activityId/accept-group');
+    final payload = <String, dynamic>{};
+    if (email != null) payload['email'] = email;
+    final response = await http.post(
+      uri,
+      headers: _headers,
+      body: jsonEncode(payload),
+    );
+    if (response.statusCode != 200) {
+      throw Exception('Failed to accept group (${response.statusCode})');
+    }
+  }
+
+  /// Request group change (Step 8 -> Step 9)
+  Future<void> requestChange(
+    int activityId, {
+    required String reason,
+    String? preferredSwap,
+    String? studentName,
+    String? studentEmail,
+  }) async {
+    final uri = Uri.parse('${ApiService.baseUrl}/activities/$activityId/request-change');
+    final payload = <String, dynamic>{'reason': reason};
+    if (preferredSwap != null) payload['preferred_swap'] = preferredSwap;
+    if (studentName != null) payload['student_name'] = studentName;
+    if (studentEmail != null) payload['student_email'] = studentEmail;
+    final response = await http.post(
+      uri,
+      headers: _headers,
+      body: jsonEncode(payload),
+    );
+    if (response.statusCode != 200) {
+      throw Exception('Failed to request change (${response.statusCode})');
+    }
+  }
 }

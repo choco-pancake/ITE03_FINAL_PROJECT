@@ -163,7 +163,19 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
 
   void _showSwitchGroupDialog(GroupingActivity activity) {
     final reasonController = TextEditingController();
-    String targetTeam = 'Team Beta';
+    final availableTeams = <String>[];
+    if (activity.formedTeams != null && activity.formedTeams!.isNotEmpty) {
+      for (final t in activity.formedTeams!) {
+        final tName = (t as Map)['name']?.toString();
+        if (tName != null && tName.isNotEmpty) {
+          availableTeams.add(tName);
+        }
+      }
+    }
+    if (availableTeams.isEmpty) {
+      availableTeams.addAll(['Team Beta', 'Team Gamma', 'Team Delta']);
+    }
+    String targetTeam = availableTeams.first;
 
     showDialog(
       context: context,
@@ -238,7 +250,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                   borderRadius: BorderRadius.circular(8),
                 ),
               ),
-              items: ['Team Beta', 'Team Gamma', 'Team Delta']
+              items: availableTeams
                   .map(
                     (t) => DropdownMenuItem(
                       value: t,
@@ -622,6 +634,65 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
     );
   }
 
+  int get _confirmedTeamsCount {
+    final currentUser = AuthService.currentUser;
+    final currentEmail = currentUser?.email.toLowerCase() ?? '';
+    final currentName = currentUser?.name.toLowerCase() ?? '';
+
+    int count = 0;
+    for (final a in _activities) {
+      final teams = a.formedTeams;
+      if (teams != null && teams.isNotEmpty) {
+        bool inTeam = false;
+        for (final t in teams) {
+          final members = (t as Map)['members'] as List? ?? [];
+          for (final m in members) {
+            final mMap = m as Map;
+            final email = mMap['email']?.toString().toLowerCase() ?? '';
+            final name = mMap['name']?.toString().toLowerCase() ?? '';
+            if ((currentEmail.isNotEmpty && email == currentEmail) ||
+                (currentName.isNotEmpty && name.contains(currentName)) ||
+                (currentUser == null && (email == 'alex.santos@student.edu' || name.contains('alex santos'))) ||
+                name.contains('(you)')) {
+              inTeam = true;
+              break;
+            }
+          }
+          if (inTeam) break;
+        }
+        if (inTeam) count++;
+      } else if (a.status.toLowerCase() == 'completed' && a.groupingMethod == 'auto') {
+        count++;
+      }
+    }
+    return count;
+  }
+
+  String get _nextCutoffText {
+    final now = DateTime.now();
+    DateTime? nearest;
+    for (final a in _activities) {
+      if (a.groupingDeadline.isAfter(now)) {
+        if (nearest == null || a.groupingDeadline.isBefore(nearest)) {
+          nearest = a.groupingDeadline;
+        }
+      }
+    }
+    if (nearest == null) {
+      return 'None pending';
+    }
+    final diff = nearest.difference(now);
+    if (diff.inDays == 0) {
+      return 'Today';
+    } else if (diff.inDays == 1) {
+      return 'Tomorrow';
+    } else if (diff.inDays < 7) {
+      return 'In ${diff.inDays} days';
+    } else {
+      return '${nearest.month}/${nearest.day}/${nearest.year}';
+    }
+  }
+
   // Metric Statistics Row
   Widget _buildMetricsRow() {
     return LayoutBuilder(
@@ -643,14 +714,14 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
           ),
           _buildStatCard(
             title: 'Formed Teams',
-            value: '1 Confirmed',
+            value: '$_confirmedTeamsCount Confirmed',
             icon: Icons.groups_outlined,
             color: const Color(0xFF7E22CE),
             bg: const Color(0xFFF3E8FF),
           ),
           _buildStatCard(
             title: 'Next Cutoff',
-            value: 'Tomorrow',
+            value: _nextCutoffText,
             icon: Icons.timer_outlined,
             color: const Color(0xFFD97706),
             bg: const Color(0xFFFFFBEB),
@@ -806,9 +877,62 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
   }
 
   Widget _buildActivityProjectCard(GroupingActivity activity) {
-    final isTeamFormed =
-        activity.status.toLowerCase().contains('lock') ||
-        activity.status.toLowerCase().contains('open');
+    final currentUser = AuthService.currentUser;
+    final currentEmail = currentUser?.email.toLowerCase() ?? '';
+    final currentName = currentUser?.name.toLowerCase() ?? '';
+
+    Map<String, dynamic>? studentTeam;
+    final teams = activity.formedTeams;
+    if (teams != null && teams.isNotEmpty) {
+      for (final t in teams) {
+        final teamMap = Map<String, dynamic>.from(t as Map);
+        final members = (teamMap['members'] as List?) ?? [];
+        for (final m in members) {
+          final memberMap = Map<String, dynamic>.from(m as Map);
+          final email = memberMap['email']?.toString().toLowerCase() ?? '';
+          final name = memberMap['name']?.toString().toLowerCase() ?? '';
+          final isCurrentUser = (currentEmail.isNotEmpty && email == currentEmail) ||
+              (currentName.isNotEmpty && name.contains(currentName)) ||
+              (currentUser == null && (email == 'alex.santos@student.edu' || name.contains('alex santos'))) ||
+              name.contains('(you)');
+          if (isCurrentUser) {
+            studentTeam = teamMap;
+            break;
+          }
+        }
+        if (studentTeam != null) break;
+      }
+    } else if (activity.status.toLowerCase() == 'completed' && activity.groupingMethod == 'auto') {
+      final studentDisplayName = currentUser?.name ?? "Carlos Mendoza";
+      final initial = (currentUser?.name.isNotEmpty == true)
+          ? currentUser!.name.substring(0, 1).toUpperCase()
+          : 'C';
+      studentTeam = {
+        'name': 'Team Alpha Synthetix',
+        'members': [
+          {
+            'name': studentDisplayName,
+            'email': currentUser?.email ?? 'carlos.mendoza@student.edu',
+            'role': activity.requiredSkills.isNotEmpty ? activity.requiredSkills.first : 'Frontend Developer',
+            'avatar': initial,
+          },
+          {
+            'name': 'Bianca Cruz',
+            'role': activity.requiredSkills.length > 1 ? activity.requiredSkills[1] : 'UI/UX Designer',
+            'avatar': 'B',
+          },
+          {
+            'name': 'Dani Garcia',
+            'role': 'QA & Docs',
+            'avatar': 'D',
+          },
+        ],
+      };
+    }
+
+    final isTeamFormed = studentTeam != null;
+    final teamName = studentTeam?['name']?.toString() ?? 'My Team';
+    final members = (studentTeam?['members'] as List?) ?? [];
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -888,40 +1012,75 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
           ),
           const SizedBox(height: 16),
 
-          // Teammates Preview Row
-          const Text(
-            'Formed Team Roster (Alpha Squad):',
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: Color(0xFF475569),
+          if (isTeamFormed) ...[
+            Text(
+              'Formed Team Roster ($teamName):',
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF475569),
+              ),
             ),
-          ),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              _buildTeammateAvatar(
-                'Carlos Mendoza (You)',
-                'Frontend Developer',
-                'C',
-                const Color(0xFF1E40AF),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: members.map((m) {
+                final mMap = Map<String, dynamic>.from(m as Map);
+                final rawName = mMap['name']?.toString() ?? 'Teammate';
+                final cleanName = rawName.replaceAll(RegExp(r'\s*\(You\)', caseSensitive: false), '').trim();
+                final memberEmail = mMap['email']?.toString().toLowerCase() ?? '';
+                final mRole = mMap['role']?.toString() ?? 'Developer';
+                final mAvatar = (mMap['avatar']?.toString().isNotEmpty == true)
+                    ? mMap['avatar'].toString()
+                    : (cleanName.isNotEmpty ? cleanName.substring(0, 1).toUpperCase() : 'T');
+
+                final currentUser = AuthService.currentUser;
+                final isProfessor = currentUser?.role.toLowerCase() == 'professor';
+                final currentEmail = currentUser?.email.toLowerCase() ?? '';
+                final currentName = currentUser?.name.toLowerCase() ?? '';
+
+                final isSelf = !isProfessor && (
+                  (currentEmail.isNotEmpty && memberEmail == currentEmail) ||
+                  (currentName.isNotEmpty && cleanName.toLowerCase() == currentName)
+                );
+
+                final displayName = isSelf ? '$cleanName (You)' : cleanName;
+
+                return _buildTeammateAvatar(
+                  displayName,
+                  mRole,
+                  mAvatar,
+                  isSelf ? const Color(0xFF1E40AF) : const Color(0xFF047857),
+                );
+              }).toList(),
+            ),
+          ] else ...[
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFFE2E8F0)),
               ),
-              _buildTeammateAvatar(
-                'Bianca Cruz',
-                'UI/UX Designer',
-                'B',
-                const Color(0xFF047857),
+              child: Row(
+                children: const [
+                  Icon(
+                    Icons.group_outlined,
+                    size: 20,
+                    color: Color(0xFF64748B),
+                  ),
+                  SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'No team formed yet. Grouping is currently in progress.',
+                      style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                    ),
+                  ),
+                ],
               ),
-              _buildTeammateAvatar(
-                'Dani Garcia',
-                'QA & Docs',
-                'D',
-                const Color(0xFF7E22CE),
-              ),
-            ],
-          ),
+            ),
+          ],
 
           const SizedBox(height: 18),
           const Divider(color: Color(0xFFF1F5F9), height: 1),
@@ -934,18 +1093,21 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
             spacing: 8,
             runSpacing: 8,
             children: [
-              OutlinedButton.icon(
-                onPressed: () => _showSwitchGroupDialog(activity),
-                icon: const Icon(Icons.swap_horiz, size: 16),
-                label: const Text(
-                  'Request Switch',
-                  style: TextStyle(fontSize: 12),
-                ),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: const Color(0xFF475569),
-                  side: const BorderSide(color: Color(0xFFCBD5E1)),
-                ),
-              ),
+              if (isTeamFormed)
+                OutlinedButton.icon(
+                  onPressed: () => _showSwitchGroupDialog(activity),
+                  icon: const Icon(Icons.swap_horiz, size: 16),
+                  label: const Text(
+                    'Request Switch',
+                    style: TextStyle(fontSize: 12),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: const Color(0xFF475569),
+                    side: const BorderSide(color: Color(0xFFCBD5E1)),
+                  ),
+                )
+              else
+                const SizedBox.shrink(),
               ElevatedButton.icon(
                 onPressed: () {
                   Navigator.push(
@@ -957,9 +1119,9 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                   );
                 },
                 icon: const Icon(Icons.hub_outlined, size: 16),
-                label: const Text(
-                  'Enter Team Workspace',
-                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                label: Text(
+                  isTeamFormed ? 'Enter Team Workspace' : 'Find Teammates',
+                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
                 ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF1E40AF),

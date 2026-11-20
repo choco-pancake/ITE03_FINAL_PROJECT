@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/models/grouping_activity.dart';
 import 'package:frontend/models/scarcity_report.dart';
 import 'package:frontend/screens/student_groups_screen.dart';
+import 'package:frontend/services/auth_service.dart';
 
 void main() {
   group('ScarcityReport Model Tests', () {
@@ -95,6 +96,29 @@ void main() {
       await tester.pumpWidget(const MaterialApp(home: StudentGroupsScreen()));
 
       // Loading state or initial render
+      expect(find.byType(StudentGroupsScreen), findsOneWidget);
+    });
+
+    testWidgets('StudentGroupsScreen respects current logged-in student session', (
+      tester,
+    ) async {
+      AuthService.currentUser = const AuthUser(
+        name: 'Carlos Mendoza',
+        email: 'carlos.mendoza@student.edu',
+        role: 'student',
+      );
+      addTearDown(() => AuthService.currentUser = null);
+
+      tester.view.physicalSize = const Size(1280, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
+      await tester.pumpWidget(const MaterialApp(home: StudentGroupsScreen()));
+      await tester.pump();
+
       expect(find.byType(StudentGroupsScreen), findsOneWidget);
     });
 

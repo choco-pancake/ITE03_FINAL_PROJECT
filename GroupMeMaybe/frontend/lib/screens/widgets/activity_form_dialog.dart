@@ -4,6 +4,8 @@ import '../../models/academic_class.dart';
 import '../../models/grouping_activity.dart';
 import '../../services/activity_service.dart';
 
+/// Simplified Project Making Dialog based on Workflow Step 4:
+/// "Grouping Activity Configuration"
 class ActivityFormDialog extends StatefulWidget {
   final GroupingActivity? activity;
   final VoidCallback onSaved;
@@ -22,46 +24,39 @@ class _ActivityFormDialogState extends State<ActivityFormDialog> {
   late TextEditingController _descriptionController;
   late TextEditingController _groupCapacityController;
   late TextEditingController _numberOfGroupsController;
-  late TextEditingController _minCommonHoursController;
-  late TextEditingController _customSkillController;
+  final _customSkillController = TextEditingController();
 
   String? _selectedClassDisplay;
   int? _selectedClassId;
   List<AcademicClass> _availableClasses = [];
   bool _loadingClasses = true;
 
-  String _groupingMethod = 'auto'; // auto, manual, hybrid
-  String _minProficiencyLevel =
-      'Intermediate'; // Beginner, Intermediate, Advanced
-  String _status = 'open'; // draft, open, grouping in progress, completed
-
   late DateTime _groupingDeadline;
-  DateTime? _modificationDeadline;
 
   final List<String> _requiredSkills = [];
   final List<String> _preferredSkills = [];
-
   bool _isSaving = false;
 
-  // Standard skills pool from specifications
-  static const List<String> _standardSkills = [
+  // Streamlined skill pools from Step 4 infographic
+  static const List<String> _commonRequiredSkills = [
     'Frontend Development',
     'Backend Development',
-    'Full-Stack Development',
+    'Database Management',
     'Mobile App Development',
     'UI/UX Design',
-    'Database Management',
     'API Development and Integration',
     'Software Testing and Quality Assurance',
     'Cybersecurity',
-    'Networking',
-    'Artificial Intelligence and Machine Learning',
-    'Data Analysis',
-    'System Analysis and Design',
+    'Full-Stack Development',
+  ];
+
+  static const List<String> _commonPreferredSkills = [
+    'UI/UX Design',
     'Technical Documentation',
     'Project Management',
     'Research and Problem Solving',
     'Presentation and Communication',
+    'Data Analysis',
   ];
 
   @override
@@ -69,7 +64,7 @@ class _ActivityFormDialogState extends State<ActivityFormDialog> {
     super.initState();
     final a = widget.activity;
 
-    _titleController = TextEditingController(text: a?.title ?? '');
+    _titleController = TextEditingController(text: a?.title ?? 'Final Project');
     _descriptionController = TextEditingController(text: a?.description ?? '');
     _groupCapacityController = TextEditingController(
       text: (a?.groupCapacity ?? 5).toString(),
@@ -77,30 +72,24 @@ class _ActivityFormDialogState extends State<ActivityFormDialog> {
     _numberOfGroupsController = TextEditingController(
       text: (a?.numberOfGroups ?? 6).toString(),
     );
-    _minCommonHoursController = TextEditingController(
-      text: (a?.minCommonHours ?? 5).toString(),
-    );
-    _customSkillController = TextEditingController();
-
-    _groupingMethod = a?.groupingMethod ?? 'auto';
-    _minProficiencyLevel = a?.minProficiencyLevel ?? 'Intermediate';
-    _status = a?.status ?? 'open';
 
     _selectedClassDisplay = a?.className;
     _selectedClassId = a?.academicClassId;
 
     _groupingDeadline =
-        a?.groupingDeadline ?? DateTime.now().add(const Duration(days: 14));
-    _modificationDeadline =
-        a?.studentModificationDeadline ??
-        DateTime.now().add(const Duration(days: 17));
+        a?.groupingDeadline ?? DateTime.now().add(const Duration(days: 21));
 
     if (a != null) {
       _requiredSkills.addAll(a.requiredSkills);
       _preferredSkills.addAll(a.preferredSkills);
     } else {
-      _requiredSkills.addAll(['Frontend Development', 'Backend Development']);
-      _preferredSkills.add('UI/UX Design');
+      // Default common skills as shown in Step 4 infographic
+      _requiredSkills.addAll([
+        'Frontend Development',
+        'Backend Development',
+        'Database Management',
+      ]);
+      _preferredSkills.addAll(['UI/UX Design', 'Technical Documentation']);
     }
 
     _loadClasses();
@@ -112,7 +101,6 @@ class _ActivityFormDialogState extends State<ActivityFormDialog> {
     _descriptionController.dispose();
     _groupCapacityController.dispose();
     _numberOfGroupsController.dispose();
-    _minCommonHoursController.dispose();
     _customSkillController.dispose();
     super.dispose();
   }
@@ -120,78 +108,34 @@ class _ActivityFormDialogState extends State<ActivityFormDialog> {
   Future<void> _loadClasses() async {
     try {
       final classes = await _activityService.getClasses();
-      setState(() {
-        _availableClasses = classes;
-        _loadingClasses = false;
-        if (_selectedClassDisplay == null && classes.isNotEmpty) {
-          _selectedClassDisplay = classes.first.displayName;
-          _selectedClassId = classes.first.id;
-        }
-      });
+      if (mounted) {
+        setState(() {
+          _availableClasses = classes;
+          _loadingClasses = false;
+          if (_selectedClassDisplay == null && classes.isNotEmpty) {
+            _selectedClassDisplay = classes.first.displayName;
+            _selectedClassId = classes.first.id;
+          }
+        });
+      }
     } catch (_) {
-      setState(() {
-        _loadingClasses = false;
-        _selectedClassDisplay ??= 'Web Development - BSIT 2A';
-      });
+      if (mounted) setState(() => _loadingClasses = false);
     }
   }
 
-  Future<void> _pickDateTime({
-    required BuildContext context,
-    required DateTime initialDate,
-    required Function(DateTime) onPicked,
-  }) async {
-    final pickedDate = await showDatePicker(
+  Future<void> _pickDeadline() async {
+    final picked = await showDatePicker(
       context: context,
-      initialDate: initialDate,
-      firstDate: DateTime(2025),
-      lastDate: DateTime(2030),
+      initialDate: _groupingDeadline,
+      firstDate: DateTime.now(),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
     );
-    if (pickedDate == null || !mounted) return;
-
-    final pickedTime = await showTimePicker(
-      context: this.context,
-      initialTime: TimeOfDay.fromDateTime(initialDate),
-    );
-    if (pickedTime == null || !mounted) return;
-
-    final finalDateTime = DateTime(
-      pickedDate.year,
-      pickedDate.month,
-      pickedDate.day,
-      pickedTime.hour,
-      pickedTime.minute,
-    );
-
-    onPicked(finalDateTime);
+    if (picked != null) {
+      setState(() => _groupingDeadline = picked);
+    }
   }
 
-  String _formatDateTime(DateTime dt) {
-    return '${dt.year}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')} '
-        '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
-  }
-
-  void _addCustomSkill(bool isRequired) {
-    final skill = _customSkillController.text.trim();
-    if (skill.isEmpty) return;
-
-    setState(() {
-      if (isRequired) {
-        if (!_requiredSkills.contains(skill)) {
-          _requiredSkills.add(skill);
-          _preferredSkills.remove(skill);
-        }
-      } else {
-        if (!_preferredSkills.contains(skill)) {
-          _preferredSkills.add(skill);
-          _requiredSkills.remove(skill);
-        }
-      }
-      _customSkillController.clear();
-    });
-  }
-
-  Future<void> _save() async {
+  Future<void> _saveActivity() async {
     if (!_formKey.currentState!.validate()) return;
 
     if (_requiredSkills.isEmpty) {
@@ -208,24 +152,24 @@ class _ActivityFormDialogState extends State<ActivityFormDialog> {
 
     final capacity = int.tryParse(_groupCapacityController.text) ?? 5;
     final groups = int.tryParse(_numberOfGroupsController.text) ?? 6;
-    final commonHours = int.tryParse(_minCommonHoursController.text) ?? 5;
 
     final activity = GroupingActivity(
       id: widget.activity?.id,
       academicClassId: _selectedClassId,
       className: _selectedClassDisplay ?? 'Web Development - BSIT 2A',
       title: _titleController.text.trim(),
-      description: _descriptionController.text.trim(),
-      groupingMethod: _groupingMethod,
+      description: _descriptionController.text.trim().isNotEmpty
+          ? _descriptionController.text.trim()
+          : 'Final project activity specifications, guidelines, and team requirements.',
+      groupingMethod: 'auto',
       groupCapacity: capacity,
       numberOfGroups: groups,
       requiredSkills: _requiredSkills,
       preferredSkills: _preferredSkills,
-      minProficiencyLevel: _minProficiencyLevel,
-      minCommonHours: commonHours,
+      minProficiencyLevel: 'Intermediate',
+      minCommonHours: 5,
       groupingDeadline: _groupingDeadline,
-      studentModificationDeadline: _modificationDeadline,
-      status: _status,
+      status: 'open',
       studentsCount: capacity * groups,
     );
 
@@ -260,7 +204,7 @@ class _ActivityFormDialogState extends State<ActivityFormDialog> {
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 820, maxHeight: 850),
+        constraints: const BoxConstraints(maxWidth: 620, maxHeight: 780),
         child: Padding(
           padding: const EdgeInsets.all(24.0),
           child: Form(
@@ -268,285 +212,109 @@ class _ActivityFormDialogState extends State<ActivityFormDialog> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Header
+                // Step 4 Header
                 Row(
                   children: [
                     Container(
-                      padding: const EdgeInsets.all(8),
+                      padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                        color: Colors.blue.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(8),
+                        color: const Color(0xFFECFDF5),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: const Color(0xFFA7F3D0)),
                       ),
-                      child: Icon(
-                        isEditing ? Icons.edit_note : Icons.add_task,
-                        color: Colors.blue[700],
-                        size: 26,
+                      child: const Icon(
+                        Icons.check_box_outlined,
+                        color: Color(0xFF059669),
+                        size: 24,
                       ),
                     ),
                     const SizedBox(width: 14),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          isEditing
-                              ? 'Edit Project'
-                              : 'Create Project',
-                          style: const TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            isEditing ? 'Edit Grouping Activity' : 'Create Grouping Activity',
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF0F172A),
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          'Configure matching parameters, required skills, and deadlines',
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: Colors.grey[600],
+                          const SizedBox(height: 2),
+                          const Text(
+                            'Step 4: Set project requirements to automatically balance teams',
+                            style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                    const Spacer(),
                     IconButton(
                       icon: const Icon(Icons.close),
                       onPressed: () => Navigator.of(context).pop(),
                     ),
                   ],
                 ),
-                const SizedBox(height: 14),
-                const Divider(),
-                const SizedBox(height: 8),
+                const SizedBox(height: 16),
+                const Divider(height: 1),
+                const SizedBox(height: 16),
 
-                // Form body
+                // Form Body
                 Expanded(
                   child: SingleChildScrollView(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Class Selection & Status
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // Class Selection
-                            Expanded(
-                              flex: 2,
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Text(
-                                    'Class Selection *',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 13,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 6),
-                                  _loadingClasses
-                                      ? const LinearProgressIndicator()
-                                      : DropdownButtonFormField<String>(
-                                          initialValue:
-                                              _availableClasses.any(
-                                                (c) =>
-                                                    c.displayName ==
-                                                    _selectedClassDisplay,
-                                              )
-                                              ? _selectedClassDisplay
-                                              : (_availableClasses.isNotEmpty
-                                                    ? _availableClasses
-                                                          .first
-                                                          .displayName
-                                                    : null),
-                                          decoration: InputDecoration(
-                                            prefixIcon: const Icon(
-                                              Icons.school,
-                                              size: 20,
-                                            ),
-                                            border: OutlineInputBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(10),
-                                            ),
-                                            contentPadding:
-                                                const EdgeInsets.symmetric(
-                                                  horizontal: 12,
-                                                  vertical: 12,
-                                                ),
-                                          ),
-                                          items: _availableClasses.map((c) {
-                                            return DropdownMenuItem<String>(
-                                              value: c.displayName,
-                                              child: Text(c.displayName),
-                                            );
-                                          }).toList(),
-                                          onChanged: (val) {
-                                            if (val == null) return;
-                                            final matching = _availableClasses
-                                                .firstWhere(
-                                                  (c) => c.displayName == val,
-                                                );
-                                            setState(() {
-                                              _selectedClassDisplay = val;
-                                              _selectedClassId = matching.id;
-                                            });
-                                          },
-                                        ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(width: 16),
-
-                            // Status dropdown
-                            Expanded(
-                              flex: 1,
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Text(
-                                    'Status',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 13,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 6),
-                                  DropdownButtonFormField<String>(
-                                    initialValue: _status,
-                                    decoration: InputDecoration(
-                                      border: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(10),
-                                      ),
-                                      contentPadding:
-                                          const EdgeInsets.symmetric(
-                                            horizontal: 12,
-                                            vertical: 12,
-                                          ),
-                                    ),
-                                    items: const [
-                                      DropdownMenuItem(
-                                        value: 'open',
-                                        child: Text('Open'),
-                                      ),
-                                      DropdownMenuItem(
-                                        value: 'grouping in progress',
-                                        child: Text('Grouping in Progress'),
-                                      ),
-                                      DropdownMenuItem(
-                                        value: 'completed',
-                                        child: Text('Completed'),
-                                      ),
-                                      DropdownMenuItem(
-                                        value: 'draft',
-                                        child: Text('Draft'),
-                                      ),
-                                    ],
-                                    onChanged: (val) {
-                                      if (val != null) {
-                                        setState(() => _status = val);
-                                      }
-                                    },
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
+                        // Class selector
+                        const Text(
+                          'Course Section',
+                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF334155)),
                         ),
-                        const SizedBox(height: 14),
+                        const SizedBox(height: 6),
+                        _loadingClasses
+                            ? const LinearProgressIndicator()
+                            : DropdownButtonFormField<String>(
+                                isExpanded: true,
+                                initialValue: _availableClasses.any((c) => c.displayName == _selectedClassDisplay)
+                                    ? _selectedClassDisplay
+                                    : (_availableClasses.isNotEmpty ? _availableClasses.first.displayName : null),
+                                decoration: InputDecoration(
+                                  prefixIcon: const Icon(Icons.school, size: 18, color: Color(0xFF1E40AF)),
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                                ),
+                                items: _availableClasses
+                                    .map((c) => DropdownMenuItem(value: c.displayName, child: Text(c.displayName, style: const TextStyle(fontSize: 13))))
+                                    .toList(),
+                                onChanged: (val) {
+                                  setState(() {
+                                    _selectedClassDisplay = val;
+                                    final match = _availableClasses.cast<AcademicClass?>().firstWhere((c) => c?.displayName == val, orElse: () => null);
+                                    _selectedClassId = match?.id;
+                                  });
+                                },
+                              ),
+                        const SizedBox(height: 16),
 
                         // Activity Title
                         const Text(
-                          'Activity Title *',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 13,
-                          ),
+                          'Activity Title',
+                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF334155)),
                         ),
                         const SizedBox(height: 6),
                         TextFormField(
                           controller: _titleController,
                           decoration: InputDecoration(
-                            hintText: 'e.g. Final Capstone Project',
-                            prefixIcon: const Icon(Icons.assignment, size: 20),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 12,
-                            ),
+                            hintText: 'e.g. Final Project',
+                            prefixIcon: const Icon(Icons.assignment_outlined, size: 18),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                           ),
-                          validator: (val) => val == null || val.trim().isEmpty
-                              ? 'Activity title is required'
-                              : null,
-                        ),
-                        const SizedBox(height: 14),
-
-                        // Description
-                        const Text(
-                          'Activity Description',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 13,
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        TextFormField(
-                          controller: _descriptionController,
-                          maxLines: 2,
-                          decoration: InputDecoration(
-                            hintText: 'Explain the activity goals, expected deliverables, and grouping guidelines...',
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            contentPadding: const EdgeInsets.all(12),
-                          ),
+                          validator: (val) => val == null || val.trim().isEmpty ? 'Please enter a title' : null,
                         ),
                         const SizedBox(height: 16),
 
-                        // Grouping Method & Team Sizes
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // Grouping Method (Auto, Manual, Hybrid)
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Text(
-                                    'Grouping Method *',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 13,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 6),
-                                  Row(
-                                    children: [
-                                      _buildMethodChip(
-                                        'auto',
-                                        'Auto (Algorithm)',
-                                        Icons.smart_toy,
-                                      ),
-                                      const SizedBox(width: 8),
-                                      _buildMethodChip(
-                                        'manual',
-                                        'Manual',
-                                        Icons.person_search,
-                                      ),
-                                      const SizedBox(width: 8),
-                                      _buildMethodChip(
-                                        'hybrid',
-                                        'Hybrid',
-                                        Icons.shuffle,
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-
-                        // Capacity, Number of Groups, Min Common Hours, Min Proficiency
+                        // Group Size & Number of Groups (Side-by-side)
                         Row(
                           children: [
                             Expanded(
@@ -554,38 +322,19 @@ class _ActivityFormDialogState extends State<ActivityFormDialog> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   const Text(
-                                    'Group Capacity *',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 13,
-                                    ),
+                                    'Group Size',
+                                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF334155)),
                                   ),
                                   const SizedBox(height: 6),
                                   TextFormField(
                                     controller: _groupCapacityController,
                                     keyboardType: TextInputType.number,
                                     decoration: InputDecoration(
-                                      prefixIcon: const Icon(
-                                        Icons.group,
-                                        size: 20,
-                                      ),
-                                      suffixText: 'members',
-                                      border: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(10),
-                                      ),
-                                      contentPadding:
-                                          const EdgeInsets.symmetric(
-                                            horizontal: 12,
-                                            vertical: 12,
-                                          ),
+                                      prefixIcon: const Icon(Icons.people_alt_outlined, size: 18),
+                                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                                     ),
-                                    validator: (val) {
-                                      final n = int.tryParse(val ?? '');
-                                      if (n == null || n < 2) {
-                                        return 'Min 2';
-                                      }
-                                      return null;
-                                    },
+                                    validator: (v) => (int.tryParse(v ?? '') ?? 0) < 2 ? 'Min 2' : null,
                                   ),
                                 ],
                               ),
@@ -597,115 +346,18 @@ class _ActivityFormDialogState extends State<ActivityFormDialog> {
                                 children: [
                                   const Text(
                                     'Number of Groups',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 13,
-                                    ),
+                                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF334155)),
                                   ),
                                   const SizedBox(height: 6),
                                   TextFormField(
                                     controller: _numberOfGroupsController,
                                     keyboardType: TextInputType.number,
                                     decoration: InputDecoration(
-                                      prefixIcon: const Icon(
-                                        Icons.grid_view,
-                                        size: 20,
-                                      ),
-                                      suffixText: 'teams',
-                                      border: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(10),
-                                      ),
-                                      contentPadding:
-                                          const EdgeInsets.symmetric(
-                                            horizontal: 12,
-                                            vertical: 12,
-                                          ),
+                                      prefixIcon: const Icon(Icons.grid_view_outlined, size: 18),
+                                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                                     ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(width: 14),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Text(
-                                    'Min Common Hours *',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 13,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 6),
-                                  TextFormField(
-                                    controller: _minCommonHoursController,
-                                    keyboardType: TextInputType.number,
-                                    decoration: InputDecoration(
-                                      prefixIcon: const Icon(
-                                        Icons.access_time,
-                                        size: 20,
-                                      ),
-                                      suffixText: 'hrs/wk',
-                                      border: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(10),
-                                      ),
-                                      contentPadding:
-                                          const EdgeInsets.symmetric(
-                                            horizontal: 12,
-                                            vertical: 12,
-                                          ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(width: 14),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Text(
-                                    'Min Proficiency *',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 13,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 6),
-                                  DropdownButtonFormField<String>(
-                                    initialValue: _minProficiencyLevel,
-                                    decoration: InputDecoration(
-                                      border: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(10),
-                                      ),
-                                      contentPadding:
-                                          const EdgeInsets.symmetric(
-                                            horizontal: 12,
-                                            vertical: 12,
-                                          ),
-                                    ),
-                                    items: const [
-                                      DropdownMenuItem(
-                                        value: 'Beginner',
-                                        child: Text('Beginner'),
-                                      ),
-                                      DropdownMenuItem(
-                                        value: 'Intermediate',
-                                        child: Text('Intermediate'),
-                                      ),
-                                      DropdownMenuItem(
-                                        value: 'Advanced',
-                                        child: Text('Advanced'),
-                                      ),
-                                    ],
-                                    onChanged: (val) {
-                                      if (val != null) {
-                                        setState(
-                                          () => _minProficiencyLevel = val,
-                                        );
-                                      }
-                                    },
+                                    validator: (v) => (int.tryParse(v ?? '') ?? 0) < 1 ? 'Min 1' : null,
                                   ),
                                 ],
                               ),
@@ -714,168 +366,36 @@ class _ActivityFormDialogState extends State<ActivityFormDialog> {
                         ),
                         const SizedBox(height: 18),
 
-                        // Deadlines
+                        // Required Skills Chips
                         Row(
-                          children: [
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Text(
-                                    'Grouping Deadline *',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 13,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 6),
-                                  InkWell(
-                                    onTap: () => _pickDateTime(
-                                      context: context,
-                                      initialDate: _groupingDeadline,
-                                      onPicked: (dt) => setState(
-                                        () => _groupingDeadline = dt,
-                                      ),
-                                    ),
-                                    borderRadius: BorderRadius.circular(10),
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 12,
-                                        vertical: 12,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        border: Border.all(
-                                          color: Colors.grey.shade400,
-                                        ),
-                                        borderRadius: BorderRadius.circular(10),
-                                      ),
-                                      child: Row(
-                                        children: [
-                                          const Icon(
-                                            Icons.event,
-                                            size: 20,
-                                            color: Colors.blue,
-                                          ),
-                                          const SizedBox(width: 8),
-                                          Text(
-                                            _formatDateTime(_groupingDeadline),
-                                          ),
-                                          const Spacer(),
-                                          const Icon(
-                                            Icons.arrow_drop_down,
-                                            color: Colors.grey,
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Text(
-                                    'Student Modification Deadline (Switch cutoff)',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 13,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 6),
-                                  InkWell(
-                                    onTap: () => _pickDateTime(
-                                      context: context,
-                                      initialDate:
-                                          _modificationDeadline ??
-                                          DateTime.now().add(
-                                            const Duration(days: 17),
-                                          ),
-                                      onPicked: (dt) => setState(
-                                        () => _modificationDeadline = dt,
-                                      ),
-                                    ),
-                                    borderRadius: BorderRadius.circular(10),
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 12,
-                                        vertical: 12,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        border: Border.all(
-                                          color: Colors.grey.shade400,
-                                        ),
-                                        borderRadius: BorderRadius.circular(10),
-                                      ),
-                                      child: Row(
-                                        children: [
-                                          const Icon(
-                                            Icons.edit_calendar,
-                                            size: 20,
-                                            color: Colors.indigo,
-                                          ),
-                                          const SizedBox(width: 8),
-                                          Text(
-                                            _modificationDeadline != null
-                                                ? _formatDateTime(
-                                                    _modificationDeadline!,
-                                                  )
-                                                : 'Set deadline',
-                                          ),
-                                          const Spacer(),
-                                          const Icon(
-                                            Icons.arrow_drop_down,
-                                            color: Colors.grey,
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 20),
-
-                        // Required Skills Section
-                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             const Text(
-                              'Required Skills *',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14,
-                              ),
+                              'Required Skills (Tap to toggle)',
+                              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF334155)),
                             ),
-                            const SizedBox(width: 8),
                             Text(
-                              '(${_requiredSkills.length} selected - Every group will require these)',
-                              style: TextStyle(
-                                color: Colors.grey[600],
-                                fontSize: 12,
-                              ),
+                              '${_requiredSkills.length} selected',
+                              style: const TextStyle(fontSize: 11, color: Color(0xFF059669), fontWeight: FontWeight.bold),
                             ),
                           ],
                         ),
                         const SizedBox(height: 8),
                         Wrap(
                           spacing: 8,
-                          runSpacing: 6,
-                          children: _standardSkills.map((skill) {
+                          runSpacing: 8,
+                          children: _commonRequiredSkills.map((skill) {
                             final isSelected = _requiredSkills.contains(skill);
                             return FilterChip(
-                              label: Text(skill),
+                              label: Text(skill, style: TextStyle(fontSize: 12, color: isSelected ? Colors.white : const Color(0xFF334155))),
                               selected: isSelected,
-                              selectedColor: Colors.blue[100],
-                              checkmarkColor: Colors.blue[800],
-                              onSelected: (val) {
+                              selectedColor: const Color(0xFF2563EB),
+                              backgroundColor: const Color(0xFFF1F5F9),
+                              checkmarkColor: Colors.white,
+                              onSelected: (selected) {
                                 setState(() {
-                                  if (val) {
+                                  if (selected) {
                                     _requiredSkills.add(skill);
-                                    _preferredSkills.remove(skill);
                                   } else {
                                     _requiredSkills.remove(skill);
                                   }
@@ -886,133 +406,107 @@ class _ActivityFormDialogState extends State<ActivityFormDialog> {
                         ),
                         const SizedBox(height: 18),
 
-                        // Preferred Skills Section
+                        // Preferred Skills Chips
                         Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             const Text(
-                              'Preferred Skills (Optional)',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14,
-                              ),
+                              'Preferred Skills (Tap to toggle)',
+                              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF334155)),
                             ),
-                            const SizedBox(width: 8),
                             Text(
-                              '(${_preferredSkills.length} selected - Weighted in matching score)',
-                              style: TextStyle(
-                                color: Colors.grey[600],
-                                fontSize: 12,
-                              ),
+                              '${_preferredSkills.length} selected',
+                              style: const TextStyle(fontSize: 11, color: Color(0xFF7E22CE), fontWeight: FontWeight.bold),
                             ),
                           ],
                         ),
                         const SizedBox(height: 8),
                         Wrap(
                           spacing: 8,
-                          runSpacing: 6,
-                          children: _standardSkills
-                              .where((s) => !_requiredSkills.contains(s))
-                              .map((skill) {
-                                final isSelected = _preferredSkills.contains(
-                                  skill,
-                                );
-                                return FilterChip(
-                                  label: Text(skill),
-                                  selected: isSelected,
-                                  selectedColor: Colors.teal[100],
-                                  checkmarkColor: Colors.teal[800],
-                                  onSelected: (val) {
-                                    setState(() {
-                                      if (val) {
-                                        _preferredSkills.add(skill);
-                                      } else {
-                                        _preferredSkills.remove(skill);
-                                      }
-                                    });
-                                  },
-                                );
-                              })
-                              .toList(),
+                          runSpacing: 8,
+                          children: _commonPreferredSkills.map((skill) {
+                            final isSelected = _preferredSkills.contains(skill);
+                            return FilterChip(
+                              label: Text(skill, style: TextStyle(fontSize: 12, color: isSelected ? Colors.white : const Color(0xFF334155))),
+                              selected: isSelected,
+                              selectedColor: const Color(0xFF7E22CE),
+                              backgroundColor: const Color(0xFFF1F5F9),
+                              checkmarkColor: Colors.white,
+                              onSelected: (selected) {
+                                setState(() {
+                                  if (selected) {
+                                    _preferredSkills.add(skill);
+                                  } else {
+                                    _preferredSkills.remove(skill);
+                                  }
+                                });
+                              },
+                            );
+                          }).toList(),
                         ),
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 18),
 
-                        // Custom Skill addition
-                        Row(
-                          children: [
-                            Expanded(
-                              child: TextField(
-                                controller: _customSkillController,
-                                decoration: InputDecoration(
-                                  hintText: 'Add custom skill (e.g. GraphQL, Tailwind CSS)',
-                                  prefixIcon: const Icon(Icons.add, size: 20),
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                  contentPadding: const EdgeInsets.symmetric(
-                                    horizontal: 12,
-                                    vertical: 10,
-                                  ),
+                        // Grouping Deadline
+                        const Text(
+                          'Deadline',
+                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF334155)),
+                        ),
+                        const SizedBox(height: 6),
+                        InkWell(
+                          onTap: _pickDeadline,
+                          borderRadius: BorderRadius.circular(8),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: const Color(0xFFCBD5E1)),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.calendar_month_outlined, size: 18, color: Color(0xFF059669)),
+                                const SizedBox(width: 10),
+                                Text(
+                                  '${_groupingDeadline.year}-${_groupingDeadline.month.toString().padLeft(2, '0')}-${_groupingDeadline.day.toString().padLeft(2, '0')}',
+                                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
                                 ),
-                                onSubmitted: (_) => _addCustomSkill(true),
-                              ),
+                                const Spacer(),
+                                const Text('Change', style: TextStyle(fontSize: 12, color: Color(0xFF2563EB), fontWeight: FontWeight.bold)),
+                              ],
                             ),
-                            const SizedBox(width: 8),
-                            OutlinedButton.icon(
-                              onPressed: () => _addCustomSkill(true),
-                              icon: const Icon(Icons.check, size: 16),
-                              label: const Text('+ Required'),
-                            ),
-                            const SizedBox(width: 8),
-                            OutlinedButton.icon(
-                              onPressed: () => _addCustomSkill(false),
-                              icon: const Icon(Icons.favorite_border, size: 16),
-                              label: const Text('+ Preferred'),
-                            ),
-                          ],
+                          ),
                         ),
                       ],
                     ),
                   ),
                 ),
 
-                const SizedBox(height: 14),
-                const Divider(),
-                const SizedBox(height: 8),
+                const SizedBox(height: 16),
+                const Divider(height: 1),
+                const SizedBox(height: 16),
 
-                // Bottom Buttons: Cancel & Create Activity
+                // Bottom Action Button: matching Step 4 green button
                 Row(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
-                    OutlinedButton(
-                      onPressed: _isSaving
-                          ? null
-                          : () => Navigator.of(context).pop(),
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(),
                       child: const Text('Cancel'),
                     ),
                     const SizedBox(width: 12),
                     ElevatedButton.icon(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blue[700],
+                        backgroundColor: const Color(0xFF059669), // Emerald green from Step 4
                         foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 20,
-                          vertical: 12,
-                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                       ),
-                      onPressed: _isSaving ? null : _save,
+                      onPressed: _isSaving ? null : _saveActivity,
                       icon: _isSaving
-                          ? const SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
-                              ),
-                            )
-                          : Icon(isEditing ? Icons.save : Icons.add_task),
+                          ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                          : const Icon(Icons.check, size: 18),
                       label: Text(
-                        isEditing ? 'Save Changes' : 'Create Project',
-                        style: const TextStyle(fontWeight: FontWeight.bold),
+                        _isSaving ? 'Creating...' : (isEditing ? 'Save Changes' : 'Create Activity'),
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
                       ),
                     ),
                   ],
@@ -1022,27 +516,6 @@ class _ActivityFormDialogState extends State<ActivityFormDialog> {
           ),
         ),
       ),
-    );
-  }
-
-  Widget _buildMethodChip(String method, String label, IconData icon) {
-    final isSelected = _groupingMethod == method;
-    return ChoiceChip(
-      avatar: Icon(
-        icon,
-        size: 16,
-        color: isSelected ? Colors.white : Colors.grey[700],
-      ),
-      label: Text(label),
-      selected: isSelected,
-      selectedColor: Colors.blue[700],
-      labelStyle: TextStyle(
-        color: isSelected ? Colors.white : Colors.grey[800],
-        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-      ),
-      onSelected: (val) {
-        if (val) setState(() => _groupingMethod = method);
-      },
     );
   }
 }

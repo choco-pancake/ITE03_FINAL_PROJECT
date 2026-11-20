@@ -8,6 +8,7 @@ class ActivityCard extends StatelessWidget {
   final VoidCallback onEdit;
   final VoidCallback onDelete;
   final VoidCallback? onScarcityReport;
+  final VoidCallback? onFinalize;
 
   const ActivityCard({
     super.key,
@@ -16,6 +17,7 @@ class ActivityCard extends StatelessWidget {
     required this.onEdit,
     required this.onDelete,
     this.onScarcityReport,
+    this.onFinalize,
   });
 
   String _formatDate(DateTime dt) {
@@ -281,7 +283,7 @@ class ActivityCard extends StatelessWidget {
             const Divider(height: 1),
             const SizedBox(height: 10),
 
-            // Card Action Buttons (View Details, Scarcity Report, Edit, Delete)
+            // Card Action Buttons (Skill Distribution, Finalize, View Details, Edit, Delete)
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
@@ -290,7 +292,7 @@ class ActivityCard extends StatelessWidget {
                     onPressed: onScarcityReport,
                     icon: const Icon(Icons.analytics_outlined, size: 16),
                     label: const Text(
-                      'Scarcity',
+                      'Skill Distribution',
                       style: TextStyle(fontSize: 12),
                     ),
                     style: TextButton.styleFrom(
@@ -298,6 +300,24 @@ class ActivityCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 4),
+                ],
+                if (activity.status.toLowerCase() != 'completed' && onFinalize != null) ...[
+                  ElevatedButton.icon(
+                    onPressed: onFinalize,
+                    icon: const Icon(Icons.check_circle_outline, size: 15),
+                    label: const Text(
+                      'Finalize (Step 10)',
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF059669),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                    ),
+                  ),
+                  const SizedBox(width: 6),
                 ],
                 TextButton.icon(
                   onPressed: onViewDetails,

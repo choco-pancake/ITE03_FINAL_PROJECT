@@ -227,7 +227,41 @@ class ProfessorEvaluationScreen extends StatefulWidget {
 }
 
 class _ProfessorEvaluationScreenState extends State<ProfessorEvaluationScreen> {
-  final List<_Request> _requests = [];
+  final List<_Request> _requests = [
+    _Request(
+      studentName: 'Alex Santos',
+      studentId: '2024-0012',
+      program: 'BSIT 2A',
+      title: 'Request to swap with Bea Cruz',
+      field: 'Teammate Swap',
+      currentValue: 'Group 3 (Olive Ramos)',
+      requestedValue: 'Group 1 (Bea Cruz)',
+      submitted: DateTime.now().subtract(const Duration(hours: 2)),
+      status: _Status.pending,
+    ),
+    _Request(
+      studentName: 'Mia Alberto',
+      studentId: '2024-0045',
+      program: 'BSIT 2A',
+      title: 'Schedule conflict',
+      field: 'Availability Overlap',
+      currentValue: 'Evening Sessions (Tue/Thu)',
+      requestedValue: 'Morning / Afternoon Sessions',
+      submitted: DateTime.now().subtract(const Duration(hours: 5)),
+      status: _Status.underReview,
+    ),
+    _Request(
+      studentName: 'Noah Sy',
+      studentId: '2024-0089',
+      program: 'BSIT 2A',
+      title: 'Request reconsideration',
+      field: 'Role Assignment',
+      currentValue: 'Documentation Specialist',
+      requestedValue: 'Database Specialist',
+      submitted: DateTime.now().subtract(const Duration(days: 1)),
+      status: _Status.pending,
+    ),
+  ];
   final _searchCtrl = TextEditingController();
   final Set<_Status> _filters = {};
   _Sort _sort = _Sort.newest;
@@ -578,6 +612,30 @@ class _ProfessorEvaluationScreenState extends State<ProfessorEvaluationScreen> {
                                   ),
                                 ),
                               ),
+                              onApprove: () {
+                                setState(() {
+                                  items[i].status = _Status.approved;
+                                  items[i].history.add(_HistoryEntry(DateTime.now(), 'Approved directly by professor'));
+                                });
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Approved ${items[i].studentName}\'s request.'),
+                                    backgroundColor: const Color(0xFF059669),
+                                  ),
+                                );
+                              },
+                              onReject: () {
+                                setState(() {
+                                  items[i].status = _Status.rejected;
+                                  items[i].history.add(_HistoryEntry(DateTime.now(), 'Rejected directly by professor'));
+                                });
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Rejected ${items[i].studentName}\'s request.'),
+                                    backgroundColor: const Color(0xFFDC2626),
+                                  ),
+                                );
+                              },
                             ),
                           ),
                   ),
@@ -684,12 +742,22 @@ class _EmptyState extends StatelessWidget {
 class _RequestCard extends StatelessWidget {
   final _Request request;
   final VoidCallback onView;
-  const _RequestCard({required this.request, required this.onView});
+  final VoidCallback? onApprove;
+  final VoidCallback? onReject;
+
+  const _RequestCard({
+    required this.request,
+    required this.onView,
+    this.onApprove,
+    this.onReject,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final canDecide = request.status == _Status.pending || request.status == _Status.underReview;
+
     return _Panel(
-      padding: const EdgeInsets.fromLTRB(16, 16, 12, 8),
+      padding: const EdgeInsets.fromLTRB(16, 16, 12, 12),
       child: Column(
         children: [
           Row(
@@ -726,6 +794,7 @@ class _RequestCard extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           const Divider(height: 1, color: _C.border),
+          const SizedBox(height: 6),
           Row(
             children: [
               const Icon(
@@ -752,6 +821,50 @@ class _RequestCard extends StatelessWidget {
               ),
             ],
           ),
+          if (canDecide && onApprove != null && onReject != null) ...[
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF059669),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      elevation: 0,
+                    ),
+                    onPressed: onApprove,
+                    child: const Text(
+                      'Approve',
+                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFDC2626),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      elevation: 0,
+                    ),
+                    onPressed: onReject,
+                    child: const Text(
+                      'Reject',
+                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );

@@ -1,12 +1,34 @@
 import 'package:flutter/material.dart';
 
 import 'widgets/portal_top_actions.dart';
-
+import 'widgets/student_sidebar.dart';
 import '../models/grouping_activity.dart';
 import '../models/profile.dart';
 import '../services/activity_service.dart';
+import '../services/auth_service.dart';
 import '../services/profile_service.dart';
-import 'widgets/student_sidebar.dart';
+
+class CompatibilityResult {
+  final double complementarySkills; // max 35
+  final double sharedInterests; // max 20
+  final double preferredRoles; // max 20
+  final double availabilityOverlap; // max 15
+  final double projectPreference; // max 10
+  final double totalScore; // sum of above
+  final String compatibilityTier; // "Highly compatible", "Good compatibility", "Moderate compatibility"
+  final Color color;
+
+  CompatibilityResult({
+    required this.complementarySkills,
+    required this.sharedInterests,
+    required this.preferredRoles,
+    required this.availabilityOverlap,
+    required this.projectPreference,
+    required this.totalScore,
+    required this.compatibilityTier,
+    required this.color,
+  });
+}
 
 class StudentCandidate {
   final int id;
@@ -36,47 +58,58 @@ class StudentCandidate {
   });
 }
 
+/// Simplified Student Groups Workspace implementing Workflow Steps 6, 7 & 8:
+/// - Step 6: Compatibility Matching
+/// - Step 7: Automated Team Formation
+/// - Step 8: Student Review and Modification (Accept Group / Request Change)
 class StudentGroupsScreen extends StatefulWidget {
   final int? initialActivityId;
+  final int? initialClassId;
+  final String? initialClassName;
 
-  const StudentGroupsScreen({super.key, this.initialActivityId});
+  const StudentGroupsScreen({
+    super.key,
+    this.initialActivityId,
+    this.initialClassId,
+    this.initialClassName,
+  });
 
   @override
   State<StudentGroupsScreen> createState() => _StudentGroupsScreenState();
 }
 
-class _StudentGroupsScreenState extends State<StudentGroupsScreen> {
+class _StudentGroupsScreenState extends State<StudentGroupsScreen>
+    with SingleTickerProviderStateMixin {
   final _activityService = ActivityService();
   final _profileService = ProfileService();
-  final _searchController = TextEditingController();
 
+  late TabController _tabController;
   List<GroupingActivity> _activities = [];
   List<Profile> _allProfiles = [];
   GroupingActivity? _selectedActivity;
+  Profile? _selectedPeerForCompatibility;
+
   bool _isLoading = true;
   String? _errorMessage;
 
-  String _filterMode = 'skills'; // 'skills', 'availability', 'all'
-  String _projectStatusFilter = 'all';
-
-  // Local state for teams created during the session
-  final Map<int, Map<String, dynamic>> _localCreatedTeams = {};
-  // Track invited student names per activity
-  final Map<int, Set<String>> _invitedStudents = {};
+  // Local state for user review status: 'suggested', 'accepted', 'under_review'
+  String _groupReviewStatus = 'suggested';
+  bool _isActionInProgress = false;
 
   @override
   void initState() {
     super.initState();
-    _loadActivities();
+    _tabController = TabController(length: 3, vsync: this);
+    _loadData();
   }
 
   @override
   void dispose() {
-    _searchController.dispose();
+    _tabController.dispose();
     super.dispose();
   }
 
-  Future<void> _loadActivities() async {
+  Future<void> _loadData() async {
     setState(() {
       _isLoading = true;
       _errorMessage = null;
@@ -94,17 +127,47 @@ class _StudentGroupsScreenState extends State<StudentGroupsScreen> {
         setState(() {
           _activities = list;
           _allProfiles = profiles;
+
+          // Select matching activity
           if (widget.initialActivityId != null) {
             _selectedActivity = list.firstWhere(
               (a) => a.id == widget.initialActivityId,
-              orElse: () => list.first,
+              orElse: () => list.isNotEmpty ? list.first : null as dynamic,
             );
-          } else if (_selectedActivity != null) {
-            _selectedActivity = list.firstWhere(
-              (a) => a.id == _selectedActivity!.id,
-              orElse: () => _selectedActivity!,
-            );
+          } else if (widget.initialClassId != null || widget.initialClassName != null) {
+            final matching = list.where((a) {
+              if (widget.initialClassId != null && a.academicClassId == widget.initialClassId) {
+                return true;
+              }
+              if (widget.initialClassName != null) {
+                final cName = widget.initialClassName!.toLowerCase();
+                final aClass = a.className.toLowerCase();
+                return aClass.contains(cName.split(' - ').first.trim());
+              }
+              return false;
+            }).toList();
+
+            _selectedActivity = matching.isNotEmpty ? matching.first : (list.isNotEmpty ? list.first : null);
+          } else if (list.isNotEmpty) {
+            _selectedActivity = list.first;
           }
+
+          // Select initial peer for compatibility matching (Step 6)
+          final currentUser = AuthService.currentUser;
+          final currentEmail = currentUser?.email.toLowerCase() ?? '';
+          final otherProfiles = profiles.where((p) => p.email.toLowerCase() != currentEmail).toList();
+          if (otherProfiles.isNotEmpty) {
+            _selectedPeerForCompatibility = otherProfiles.first;
+          }
+
+          // Detect group status from activity teams
+          if (_selectedActivity != null) {
+            final team = _getStudentTeam(_selectedActivity!);
+            if (team != null) {
+              _groupReviewStatus = team['status']?.toString() ?? 'suggested';
+            }
+          }
+
           _isLoading = false;
         });
       }
@@ -118,8 +181,11 @@ class _StudentGroupsScreenState extends State<StudentGroupsScreen> {
     }
   }
 
-  Map<String, dynamic> _getTeamState(GroupingActivity activity) {
-    // 1. Inspect the activity's formed_teams from backend
+  Map<String, dynamic>? _getStudentTeam(GroupingActivity activity) {
+    final currentUser = AuthService.currentUser;
+    final currentEmail = currentUser?.email.toLowerCase() ?? '';
+    final currentName = currentUser?.name.toLowerCase() ?? '';
+
     final teams = activity.formedTeams;
     if (teams != null && teams.isNotEmpty) {
       for (final t in teams) {
@@ -127,621 +193,193 @@ class _StudentGroupsScreenState extends State<StudentGroupsScreen> {
         final members = (teamMap['members'] as List?) ?? [];
         for (final m in members) {
           final memberMap = Map<String, dynamic>.from(m as Map);
-          final email = memberMap['email']?.toString() ?? '';
-          final name = memberMap['name']?.toString() ?? '';
-          if (email == 'alex.santos@student.edu' ||
-              name.toLowerCase().contains('alex santos') ||
-              name.contains('(You)')) {
-            return {
-              'hasTeam': true,
-              'teamName': teamMap['name']?.toString() ?? 'My Group',
-              'isLeader': memberMap['is_leader'] == true,
-              'isAutoAssigned': teamMap['is_auto_assigned'] == true,
-              'members': members
-                  .map(
-                    (mem) => Map<String, String>.from(
-                      (mem as Map).map(
-                        (k, v) => MapEntry(k.toString(), v?.toString() ?? ''),
-                      ),
-                    ),
-                  )
-                  .toList(),
-            };
+          final email = memberMap['email']?.toString().toLowerCase() ?? '';
+          final name = memberMap['name']?.toString().toLowerCase() ?? '';
+          final isCurrentUser = (currentEmail.isNotEmpty && email == currentEmail) ||
+              (currentName.isNotEmpty && name.contains(currentName)) ||
+              (currentUser == null && (email == 'carlos.mendoza@student.edu' || email == 'alex.santos@student.edu'));
+          if (isCurrentUser) {
+            return teamMap;
           }
         }
       }
+      // Fall back to the first team of this specific activity
+      return Map<String, dynamic>.from(teams.first as Map);
     }
 
-    // 2. Check local state if student created a team in this session
-    if (_localCreatedTeams.containsKey(activity.id)) {
-      return _localCreatedTeams[activity.id]!;
-    }
-
-    // 3. Fallback for completed auto activities
-    if (activity.status.toLowerCase() == 'completed' &&
-        activity.groupingMethod == 'auto') {
-      final section = activity.className.split(' - ').lastOrNull ?? 'BSCS';
-      return {
-        'hasTeam': true,
-        'teamName': 'Team Alpha Synthetix',
-        'isLeader': false,
-        'isAutoAssigned': true,
-        'members': [
-          {
-            'name': 'Alex Santos (You)',
-            'role': activity.requiredSkills.isNotEmpty
-                ? activity.requiredSkills.first
-                : 'Student Developer',
-            'block': section,
-            'avatar': 'A',
-          },
-          {
-            'name': 'Liam Torres',
-            'role': 'Team Leader & Specialist',
-            'block': section,
-            'avatar': 'L',
-          },
-          {
-            'name': 'Chloe Mendoza',
-            'role': activity.requiredSkills.length > 1
-                ? activity.requiredSkills[1]
-                : 'UI/UX Designer',
-            'block': section,
-            'avatar': 'C',
-          },
-          {
-            'name': 'Marcus Vance',
-            'role': activity.requiredSkills.length > 2
-                ? activity.requiredSkills[2]
-                : 'API Developer',
-            'block': section,
-            'avatar': 'M',
-          },
-        ],
-      };
-    }
-
-    // 4. No team assigned yet
-    return {
-      'hasTeam': false,
-      'teamName': '',
-      'isLeader': false,
-      'isAutoAssigned': false,
-      'members': <Map<String, String>>[],
-    };
+    return null;
   }
 
-  List<StudentCandidate> _getCandidatesForActivity(GroupingActivity activity) {
-    final teamState = _getTeamState(activity);
-    final teamMemberNames = ((teamState['members'] as List?) ?? [])
-        .map((m) => (m as Map)['name']?.toString() ?? '')
-        .toSet();
-
-    final section =
-        activity.className.split(' - ').lastOrNull ?? 'Class Member';
-    final invitedSet = _invitedStudents[activity.id] ?? <String>{};
-
-    if (_allProfiles.isNotEmpty) {
-      final candidates = <StudentCandidate>[];
-      for (final p in _allProfiles) {
-        if (p.email == 'alex.santos@student.edu' ||
-            p.name.contains('Alex Santos')) {
-          continue;
-        }
-
-        if (teamMemberNames.any((tm) => tm.contains(p.name))) {
-          continue;
-        }
-
-        int matchCount = 0;
-        for (final req in activity.requiredSkills) {
-          if (p.skills.contains(req)) matchCount += 2;
-        }
-        for (final pref in activity.preferredSkills) {
-          if (p.skills.contains(pref)) matchCount += 1;
-        }
-
-        final maxPossible =
-            (activity.requiredSkills.length * 2) +
-            activity.preferredSkills.length;
-        double score = 70.0;
-        if (maxPossible > 0) {
-          score = 70.0 + ((matchCount / maxPossible) * 28.0);
-        }
-        if (score > 98.0) score = 98.0;
-
-        int commonHours = activity.minCommonHours;
-        if (p.availability.contains('afternoon') ||
-            p.availability.contains('PM')) {
-          commonHours = (commonHours + 1).clamp(1, 10);
-        }
-
-        candidates.add(
-          StudentCandidate(
-            id: p.id ?? candidates.length + 1,
-            name: p.name,
-            block: section,
-            avatarUrl: p.name.isNotEmpty
-                ? p.name.substring(0, 1).toUpperCase()
-                : 'S',
-            skills: p.skills,
-            interests: p.interests,
-            availability: p.availability,
-            commonHours: commonHours,
-            compatibilityScore: double.parse(score.toStringAsFixed(1)),
-            preferredRole: p.preferredRole,
-            isInvited: invitedSet.contains(p.name),
-          ),
-        );
-      }
-
-      candidates.sort(
-        (a, b) => b.compatibilityScore.compareTo(a.compatibilityScore),
-      );
-      return candidates;
-    }
-
-    return [];
-  }
-
-  List<StudentCandidate> _getSortedCandidates(GroupingActivity activity) {
-    final list = List<StudentCandidate>.from(
-      _getCandidatesForActivity(activity),
-    );
-    if (_filterMode == 'skills') {
-      list.sort((a, b) => b.compatibilityScore.compareTo(a.compatibilityScore));
-    } else if (_filterMode == 'availability') {
-      list.sort((a, b) => b.commonHours.compareTo(a.commonHours));
-    }
-    return list;
-  }
-
-  List<GroupingActivity> get _filteredActivities {
-    return _activities.where((a) {
-      final matchesSearch =
-          _searchController.text.trim().isEmpty ||
-          a.title.toLowerCase().contains(
-            _searchController.text.trim().toLowerCase(),
-          ) ||
-          a.className.toLowerCase().contains(
-            _searchController.text.trim().toLowerCase(),
-          );
-
-      final matchesStatus =
-          _projectStatusFilter == 'all' ||
-          (_projectStatusFilter == 'active' &&
-              (a.status == 'open' || a.status == 'grouping in progress')) ||
-          a.status.toLowerCase() == _projectStatusFilter.toLowerCase();
-
-      return matchesSearch && matchesStatus;
-    }).toList();
-  }
-
-  Future<void> _inviteTeammate(
-    StudentCandidate candidate,
-    GroupingActivity activity,
-  ) async {
-    final teamState = _getTeamState(activity);
-    final hasTeam = teamState['hasTeam'] == true;
-    final members = (teamState['members'] as List?) ?? [];
-    final slotsOpen = activity.groupCapacity - members.length;
-
-    if (!hasTeam) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Please start or join a team first before inviting candidates!',
-          ),
-          backgroundColor: Colors.orange,
-        ),
-      );
-      return;
-    }
-
-    if (slotsOpen <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Your team has already reached maximum capacity!'),
-          backgroundColor: Colors.orange,
-        ),
-      );
-      return;
-    }
-
-    final teamName = teamState['teamName'] as String;
+  Future<void> _acceptGroup() async {
+    if (_selectedActivity?.id == null) return;
+    setState(() => _isActionInProgress = true);
 
     try {
-      if (activity.id != null) {
-        await _activityService.inviteStudent(
-          activity.id!,
-          teamName,
-          candidate.name,
-          role: candidate.preferredRole,
-        );
-      }
-
-      setState(() {
-        candidate.isInvited = true;
-        _invitedStudents
-            .putIfAbsent(activity.id ?? 0, () => <String>{})
-            .add(candidate.name);
-      });
-
-      _loadActivities();
-
+      await _activityService.acceptGroup(
+        _selectedActivity!.id!,
+        email: AuthService.currentUser?.email,
+      );
       if (mounted) {
+        setState(() {
+          _groupReviewStatus = 'accepted';
+          _isActionInProgress = false;
+        });
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Invitation sent to ${candidate.name} ($slotsOpen slots remaining)!',
-            ),
-            backgroundColor: const Color(0xFF059669),
+          const SnackBar(
+            content: Text('Group assignment officially accepted! Final assignments will be published soon.'),
+            backgroundColor: Color(0xFF059669),
+            behavior: SnackBarBehavior.floating,
           ),
         );
       }
     } catch (_) {
       if (mounted) {
         setState(() {
-          candidate.isInvited = true;
-          _invitedStudents
-              .putIfAbsent(activity.id ?? 0, () => <String>{})
-              .add(candidate.name);
+          _groupReviewStatus = 'accepted';
+          _isActionInProgress = false;
         });
-
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Invitation sent to ${candidate.name}!'),
-            backgroundColor: const Color(0xFF059669),
+          const SnackBar(
+            content: Text('Group assignment accepted!'),
+            backgroundColor: Color(0xFF059669),
+            behavior: SnackBarBehavior.floating,
           ),
         );
       }
     }
   }
 
-  void _showCreateGroupDialog(GroupingActivity activity) {
-    final titleController = TextEditingController(text: 'Team NextGen');
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Create New Team'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'For ${activity.title} (${activity.className})',
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 13,
-                color: Color(0xFF1E40AF),
-              ),
-            ),
-            const SizedBox(height: 6),
-            const Text(
-              'As the group creator, you will be assigned as the Team Leader.',
-              style: TextStyle(fontSize: 12, color: Colors.grey),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: titleController,
-              decoration: const InputDecoration(
-                labelText: 'Team Name',
-                border: OutlineInputBorder(),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF1E40AF),
-              foregroundColor: Colors.white,
-            ),
-            onPressed: () async {
-              final newName = titleController.text.trim();
-              final teamName = newName.isNotEmpty ? newName : 'My New Team';
-              final section =
-                  activity.className.split(' - ').lastOrNull ?? 'BSIT';
-
-              Navigator.of(ctx).pop();
-
-              try {
-                if (activity.id != null) {
-                  await _activityService.createTeam(
-                    activity.id!,
-                    teamName,
-                    role: 'Team Leader & Developer',
-                  );
-                  await _loadActivities();
-                }
-              } catch (_) {
-                setState(() {
-                  _localCreatedTeams[activity.id ?? 1] = {
-                    'hasTeam': true,
-                    'teamName': teamName,
-                    'isLeader': true,
-                    'isAutoAssigned': false,
-                    'members': [
-                      {
-                        'name': 'Alex Santos (You)',
-                        'role': 'Team Leader & Developer',
-                        'block': section,
-                        'avatar': 'A',
-                      },
-                    ],
-                  };
-                });
-              }
-
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Created team "$teamName" as Team Leader!'),
-                    backgroundColor: const Color(0xFF059669),
-                  ),
-                );
-              }
-            },
-            child: const Text('Create Group'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showSwitchRequestDialog(GroupingActivity activity) {
+  void _showRequestChangeDialog() {
     final reasonController = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Request Group Switch'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Activity: ${activity.title}',
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 13,
-                color: Color(0xFF1E40AF),
-              ),
-            ),
-            const SizedBox(height: 6),
-            const Text(
-              'Switch requests are submitted to the Project Manager and Professor for approval. Teams are locked once approved.',
-              style: TextStyle(fontSize: 12, color: Colors.grey),
-            ),
-            const SizedBox(height: 14),
-            TextField(
-              controller: reasonController,
-              maxLines: 3,
-              decoration: const InputDecoration(
-                labelText: 'Reason for group switch / Target team or member',
-                hintText: 'e.g. Schedule conflict, complementary skill swap with Bea Cruz...',
-                border: OutlineInputBorder(),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.indigo.shade700,
-              foregroundColor: Colors.white,
-            ),
-            onPressed: () {
-              Navigator.of(ctx).pop();
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text(
-                    'Switch request sent to Professor & Team Manager!',
-                  ),
-                  backgroundColor: Color(0xFF1E40AF),
-                ),
-              );
-            },
-            child: const Text('Submit Request'),
-          ),
-        ],
-      ),
-    );
-  }
+    String selectedReason = 'Schedule conflict';
+    String? selectedSwapPeer;
 
-  void _showCandidateProfile(
-    StudentCandidate candidate,
-    GroupingActivity activity,
-  ) {
+    final peers = _allProfiles
+        .where((p) => p.email.toLowerCase() != (AuthService.currentUser?.email.toLowerCase() ?? ''))
+        .toList();
+
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Row(
-          children: [
-            CircleAvatar(
-              backgroundColor: const Color(0xFF1E40AF),
-              child: Text(
-                candidate.avatarUrl,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(candidate.name, style: const TextStyle(fontSize: 18)),
-                Text(
-                  '${candidate.block} • ${candidate.preferredRole}',
-                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                ),
-              ],
-            ),
-          ],
-        ),
-        content: SizedBox(
-          width: 440,
-          child: Column(
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setModalState) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Row(
+            children: const [
+              Icon(Icons.swap_horiz, color: Color(0xFF2563EB)),
+              SizedBox(width: 8),
+              Text('Request Group Change', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            ],
+          ),
+          content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.teal.shade50,
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: Colors.teal.shade200),
-                ),
-                child: Row(
-                  children: [
-                    Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        SizedBox(
-                          width: 44,
-                          height: 44,
-                          child: CircularProgressIndicator(
-                            value: candidate.compatibilityScore / 100,
-                            strokeWidth: 4,
-                            backgroundColor: Colors.teal.shade100,
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              Colors.teal.shade700,
-                            ),
-                          ),
-                        ),
-                        Text(
-                          '${candidate.compatibilityScore.toInt()}%',
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.teal.shade900,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'High Compatibility Match',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 13,
-                            ),
-                          ),
-                          Text(
-                            '40% Skills • 30% Interests • 30% Availability',
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: Colors.grey[700],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
+              const Text(
+                'Workflow Step 8: Modification Request',
+                style: TextStyle(fontSize: 12, color: Color(0xFF64748B), fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: 4),
+              const Text(
+                'Submit your request to the professor for review and evaluation.',
+                style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
               ),
               const SizedBox(height: 14),
 
-              const Text(
-                'Skills:',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-              ),
+              const Text('Reason for Request', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
               const SizedBox(height: 6),
-              Wrap(
-                spacing: 6,
-                runSpacing: 4,
-                children: candidate.skills.map((s) {
-                  final isReq = activity.requiredSkills.contains(s);
-                  return Chip(
-                    label: Text(
-                      s,
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: isReq
-                            ? Colors.blue.shade900
-                            : Colors.grey.shade800,
-                      ),
-                    ),
-                    backgroundColor: isReq
-                        ? Colors.blue.shade50
-                        : Colors.grey.shade100,
-                    side: BorderSide(
-                      color: isReq
-                          ? Colors.blue.shade300
-                          : Colors.grey.shade300,
-                    ),
-                  );
-                }).toList(),
+              DropdownButtonFormField<String>(
+                initialValue: selectedReason,
+                decoration: InputDecoration(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+                items: [
+                  'Schedule conflict',
+                  'Request to swap with peer',
+                  'Complementary skill preference',
+                  'Request reconsideration',
+                ]
+                    .map((r) => DropdownMenuItem(value: r, child: Text(r, style: const TextStyle(fontSize: 13))))
+                    .toList(),
+                onChanged: (val) {
+                  if (val != null) setModalState(() => selectedReason = val);
+                },
               ),
               const SizedBox(height: 12),
 
-              const Text(
-                'Interests:',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-              ),
-              const SizedBox(height: 6),
-              Wrap(
-                spacing: 6,
-                runSpacing: 4,
-                children: candidate.interests.map((i) {
-                  return Chip(
-                    label: Text(i, style: const TextStyle(fontSize: 11)),
-                    backgroundColor: Colors.teal.shade50,
-                    side: BorderSide(color: Colors.teal.shade200),
-                  );
-                }).toList(),
-              ),
-              const SizedBox(height: 12),
+              if (selectedReason.contains('swap')) ...[
+                const Text('Preferred Swap Partner', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 6),
+                DropdownButtonFormField<String>(
+                  decoration: InputDecoration(
+                    hintText: 'Select classmate to swap with',
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                  items: peers
+                      .map((p) => DropdownMenuItem(value: p.name, child: Text('${p.name} (${p.preferredRole})', style: const TextStyle(fontSize: 13))))
+                      .toList(),
+                  onChanged: (val) => setModalState(() => selectedSwapPeer = val),
+                ),
+                const SizedBox(height: 12),
+              ],
 
-              Row(
-                children: [
-                  const Icon(
-                    Icons.access_time,
-                    size: 16,
-                    color: Colors.blueGrey,
-                  ),
-                  const SizedBox(width: 6),
-                  Text(
-                    'Availability: ${candidate.availability}',
-                    style: const TextStyle(fontSize: 12),
-                  ),
-                ],
+              const Text('Additional Notes', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 6),
+              TextField(
+                controller: reasonController,
+                maxLines: 2,
+                decoration: InputDecoration(
+                  hintText: 'Brief explanation for instructor evaluation...',
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                ),
               ),
             ],
           ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Close'),
-          ),
-          ElevatedButton.icon(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF1E40AF),
-              foregroundColor: Colors.white,
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancel'),
             ),
-            onPressed: () {
-              Navigator.of(ctx).pop();
-              _inviteTeammate(candidate, activity);
-            },
-            icon: const Icon(Icons.person_add, size: 16),
-            label: Text(candidate.isInvited ? 'Invited' : 'Invite to Team'),
-          ),
-        ],
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF2563EB),
+                foregroundColor: Colors.white,
+              ),
+              onPressed: () async {
+                final messenger = ScaffoldMessenger.of(context);
+                Navigator.pop(ctx);
+                setState(() {
+                  _groupReviewStatus = 'under_review';
+                });
+
+                if (_selectedActivity?.id != null) {
+                  try {
+                    await _activityService.requestChange(
+                      _selectedActivity!.id!,
+                      reason: selectedReason,
+                      preferredSwap: selectedSwapPeer,
+                      studentName: AuthService.currentUser?.name,
+                      studentEmail: AuthService.currentUser?.email,
+                    );
+                  } catch (_) {}
+                }
+
+                if (mounted) {
+                  messenger.showSnackBar(
+                    const SnackBar(
+                      content: Text('Modification request submitted! Your group status is now Under Review by the professor.'),
+                      backgroundColor: Color(0xFF2563EB),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                }
+              },
+              child: const Text('Submit Request'),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -752,35 +390,35 @@ class _StudentGroupsScreenState extends State<StudentGroupsScreen> {
       backgroundColor: const Color(0xFFF8FAFC),
       body: Row(
         children: [
-          const StudentSidebar(
-            currentDestination: StudentNavDestination.groups,
-          ),
-
-          // Main POV Content Area
+          const StudentSidebar(currentDestination: StudentNavDestination.groups),
           Expanded(
             child: Column(
               children: [
-                _buildTopBar(),
+                _buildHeaderBar(),
                 Expanded(
                   child: _isLoading
                       ? const Center(child: CircularProgressIndicator())
                       : _errorMessage != null
-                      ? Center(
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text('Error: $_errorMessage'),
-                              const SizedBox(height: 10),
-                              ElevatedButton(
-                                onPressed: _loadActivities,
-                                child: const Text('Retry'),
+                          ? Center(
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text('Error loading groups: $_errorMessage'),
+                                  const SizedBox(height: 10),
+                                  ElevatedButton(onPressed: _loadData, child: const Text('Retry')),
+                                ],
                               ),
-                            ],
-                          ),
-                        )
-                      : _selectedActivity == null
-                      ? _buildProjectCardsGallery()
-                      : _buildProjectDetailView(_selectedActivity!),
+                            )
+                          : _selectedActivity == null
+                              ? const Center(child: Text('No active activities available.'))
+                              : TabBarView(
+                                  controller: _tabController,
+                                  children: [
+                                    _buildYourSuggestedGroupTab(),
+                                    _buildCompatibilityMatchingTab(),
+                                    _buildAllGeneratedGroupsTab(),
+                                  ],
+                                ),
                 ),
               ],
             ),
@@ -790,965 +428,175 @@ class _StudentGroupsScreenState extends State<StudentGroupsScreen> {
     );
   }
 
-  Widget _buildTopBar() {
+  Widget _buildHeaderBar() {
+    final activity = _selectedActivity;
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      decoration: BoxDecoration(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      decoration: const BoxDecoration(
         color: Colors.white,
-        border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
+        border: Border(bottom: BorderSide(color: Color(0xFFE2E8F0))),
       ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              _selectedActivity == null
-                  ? 'Course Projects (Gallery)'
-                  : 'Project & Teams',
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF0F172A),
-              ),
-            ),
-          ),
-          const SizedBox(width: 8),
-
-          if (_selectedActivity != null) ...[
-            TextButton.icon(
-              onPressed: () => setState(() => _selectedActivity = null),
-              icon: const Icon(Icons.grid_view, size: 16),
-              label: const Text('Browse All Cards'),
-              style: TextButton.styleFrom(
-                foregroundColor: const Color(0xFF1E40AF),
-              ),
-            ),
-            const SizedBox(width: 8),
-          ],
-
-          const PortalTopActions(),
-        ],
-      ),
-    );
-  }
-
-  /// 1. Gallery of Project Cards View (as requested)
-  Widget _buildProjectCardsGallery() {
-    final activities = _filteredActivities;
-
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(24.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Course Projects & Group Activities',
-                      style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF0F172A),
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Select an active project below to view requirements, manage your team, and find recommended teammates.',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: Colors.blueGrey.shade600,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              IconButton(
-                onPressed: _loadActivities,
-                tooltip: 'Refresh projects',
-                icon: const Icon(Icons.refresh),
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-
-          // Search & Filter Toolbar
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.grey.shade200),
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _searchController,
-                    decoration: InputDecoration(
-                      hintText: 'Search by project title or subject...',
-                      prefixIcon: const Icon(Icons.search, size: 20),
-                      isDense: true,
-                      filled: true,
-                      fillColor: const Color(0xFFF8FAFC),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 10,
-                      ),
-                    ),
-                    onChanged: (_) => setState(() {}),
+              if (widget.initialClassId != null && Navigator.canPop(context)) ...[
+                OutlinedButton.icon(
+                  onPressed: () => Navigator.pop(context),
+                  icon: const Icon(Icons.arrow_back, size: 14),
+                  label: const Text('← Enrolled Classes', style: TextStyle(fontSize: 11)),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    minimumSize: Size.zero,
                   ),
                 ),
                 const SizedBox(width: 12),
-                SegmentedButton<String>(
-                  segments: const [
-                    ButtonSegment(value: 'all', label: Text('All')),
-                    ButtonSegment(value: 'active', label: Text('Active')),
-                    ButtonSegment(value: 'completed', label: Text('Completed')),
-                  ],
-                  selected: {_projectStatusFilter},
-                  onSelectionChanged: (set) =>
-                      setState(() => _projectStatusFilter = set.first),
-                ),
               ],
-            ),
-          ),
-          const SizedBox(height: 20),
-
-          // Project Cards Grid
-          if (activities.isEmpty)
-            Center(
-              child: Container(
-                margin: const EdgeInsets.symmetric(vertical: 40),
-                padding: const EdgeInsets.all(32),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.grey.shade200),
+              Expanded(
+                child: Text(
+                  activity != null ? '${activity.className} • ${activity.title}' : 'Student Groups Workspace',
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
                 ),
-                child: const Text('No projects found matching your search.'),
               ),
-            )
-          else
-            LayoutBuilder(
-              builder: (context, constraints) {
-                final isWide = constraints.maxWidth > 850;
-
-                return GridView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: isWide ? 2 : 1,
-                    crossAxisSpacing: 16,
-                    mainAxisSpacing: 16,
-                    mainAxisExtent: 290,
-                  ),
-                  itemCount: activities.length,
-                  itemBuilder: (context, index) {
-                    final a = activities[index];
-                    return _buildGalleryProjectCard(a);
+              if (_activities.length > 1) ...[
+                const SizedBox(width: 8),
+                DropdownButton<GroupingActivity>(
+                  value: _selectedActivity,
+                  underline: const SizedBox.shrink(),
+                  icon: const Icon(Icons.keyboard_arrow_down, size: 16),
+                  items: _activities
+                      .map((a) => DropdownMenuItem(value: a, child: Text(a.title, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold))))
+                      .toList(),
+                  onChanged: (a) {
+                    if (a != null) {
+                      setState(() {
+                        _selectedActivity = a;
+                        final team = _getStudentTeam(a);
+                        if (team != null) {
+                          _groupReviewStatus = team['status']?.toString() ?? 'suggested';
+                        }
+                      });
+                    }
                   },
-                );
-              },
-            ),
+                ),
+                const SizedBox(width: 8),
+              ],
+              const PortalTopActions(),
+            ],
+          ),
+          const SizedBox(height: 10),
+
+          // 3 Tabs corresponding to Steps 8, 6, and 7
+          TabBar(
+            controller: _tabController,
+            isScrollable: true,
+            labelColor: const Color(0xFF059669),
+            unselectedLabelColor: const Color(0xFF64748B),
+            indicatorColor: const Color(0xFF059669),
+            indicatorWeight: 3,
+            labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+            tabs: const [
+              Tab(icon: Icon(Icons.stars, size: 18), text: 'Your Suggested Group (Step 8)'),
+              Tab(icon: Icon(Icons.compare_arrows, size: 18), text: 'Compatibility Matching (Step 6)'),
+              Tab(icon: Icon(Icons.groups, size: 18), text: 'All Generated Groups (Step 7)'),
+            ],
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildGalleryProjectCard(GroupingActivity a) {
-    final teamState = _getTeamState(a);
-    final hasTeam = teamState['hasTeam'] == true;
-    final teamName = teamState['teamName'] as String? ?? '';
-    final members = (teamState['members'] as List?) ?? [];
+  /// ───────────────────────── TAB 1: STEP 8 ─────────────────────────
+  /// "Student Review and Modification"
+  Widget _buildYourSuggestedGroupTab() {
+    final activity = _selectedActivity!;
+    final team = _getStudentTeam(activity);
+    final members = (team?['members'] as List?) ?? [];
+    final balanceScore = team?['balance_score'] ?? 90;
+    final teamName = team?['name']?.toString() ?? 'Group 3';
 
-    Color methodColor = Colors.teal.shade700;
-    if (a.groupingMethod.toLowerCase() == 'auto') {
-      methodColor = Colors.purple.shade600;
-    } else if (a.groupingMethod.toLowerCase() == 'hybrid') {
-      methodColor = Colors.indigo.shade600;
-    }
+    final totalMembers = members.length;
+    final acceptedCount = members.where((m) => (m as Map)['status'] == 'accepted').length;
 
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(14),
-        side: BorderSide(color: Colors.grey.shade200),
-      ),
-      child: InkWell(
-        onTap: () {
-          setState(() {
-            _selectedActivity = a;
-          });
-        },
-        borderRadius: BorderRadius.circular(14),
-        child: Padding(
-          padding: const EdgeInsets.all(18.0),
+    final isAccepted = _groupReviewStatus == 'accepted';
+    final isUnderReview = _groupReviewStatus == 'under_review';
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(24.0),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 860),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Title & Class
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          a.title,
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF0F172A),
-                          ),
-                        ),
-                        const SizedBox(height: 3),
-                        Row(
-                          children: [
-                            const Icon(
-                              Icons.school,
-                              size: 14,
-                              color: Colors.blueGrey,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              a.className,
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.blueGrey.shade700,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 3,
-                    ),
-                    decoration: BoxDecoration(
-                      color: methodColor.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(6),
-                      border: Border.all(
-                        color: methodColor.withValues(alpha: 0.3),
-                      ),
-                    ),
-                    child: Text(
-                      a.groupingMethod.toUpperCase(),
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                        color: methodColor,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
-
-              // Description snippet
-              if (a.description != null && a.description!.isNotEmpty)
-                Text(
-                  a.description!,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey.shade700,
-                    height: 1.3,
-                  ),
-                ),
-              const SizedBox(height: 12),
-
-              // Spec badges
-              Wrap(
-                spacing: 8,
-                runSpacing: 6,
-                children: [
-                  _buildSpecBadge(
-                    icon: Icons.groups,
-                    label: 'Capacity',
-                    value: '${a.groupCapacity} / team',
-                  ),
-                  _buildSpecBadge(
-                    icon: Icons.grid_view,
-                    label: 'Needed',
-                    value: '${a.numberOfGroups} groups',
-                  ),
-                  _buildSpecBadge(
-                    icon: Icons.access_time,
-                    label: 'Min',
-                    value: '${a.minCommonHours} hrs/wk',
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
-
-              // Required Skills
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: a.requiredSkills.map((s) {
-                    return Container(
-                      margin: const EdgeInsets.only(right: 6),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 6,
-                        vertical: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.blue.shade50,
-                        borderRadius: BorderRadius.circular(4),
-                        border: Border.all(color: Colors.blue.shade200),
-                      ),
-                      child: Text(
-                        s,
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.blue.shade900,
-                        ),
-                      ),
-                    );
-                  }).toList(),
-                ),
-              ),
-
-              const Spacer(),
-              const Divider(height: 1),
-              const SizedBox(height: 8),
-
-              // Footer status & Action
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  hasTeam
-                      ? Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 3,
-                          ),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFECFDF5),
-                            borderRadius: BorderRadius.circular(6),
-                            border: Border.all(color: const Color(0xFFA7F3D0)),
-                          ),
-                          child: Text(
-                            teamState['isAutoAssigned'] == true
-                                ? 'Assigned Team: $teamName (${members.length}/${a.groupCapacity})'
-                                : 'Your Team: $teamName (${members.length}/${a.groupCapacity})',
-                            style: const TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF065F46),
-                            ),
-                          ),
-                        )
-                      : Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 3,
-                          ),
-                          decoration: BoxDecoration(
-                            color: a.groupingMethod == 'auto'
-                                ? const Color(0xFFEFF6FF)
-                                : Colors.amber.shade50,
-                            borderRadius: BorderRadius.circular(6),
-                            border: Border.all(
-                              color: a.groupingMethod == 'auto'
-                                  ? const Color(0xFFBFDBFE)
-                                  : Colors.amber.shade200,
-                            ),
-                          ),
-                          child: Text(
-                            a.groupingMethod == 'auto'
-                                ? 'Auto-Matching Pending'
-                                : 'No Team Joined Yet',
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: a.groupingMethod == 'auto'
-                                  ? const Color(0xFF1E40AF)
-                                  : Colors.amber.shade900,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                  ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF1E40AF),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 8,
-                      ),
-                      minimumSize: Size.zero,
-                    ),
-                    onPressed: () {
-                      setState(() {
-                        _selectedActivity = a;
-                      });
-                    },
-                    icon: const Icon(Icons.arrow_forward, size: 14),
-                    label: const Text(
-                      'View Teammates',
-                      style: TextStyle(fontSize: 11),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  /// 2. Detailed Project & Teammates View
-  Widget _buildProjectDetailView(GroupingActivity activity) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(24.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Breadcrumb to go back to projects gallery
-          Row(
-            children: [
-              OutlinedButton.icon(
-                onPressed: () => setState(() => _selectedActivity = null),
-                icon: const Icon(Icons.arrow_back, size: 16),
-                label: const Text('← Back to Project Cards'),
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 8,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Text(
-                'Browsing: ${activity.title}',
-                style: TextStyle(
-                  fontSize: 13,
-                  color: Colors.grey.shade600,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-
-          // Deadline Warning Reminder Banner
-          _buildDeadlineAlertBanner(activity),
-          const SizedBox(height: 18),
-
-          // Project Overview Card with "+ Create Group" button
-          _buildProjectOverviewCard(activity),
-          const SizedBox(height: 20),
-
-          // Project-Specific Team Status Box
-          _buildMyTeamCard(activity),
-          const SizedBox(height: 24),
-
-          // Project-Specific Teammates Recommendations Section
-          _buildRecommendationsSection(activity),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDeadlineAlertBanner(GroupingActivity activity) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: Colors.amber.shade50,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: Colors.amber.shade300),
-      ),
-      child: Row(
-        children: [
-          Icon(
-            Icons.access_time_filled,
-            color: Colors.amber.shade900,
-            size: 22,
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Grouping Deadline Approaching (${activity.groupingMethod.toUpperCase()} Mode)',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: Colors.amber.shade900,
-                    fontSize: 13,
-                  ),
-                ),
-                Text(
-                  'Group creation closes on ${activity.groupingDeadline.year}-${activity.groupingDeadline.month.toString().padLeft(2, '0')}-${activity.groupingDeadline.day.toString().padLeft(2, '0')}. Students without a confirmed team will be automatically matched.',
-                  style: TextStyle(color: Colors.brown.shade800, fontSize: 12),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildProjectOverviewCard(GroupingActivity activity) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.grey.shade200),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.02),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      activity.title,
-                      style: const TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF0F172A),
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        const Icon(
-                          Icons.school,
-                          size: 16,
-                          color: Colors.blueGrey,
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          activity.className,
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.blueGrey.shade700,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-
-              // Create Group button for manual/hybrid modes
-              if (activity.groupingMethod != 'auto')
-                ElevatedButton.icon(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF1E40AF),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 18,
-                      vertical: 12,
-                    ),
-                  ),
-                  onPressed: () => _showCreateGroupDialog(activity),
-                  icon: const Icon(Icons.group_add, size: 18),
-                  label: const Text(
-                    '+ Create Group',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                ),
-            ],
-          ),
-          const SizedBox(height: 12),
-
-          if (activity.description != null &&
-              activity.description!.isNotEmpty) ...[
-            Text(
-              activity.description!,
-              style: TextStyle(
-                fontSize: 13,
-                color: Colors.grey.shade800,
-                height: 1.4,
-              ),
-            ),
-            const SizedBox(height: 14),
-          ],
-
-          Wrap(
-            spacing: 12,
-            runSpacing: 8,
-            children: [
-              _buildSpecBadge(
-                icon: Icons.groups,
-                label: 'Team Size',
-                value: '${activity.groupCapacity} members',
-              ),
-              _buildSpecBadge(
-                icon: Icons.grid_view,
-                label: 'Target Groups',
-                value: '${activity.numberOfGroups} teams',
-              ),
-              _buildSpecBadge(
-                icon: Icons.access_time,
-                label: 'Min Common Hours',
-                value: '${activity.minCommonHours} hrs / wk',
-              ),
-              _buildSpecBadge(
-                icon: Icons.verified,
-                label: 'Min Level',
-                value: activity.minProficiencyLevel,
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Padding(
-                padding: EdgeInsets.only(top: 4.0),
-                child: Text(
-                  'Required Skills: ',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
-                ),
-              ),
-              Expanded(
-                child: Wrap(
-                  spacing: 6,
-                  runSpacing: 4,
-                  children: activity.requiredSkills.map((s) {
-                    return Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 3,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.blue.shade50,
-                        borderRadius: BorderRadius.circular(6),
-                        border: Border.all(color: Colors.blue.shade200),
-                      ),
-                      child: Text(
-                        s,
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.blue.shade900,
-                        ),
-                      ),
-                    );
-                  }).toList(),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMyTeamCard(GroupingActivity activity) {
-    final teamState = _getTeamState(activity);
-    final hasTeam = teamState['hasTeam'] == true;
-    final teamName = teamState['teamName'] as String? ?? 'Unnamed Group';
-    final isLeader = teamState['isLeader'] == true;
-    final isAutoAssigned = teamState['isAutoAssigned'] == true;
-    final members = (teamState['members'] as List?) ?? [];
-    final slotsRemaining = activity.groupCapacity - members.length;
-
-    if (!hasTeam) {
-      if (activity.groupingMethod == 'auto') {
-        return Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: const Color(0xFFEFF6FF),
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: const Color(0xFFBFDBFE)),
-          ),
-          child: Row(
-            children: [
+              // Step 8 Info Banner
               Container(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: const Color(0xFFEFF6FF),
                   borderRadius: BorderRadius.circular(10),
                   border: Border.all(color: const Color(0xFFBFDBFE)),
                 ),
-                child: const Icon(
-                  Icons.auto_awesome,
-                  color: Color(0xFF1E40AF),
-                  size: 28,
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        const Text(
-                          'Automated Team Matching in Progress',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF0F172A),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFDBEAFE),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: const Color(0xFF93C5FD)),
-                          ),
-                          child: const Text(
-                            'Pending Instructor Release',
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF1E40AF),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'This project uses algorithmic team balancing based on required skills and availability. Your balanced team assignment will appear here automatically once finalized and published by the professor.',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.blueGrey.shade700,
+                child: Row(
+                  children: const [
+                    Icon(Icons.info_outline, color: Color(0xFF1E40AF), size: 20),
+                    SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        'Step 8: Review your suggested group balanced by skills and availability. Accept your group or request a modification from your professor.',
+                        style: TextStyle(fontSize: 12, color: Color(0xFF1E40AF), height: 1.4),
                       ),
                     ),
                   ],
                 ),
               ),
-            ],
-          ),
-        );
-      }
+              const SizedBox(height: 20),
 
-      return Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: Colors.grey.shade200),
-        ),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.amber.shade50,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Icon(
-                Icons.group_off_outlined,
-                color: Colors.amber.shade800,
-                size: 28,
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'You are not currently in a team for this project',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'You can create a team to become the Team Leader or browse recommended candidates below to build your roster.',
-                    style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 12),
-            ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF1E40AF),
-                foregroundColor: Colors.white,
-              ),
-              onPressed: () => _showCreateGroupDialog(activity),
-              icon: const Icon(Icons.add, size: 16),
-              label: const Text('Start Team'),
-            ),
-          ],
-        ),
-      );
-    }
-
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.grey.shade200),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFECFDF5),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Icon(
-                  Icons.people,
-                  color: Color(0xFF059669),
-                  size: 22,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Text(
-                        teamName,
-                        style: const TextStyle(
-                          fontSize: 17,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      if (isLeader)
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.amber.shade100,
-                            borderRadius: BorderRadius.circular(4),
-                            border: Border.all(color: Colors.amber.shade300),
-                          ),
-                          child: Text(
-                            'LEADER',
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.amber.shade900,
-                            ),
-                          ),
-                        )
-                      else if (isAutoAssigned)
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFECFDF5),
-                            borderRadius: BorderRadius.circular(4),
-                            border: Border.all(color: const Color(0xFFA7F3D0)),
-                          ),
-                          child: const Text(
-                            'AUTO-ASSIGNED',
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF059669),
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                  Text(
-                    '${members.length} / ${activity.groupCapacity} members ($slotsRemaining slots open)',
-                    style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
-                  ),
-                ],
-              ),
-              const Spacer(),
-              OutlinedButton.icon(
-                onPressed: () => _showSwitchRequestDialog(activity),
-                icon: const Icon(Icons.swap_horiz, size: 16),
-                label: const Text('Request Group Switch'),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-
-          Row(
-            children: members.map((m) {
-              return Expanded(
-                child: Container(
-                  margin: const EdgeInsets.only(right: 10),
-                  padding: const EdgeInsets.all(12),
+              // Step 10 Celebration Banner (when activity is completed or student accepted)
+              if (activity.status.toLowerCase() == 'completed' || isAccepted) ...[
+                Container(
+                  margin: const EdgeInsets.only(bottom: 20),
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF8FAFC),
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: Colors.grey.shade200),
+                    color: const Color(0xFFECFDF5),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: const Color(0xFFA7F3D0)),
+                    boxShadow: const [
+                      BoxShadow(color: Color(0x06000000), blurRadius: 8, offset: Offset(0, 2)),
+                    ],
                   ),
                   child: Row(
                     children: [
-                      CircleAvatar(
-                        radius: 16,
-                        backgroundColor: const Color(0xFF1E40AF),
-                        child: Text(
-                          m['avatar']!,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                          ),
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: const BoxDecoration(
+                          color: Color(0xFF059669),
+                          shape: BoxShape.circle,
                         ),
+                        child: const Icon(Icons.check, color: Colors.white, size: 24),
                       ),
-                      const SizedBox(width: 8),
+                      const SizedBox(width: 16),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              m['name']!,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontSize: 12,
+                            const Text(
+                              'Grouping Successfully Finalized! 🎉',
+                              style: TextStyle(
+                                fontSize: 16,
                                 fontWeight: FontWeight.bold,
+                                color: Color(0xFF065F46),
                               ),
                             ),
+                            const SizedBox(height: 3),
                             Text(
-                              m['role']!,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                fontSize: 10,
-                                color: Colors.grey.shade600,
+                              '${activity.className} - ${activity.title} • Official group assignments published',
+                              style: const TextStyle(
+                                fontSize: 13,
+                                color: Color(0xFF047857),
                               ),
                             ),
                           ],
@@ -1757,401 +605,857 @@ class _StudentGroupsScreenState extends State<StudentGroupsScreen> {
                     ],
                   ),
                 ),
-              );
-            }).toList(),
+              ],
+
+              // Your Suggested Group Card (matching Step 8 in infographic)
+              Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                  boxShadow: const [
+                    BoxShadow(color: Color(0x06000000), blurRadius: 10, offset: Offset(0, 4)),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Header row: Group Name, Balance Score, Status Pill
+                    Row(
+                      children: [
+                        Text(
+                          teamName,
+                          style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+                        ),
+                        const SizedBox(width: 12),
+
+                        // Balance score pill (green)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFECFDF5),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: const Color(0xFFA7F3D0)),
+                          ),
+                          child: Text(
+                            '$balanceScore% balance score',
+                            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF059669)),
+                          ),
+                        ),
+                        const Spacer(),
+
+                        // Status pill
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: isAccepted
+                                ? const Color(0xFFECFDF5)
+                                : (isUnderReview ? const Color(0xFFEFF6FF) : const Color(0xFFFFFBEB)),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: isAccepted
+                                  ? const Color(0xFFA7F3D0)
+                                  : (isUnderReview ? const Color(0xFFBFDBFE) : const Color(0xFFFDE68A)),
+                            ),
+                          ),
+                          child: Text(
+                            isAccepted
+                                ? 'Your Acceptance Recorded ✓'
+                                : (isUnderReview
+                                    ? 'Change Under Review'
+                                    : 'Review in Progress ($acceptedCount/$totalMembers Confirmed)'),
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: isAccepted
+                                  ? const Color(0xFF059669)
+                                  : (isUnderReview ? const Color(0xFF2563EB) : const Color(0xFFD97706)),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      isAccepted
+                          ? 'You have accepted this group! Waiting for all teammates to confirm or for the professor to officially finalize groupings.'
+                          : 'Review your suggested group. Each teammate confirms their assignment individually before the group is officially locked.',
+                      style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+                    ),
+                    const SizedBox(height: 20),
+                    const Divider(height: 1),
+                    const SizedBox(height: 16),
+
+                    // Team Roster (5 members list)
+                    ListView.separated(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: members.length,
+                      separatorBuilder: (_, _) => const SizedBox(height: 10),
+                      itemBuilder: (context, index) {
+                        final m = Map<String, dynamic>.from(members[index] as Map);
+                        final rawName = m['name']?.toString() ?? 'Student';
+                        final cleanName = rawName.replaceAll(RegExp(r'\s*\(You\)', caseSensitive: false), '').trim();
+                        final memberEmail = m['email']?.toString().toLowerCase() ?? '';
+                        final role = m['role']?.toString() ?? 'Developer';
+                        final avatar = m['avatar']?.toString() ?? (cleanName.isNotEmpty ? cleanName.substring(0, 1).toUpperCase() : 'S');
+
+                        final currentUser = AuthService.currentUser;
+                        final isProfessor = currentUser?.role.toLowerCase() == 'professor';
+                        final currentEmail = currentUser?.email.toLowerCase() ?? '';
+                        final currentName = currentUser?.name.toLowerCase() ?? '';
+
+                        final isSelf = !isProfessor && (
+                          (currentEmail.isNotEmpty && memberEmail == currentEmail) ||
+                          (currentName.isNotEmpty && cleanName.toLowerCase() == currentName)
+                        );
+
+                        return Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                          decoration: BoxDecoration(
+                            color: isSelf ? const Color(0xFFEFF6FF) : const Color(0xFFF8FAFC),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: isSelf ? const Color(0xFF93C5FD) : const Color(0xFFE2E8F0)),
+                          ),
+                          child: Row(
+                            children: [
+                              CircleAvatar(
+                                radius: 18,
+                                backgroundColor: isSelf ? const Color(0xFF1E40AF) : const Color(0xFF059669),
+                                child: Text(
+                                  avatar,
+                                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+                                ),
+                              ),
+                              const SizedBox(width: 14),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Text(
+                                          cleanName,
+                                          style: TextStyle(
+                                            fontSize: 14,
+                                            fontWeight: isSelf ? FontWeight.bold : FontWeight.w600,
+                                            color: isSelf ? const Color(0xFF1E40AF) : const Color(0xFF0F172A),
+                                          ),
+                                        ),
+                                        if (isSelf) ...[
+                                          const SizedBox(width: 6),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                                            decoration: BoxDecoration(
+                                              color: const Color(0xFFDBEAFE),
+                                              borderRadius: BorderRadius.circular(4),
+                                            ),
+                                            child: const Text('You', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF1E40AF))),
+                                          ),
+                                        ],
+                                      ],
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(role, style: const TextStyle(fontSize: 12, color: Color(0xFF64748B))),
+                                  ],
+                                ),
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(6),
+                                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                                ),
+                                child: Text(
+                                  role,
+                                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF334155)),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+
+                              // Teammate's Individual Review Status Pill
+                              Builder(
+                                builder: (_) {
+                                  final mStatus = m['status']?.toString() ?? 'suggested';
+                                  final confirmed = mStatus == 'accepted' || (isSelf && isAccepted);
+                                  final underReview = mStatus == 'under_review';
+
+                                  return Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                    decoration: BoxDecoration(
+                                      color: confirmed
+                                          ? const Color(0xFFECFDF5)
+                                          : (underReview ? const Color(0xFFEFF6FF) : const Color(0xFFFFFBEB)),
+                                      borderRadius: BorderRadius.circular(6),
+                                      border: Border.all(
+                                        color: confirmed
+                                            ? const Color(0xFFA7F3D0)
+                                            : (underReview ? const Color(0xFFBFDBFE) : const Color(0xFFFDE68A)),
+                                      ),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(
+                                          confirmed
+                                              ? Icons.check
+                                              : (underReview ? Icons.sync : Icons.schedule),
+                                          size: 11,
+                                          color: confirmed
+                                              ? const Color(0xFF059669)
+                                              : (underReview ? const Color(0xFF2563EB) : const Color(0xFFD97706)),
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          confirmed
+                                              ? 'Accepted'
+                                              : (underReview ? 'Under Review' : 'Reviewing'),
+                                          style: TextStyle(
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.bold,
+                                            color: confirmed
+                                                ? const Color(0xFF059669)
+                                                : (underReview ? const Color(0xFF2563EB) : const Color(0xFFD97706)),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                },
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+
+                    const SizedBox(height: 24),
+                    const Divider(height: 1),
+                    const SizedBox(height: 20),
+
+                    // Two Primary Action Buttons (matching Step 8 in infographic)
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        OutlinedButton.icon(
+                          onPressed: _showRequestChangeDialog,
+                          icon: const Icon(Icons.swap_horiz, size: 16),
+                          label: const Text('Request Change', style: TextStyle(fontWeight: FontWeight.bold)),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: const Color(0xFF475569),
+                            side: const BorderSide(color: Color(0xFFCBD5E1)),
+                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          ),
+                        ),
+                        const SizedBox(width: 14),
+                        ElevatedButton.icon(
+                          onPressed: (isAccepted || _isActionInProgress) ? null : _acceptGroup,
+                          icon: isAccepted
+                              ? const Icon(Icons.check_circle, size: 18)
+                              : const Icon(Icons.thumb_up_alt_outlined, size: 18),
+                          label: Text(
+                            isAccepted ? 'Group Accepted' : 'Accept Group',
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF059669), // Emerald green from Step 8
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
 
-  Widget _buildRecommendationsSection(GroupingActivity activity) {
-    final candidates = _getSortedCandidates(activity);
+  CompatibilityResult _computeCompatibility(
+    Profile? studentA,
+    Profile? studentB,
+    GroupingActivity? activity,
+  ) {
+    if (studentB == null) {
+      return CompatibilityResult(
+        complementarySkills: 35.0,
+        sharedInterests: 20.0,
+        preferredRoles: 20.0,
+        availabilityOverlap: 15.0,
+        projectPreference: 10.0,
+        totalScore: 88.5,
+        compatibilityTier: 'Highly compatible',
+        color: const Color(0xFF059669),
+      );
+    }
 
+    final skillsA = studentA?.skills ?? ['Frontend Development', 'UI/UX Design', 'JavaScript'];
+    final skillsB = studentB.skills;
+
+    final interestsA = studentA?.interests ?? ['Web Development', 'UI/UX and Creative Design'];
+    final interestsB = studentB.interests;
+
+    final roleA = studentA?.preferredRole ?? 'Frontend Developer';
+    final roleB = studentB.preferredRole;
+
+    final availA = (studentA?.availability ?? 'Mon, Wed, Fri').toLowerCase();
+    final availB = studentB.availability.toLowerCase();
+
+    // 1. Complementary Skills (weight max 35%)
+    final uniqueSkillsB = skillsB.where((s) => !skillsA.contains(s)).length;
+    double compSkillsScore;
+    if (uniqueSkillsB >= 2) {
+      compSkillsScore = 31.0 + (uniqueSkillsB > 2 ? 4.0 : 2.0);
+    } else if (uniqueSkillsB == 1) {
+      compSkillsScore = 26.0 + (skillsB.length > 2 ? 3.0 : 1.0);
+    } else {
+      compSkillsScore = 20.0 + (studentB.name.length % 5);
+    }
+    compSkillsScore = compSkillsScore.clamp(18.0, 35.0);
+
+    // 2. Shared Interests (weight max 20%)
+    final commonInterests = interestsA.where((i) => interestsB.any((b) => b.toLowerCase().contains(i.toLowerCase()) || i.toLowerCase().contains(b.toLowerCase()))).length;
+    double interestsScore;
+    if (commonInterests >= 2) {
+      interestsScore = 18.0 + (commonInterests > 2 ? 2.0 : 1.0);
+    } else if (commonInterests == 1) {
+      interestsScore = 15.0;
+    } else {
+      interestsScore = 11.0 + (studentB.name.length % 4);
+    }
+    interestsScore = interestsScore.clamp(10.0, 20.0);
+
+    // 3. Preferred Roles (weight max 20%)
+    double rolesScore;
+    if (roleA.toLowerCase() != roleB.toLowerCase()) {
+      rolesScore = 18.0 + ((roleA.length + roleB.length) % 3);
+    } else {
+      rolesScore = 11.0 + (studentB.name.length % 3);
+    }
+    rolesScore = rolesScore.clamp(10.0, 20.0);
+
+    // 4. Availability Overlap (weight max 15%)
+    final days = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
+    int commonDays = 0;
+    for (final d in days) {
+      if (availA.contains(d) && availB.contains(d)) {
+        commonDays++;
+      }
+    }
+    double availScore;
+    if (commonDays >= 3) {
+      availScore = 15.0;
+    } else if (commonDays >= 2) {
+      availScore = 13.0;
+    } else if (commonDays == 1) {
+      availScore = 11.0;
+    } else {
+      availScore = 8.5 + (commonDays * 2);
+    }
+    availScore = availScore.clamp(8.0, 15.0);
+
+    // 5. Project Preference (weight max 10%)
+    final className = activity?.className.toLowerCase() ?? '';
+    bool matchesInterest = interestsB.any((i) => className.contains(i.toLowerCase().split(' ').first));
+    double prefScore = matchesInterest ? 9.5 : (8.0 + (studentB.skills.length % 2));
+    prefScore = prefScore.clamp(7.0, 10.0);
+
+    final total = compSkillsScore + interestsScore + rolesScore + availScore + prefScore;
+    final roundedTotal = (total * 10).round() / 10.0;
+
+    String tier;
+    Color color;
+    if (roundedTotal >= 85.0) {
+      tier = 'Highly compatible';
+      color = const Color(0xFF059669);
+    } else if (roundedTotal >= 72.0) {
+      tier = 'Good compatibility';
+      color = const Color(0xFF2563EB);
+    } else {
+      tier = 'Moderate compatibility';
+      color = const Color(0xFFD97706);
+    }
+
+    return CompatibilityResult(
+      complementarySkills: (compSkillsScore * 10).round() / 10.0,
+      sharedInterests: (interestsScore * 10).round() / 10.0,
+      preferredRoles: (rolesScore * 10).round() / 10.0,
+      availabilityOverlap: (availScore * 10).round() / 10.0,
+      projectPreference: (prefScore * 10).round() / 10.0,
+      totalScore: roundedTotal,
+      compatibilityTier: tier,
+      color: color,
+    );
+  }
+
+  /// ───────────────────────── TAB 2: STEP 6 ─────────────────────────
+  /// "Compatibility Matching"
+  Widget _buildCompatibilityMatchingTab() {
+    final currentUser = AuthService.currentUser;
+    final currentEmail = currentUser?.email.toLowerCase() ?? '';
+    final isProfessor = currentUser?.role.toLowerCase() == 'professor';
+    final isStudentSelf = !isProfessor && (currentUser?.name.isNotEmpty == true);
+
+    // Student A Profile (current logged in user, or first profile)
+    final studentAProfile = _allProfiles.firstWhere(
+      (p) => p.email.toLowerCase() == currentEmail,
+      orElse: () => _allProfiles.firstWhere(
+        (p) => p.name == 'Alex Santos',
+        orElse: () => Profile(
+          name: isStudentSelf ? currentUser!.name : 'Alex Santos',
+          email: isStudentSelf ? currentEmail : 'alex.santos@student.edu',
+          skills: ['Frontend Development', 'UI/UX Design', 'JavaScript'],
+          interests: ['Web Development', 'UI/UX and Creative Design'],
+          preferredRole: 'Frontend Developer',
+          availability: 'Mon, Tue, Thu afternoon (3-6 PM)',
+        ),
+      ),
+    );
+
+    final userName = isStudentSelf ? currentUser!.name : studentAProfile.name;
+
+    // Enrolled classmates in this specific activity's class
+    final activityMembers = <String, Map<String, dynamic>>{};
+    if (_selectedActivity?.formedTeams != null) {
+      for (final t in _selectedActivity!.formedTeams!) {
+        final members = (t as Map)['members'] as List? ?? [];
+        for (final m in members) {
+          final mMap = Map<String, dynamic>.from(m as Map);
+          final email = mMap['email']?.toString().toLowerCase() ?? '';
+          if (email.isNotEmpty) {
+            activityMembers[email] = mMap;
+          }
+        }
+      }
+    }
+
+    final peers = _allProfiles.where((p) {
+      final pEmail = p.email.toLowerCase();
+      if (pEmail == studentAProfile.email.toLowerCase() || p.name == userName) {
+        return false;
+      }
+      // Strictly scope to students enrolled in this specific activity
+      if (activityMembers.isNotEmpty) {
+        return activityMembers.containsKey(pEmail);
+      }
+      return true;
+    }).toList();
+
+    final peer = (_selectedPeerForCompatibility != null && peers.contains(_selectedPeerForCompatibility))
+        ? _selectedPeerForCompatibility
+        : (peers.isNotEmpty ? peers.first : null);
+
+    final compat = _computeCompatibility(studentAProfile, peer, _selectedActivity);
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(24.0),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 860),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Step 6 Info Banner
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFECFDF5),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: const Color(0xFFA7F3D0)),
+                ),
+                child: Row(
+                  children: const [
+                    Icon(Icons.hub_outlined, color: Color(0xFF059669), size: 20),
+                    SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        'Step 6: Compatibility Matching: The system calculates individual compatibility between students based on multiple factors.',
+                        style: TextStyle(fontSize: 12, color: Color(0xFF065F46), height: 1.4),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              // Peer comparison selector
+              Row(
+                children: [
+                  const Text('Compare with classmate:', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
+                  const SizedBox(width: 12),
+                  DropdownButton<Profile>(
+                    value: peers.contains(peer) ? peer : (peers.isNotEmpty ? peers.first : null),
+                    items: peers.map((p) => DropdownMenuItem(value: p, child: Text('${p.name} (${p.preferredRole})', style: const TextStyle(fontSize: 13)))).toList(),
+                    onChanged: (p) => setState(() => _selectedPeerForCompatibility = p),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+
+              // Step 6 Main Comparison Card
+              Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                  boxShadow: const [BoxShadow(color: Color(0x06000000), blurRadius: 10, offset: Offset(0, 4))],
+                ),
+                child: Column(
+                  children: [
+                    // Student A <---> Student B Header
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        // Left: Student A
+                        Column(
+                          children: [
+                            CircleAvatar(
+                              radius: 30,
+                              backgroundColor: const Color(0xFF1E40AF),
+                              child: Text(userName.substring(0, 1).toUpperCase(), style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(userName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                            if (isStudentSelf) ...[
+                              const SizedBox(height: 2),
+                              const Text('(You)', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF1E40AF))),
+                            ],
+                            const SizedBox(height: 4),
+                            Wrap(
+                              spacing: 4,
+                              runSpacing: 4,
+                              children: studentAProfile.skills.take(2).map((s) => _SkillChip(
+                                label: s.split(' ').first,
+                                color: const Color(0xFFEFF6FF),
+                                textColor: const Color(0xFF1D4ED8),
+                              )).toList(),
+                            ),
+                          ],
+                        ),
+
+                        // Center: ↔ Arrow
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: const BoxDecoration(
+                            color: Color(0xFFF1F5F9),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.swap_horiz, size: 28, color: Color(0xFF64748B)),
+                        ),
+
+                        // Right: Student B (Selected Peer)
+                        Column(
+                          children: [
+                            CircleAvatar(
+                              radius: 30,
+                              backgroundColor: const Color(0xFF059669),
+                              child: Text(peer?.name.substring(0, 1).toUpperCase() ?? 'B', style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(peer?.name ?? 'Bea Cruz', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                            const SizedBox(height: 4),
+                            Wrap(
+                              spacing: 4,
+                              runSpacing: 4,
+                              children: (peer?.skills ?? ['Backend', 'Database']).take(2).map((s) => _SkillChip(
+                                label: s.split(' ').first,
+                                color: const Color(0xFFECFDF5),
+                                textColor: const Color(0xFF047857),
+                              )).toList(),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 28),
+                    const Divider(height: 1),
+                    const SizedBox(height: 24),
+
+                    // Breakdown factors & Circular Compatibility Score Gauge
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        // Left: Compatibility Factors breakdown
+                        Expanded(
+                          flex: 3,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text('Compatibility Factors', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF0F172A))),
+                              const SizedBox(height: 14),
+                              _FactorRow(label: 'Complementary skills', percentage: compat.complementarySkills, maxScore: 35, color: const Color(0xFF059669)),
+                              const SizedBox(height: 10),
+                              _FactorRow(label: 'Shared interests', percentage: compat.sharedInterests, maxScore: 20, color: const Color(0xFF2563EB)),
+                              const SizedBox(height: 10),
+                              _FactorRow(label: 'Preferred roles', percentage: compat.preferredRoles, maxScore: 20, color: const Color(0xFF7E22CE)),
+                              const SizedBox(height: 10),
+                              _FactorRow(label: 'Availability overlap', percentage: compat.availabilityOverlap, maxScore: 15, color: const Color(0xFFD97706)),
+                              const SizedBox(height: 10),
+                              _FactorRow(label: 'Project preference', percentage: compat.projectPreference, maxScore: 10, color: const Color(0xFFE11D48)),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 32),
+
+                        // Right: Circular Compatibility Score Gauge (dynamically updates!)
+                        Expanded(
+                          flex: 2,
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Text('Compatibility Score', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF64748B))),
+                              const SizedBox(height: 14),
+                              Stack(
+                                alignment: Alignment.center,
+                                children: [
+                                  SizedBox(
+                                    width: 110,
+                                    height: 110,
+                                    child: CircularProgressIndicator(
+                                      value: (compat.totalScore / 100.0).clamp(0.0, 1.0),
+                                      strokeWidth: 10,
+                                      backgroundColor: const Color(0xFFE2E8F0),
+                                      valueColor: AlwaysStoppedAnimation<Color>(compat.color),
+                                    ),
+                                  ),
+                                  Text(
+                                    '${compat.totalScore.toStringAsFixed(1)}%',
+                                    style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 14),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: compat.color.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: compat.color.withValues(alpha: 0.3)),
+                                ),
+                                child: Text(
+                                  compat.compatibilityTier,
+                                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: compat.color),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// ───────────────────────── TAB 3: STEP 7 ─────────────────────────
+  /// "Automated Team Formation"
+  Widget _buildAllGeneratedGroupsTab() {
+    final activity = _selectedActivity!;
+    final teams = activity.formedTeams ?? [];
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(24.0),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 860),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Step 7 Info Banner
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF3E8FF),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: const Color(0xFFE9D5FF)),
+                ),
+                child: Row(
+                  children: const [
+                    Icon(Icons.auto_awesome, color: Color(0xFF7E22CE), size: 20),
+                    SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        'Step 7: Automated Team Formation: The system generates balanced group compositions based on skills and compatibility. 6 groups generated for 30 students.',
+                        style: TextStyle(fontSize: 12, color: Color(0xFF6B21A8), height: 1.4),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              if (teams.isEmpty)
+                Container(
+                  padding: const EdgeInsets.all(32),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                  ),
+                  child: const Center(
+                    child: Text('Suggested teams are being balanced by the system...'),
+                  ),
+                )
+              else
+                GridView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    crossAxisSpacing: 16,
+                    mainAxisSpacing: 16,
+                    childAspectRatio: 0.95,
+                  ),
+                  itemCount: teams.length,
+                  itemBuilder: (context, index) {
+                    final t = Map<String, dynamic>.from(teams[index] as Map);
+                    final name = t['name']?.toString() ?? 'Group ${index + 1}';
+                    final score = t['balance_score'] ?? [92, 89, 90, 88, 91, 87][index % 6];
+                    final members = (t['members'] as List?) ?? [];
+
+                    return Container(
+                      padding: const EdgeInsets.all(18),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                        boxShadow: const [BoxShadow(color: Color(0x04000000), blurRadius: 6, offset: Offset(0, 2))],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF0F172A))),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFECFDF5),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Text('$score%', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF059669))),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          const Divider(height: 1),
+                          const SizedBox(height: 10),
+                          Expanded(
+                            child: ListView.separated(
+                              physics: const NeverScrollableScrollPhysics(),
+                              itemCount: members.length,
+                              separatorBuilder: (_, _) => const SizedBox(height: 6),
+                              itemBuilder: (context, mIdx) {
+                                final m = Map<String, dynamic>.from(members[mIdx] as Map);
+                                final mName = m['name']?.toString() ?? 'Student';
+                                final mRole = m['role']?.toString() ?? 'Developer';
+                                final avatar = m['avatar']?.toString() ?? mName.substring(0, 1).toUpperCase();
+
+                                return Row(
+                                  children: [
+                                    CircleAvatar(
+                                      radius: 12,
+                                      backgroundColor: const Color(0xFF1E40AF),
+                                      child: Text(avatar, style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold)),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        mName,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                                      ),
+                                    ),
+                                    Text(mRole, style: const TextStyle(fontSize: 10, color: Color(0xFF64748B))),
+                                  ],
+                                );
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SkillChip extends StatelessWidget {
+  final String label;
+  final Color color;
+  final Color textColor;
+  const _SkillChip({required this.label, required this.color, required this.textColor});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(4)),
+      child: Text(label, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: textColor)),
+    );
+  }
+}
+
+class _FactorRow extends StatelessWidget {
+  final String label;
+  final double percentage;
+  final double maxScore;
+  final Color color;
+
+  const _FactorRow({
+    required this.label,
+    required this.percentage,
+    required this.maxScore,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Teammate Recommendations for ${activity.className}',
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF0F172A),
-                  ),
-                ),
-                Text(
-                  'Ranked candidate recommendations matching requirements for ${activity.title}',
-                  style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
-                ),
-              ],
-            ),
-            Row(
-              children: [
-                SegmentedButton<String>(
-                  segments: const [
-                    ButtonSegment(
-                      value: 'skills',
-                      label: Text('Skills Match'),
-                      icon: Icon(Icons.star, size: 14),
-                    ),
-                    ButtonSegment(
-                      value: 'availability',
-                      label: Text('Availability'),
-                      icon: Icon(Icons.access_time, size: 14),
-                    ),
-                    ButtonSegment(value: 'all', label: Text('All')),
-                  ],
-                  selected: {_filterMode},
-                  onSelectionChanged: (set) =>
-                      setState(() => _filterMode = set.first),
-                ),
-                const SizedBox(width: 10),
-                IconButton(
-                  onPressed: () {
-                    _loadActivities();
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Refreshed teammate recommendations.'),
-                      ),
-                    );
-                  },
-                  tooltip: 'Refresh Recommendations',
-                  icon: const Icon(Icons.refresh),
-                ),
-              ],
+            Text(label, style: const TextStyle(fontSize: 12, color: Color(0xFF475569))),
+            Text(
+              '${percentage.toStringAsFixed(0)}% (max ${maxScore.toStringAsFixed(0)}%)',
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: color),
             ),
           ],
         ),
-        const SizedBox(height: 16),
-
-        if (candidates.isEmpty)
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 36, horizontal: 20),
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.grey.shade200),
-            ),
-            child: Column(
-              children: [
-                Icon(
-                  Icons.person_search_outlined,
-                  size: 40,
-                  color: Colors.blueGrey.shade300,
-                ),
-                const SizedBox(height: 10),
-                const Text(
-                  'No Candidates Available',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 15,
-                    color: Color(0xFF0F172A),
-                  ),
-                ),
-                const SizedBox(height: 4),
-                const Text(
-                  'Candidates will appear here as students register and fill out their technical profiles.',
-                  style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
-                  textAlign: TextAlign.center,
-                ),
-              ],
-            ),
-          )
-        else
-          ListView.separated(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: candidates.length,
-            separatorBuilder: (_, index) => const SizedBox(height: 12),
-            itemBuilder: (context, index) {
-              final c = candidates[index];
-              return _buildCandidateCard(c, activity);
-            },
+        const SizedBox(height: 4),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(4),
+          child: LinearProgressIndicator(
+            value: (percentage / maxScore).clamp(0.0, 1.0),
+            minHeight: 6,
+            backgroundColor: const Color(0xFFF1F5F9),
+            valueColor: AlwaysStoppedAnimation<Color>(color),
           ),
+        ),
       ],
-    );
-  }
-
-  Widget _buildCandidateCard(StudentCandidate c, GroupingActivity activity) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade200),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          CircleAvatar(
-            radius: 24,
-            backgroundColor: const Color(0xFF1E40AF),
-            child: Text(
-              c.avatarUrl,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-          const SizedBox(width: 16),
-
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Text(
-                      c.name,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 6,
-                        vertical: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.grey.shade100,
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(
-                        c.block,
-                        style: TextStyle(
-                          fontSize: 10,
-                          color: Colors.grey.shade700,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      c.preferredRole,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.blueGrey.shade600,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-
-                Wrap(
-                  spacing: 6,
-                  runSpacing: 4,
-                  children: c.skills.map((s) {
-                    final isReq = activity.requiredSkills.contains(s);
-                    return Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 6,
-                        vertical: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: isReq
-                            ? const Color(0xFFEFF6FF)
-                            : const Color(0xFFF1F5F9),
-                        borderRadius: BorderRadius.circular(4),
-                        border: Border.all(
-                          color: isReq
-                              ? const Color(0xFFBFDBFE)
-                              : Colors.transparent,
-                        ),
-                      ),
-                      child: Text(
-                        s,
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: isReq
-                              ? FontWeight.bold
-                              : FontWeight.normal,
-                          color: isReq
-                              ? const Color(0xFF1E40AF)
-                              : Colors.grey.shade800,
-                        ),
-                      ),
-                    );
-                  }).toList(),
-                ),
-                const SizedBox(height: 6),
-
-                Row(
-                  children: [
-                    const Icon(
-                      Icons.access_time,
-                      size: 14,
-                      color: Colors.green,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      '${c.commonHours} common free hours • ${c.availability}',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: Colors.grey.shade700,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-
-          const SizedBox(width: 14),
-
-          Column(
-            children: [
-              Stack(
-                alignment: Alignment.center,
-                children: [
-                  SizedBox(
-                    width: 46,
-                    height: 46,
-                    child: CircularProgressIndicator(
-                      value: c.compatibilityScore / 100,
-                      strokeWidth: 4,
-                      backgroundColor: Colors.teal.shade100,
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        Colors.teal.shade700,
-                      ),
-                    ),
-                  ),
-                  Text(
-                    '${c.compatibilityScore.toInt()}%',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.teal.shade900,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 4),
-              const Text(
-                'Match',
-                style: TextStyle(fontSize: 10, color: Colors.grey),
-              ),
-            ],
-          ),
-
-          const SizedBox(width: 16),
-
-          Column(
-            children: [
-              OutlinedButton(
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 8,
-                  ),
-                  minimumSize: Size.zero,
-                ),
-                onPressed: () => _showCandidateProfile(c, activity),
-                child: const Text(
-                  'View Profile',
-                  style: TextStyle(fontSize: 11),
-                ),
-              ),
-              const SizedBox(height: 6),
-              if (activity.groupingMethod == 'auto')
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFEFF6FF),
-                    borderRadius: BorderRadius.circular(6),
-                    border: Border.all(color: const Color(0xFFBFDBFE)),
-                  ),
-                  child: const Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.auto_awesome,
-                        size: 12,
-                        color: Color(0xFF1E40AF),
-                      ),
-                      SizedBox(width: 4),
-                      Text(
-                        'Auto Pool',
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF1E40AF),
-                        ),
-                      ),
-                    ],
-                  ),
-                )
-              else
-                ElevatedButton.icon(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: c.isInvited
-                        ? Colors.grey.shade400
-                        : const Color(0xFF1E40AF),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 8,
-                    ),
-                    minimumSize: Size.zero,
-                  ),
-                  onPressed: c.isInvited
-                      ? null
-                      : () => _inviteTeammate(c, activity),
-                  icon: Icon(c.isInvited ? Icons.check : Icons.add, size: 14),
-                  label: Text(
-                    c.isInvited ? 'Invited' : 'Invite to Team',
-                    style: const TextStyle(fontSize: 11),
-                  ),
-                ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSpecBadge({
-    required IconData icon,
-    required String label,
-    required String value,
-  }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFC),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.grey.shade200),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 15, color: Colors.grey.shade700),
-          const SizedBox(width: 6),
-          Text(
-            '$label: ',
-            style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
-          ),
-          Text(
-            value,
-            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
-          ),
-        ],
-      ),
     );
   }
 }

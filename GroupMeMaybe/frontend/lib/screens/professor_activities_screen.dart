@@ -132,6 +132,189 @@ class _ProfessorActivitiesScreenState extends State<ProfessorActivitiesScreen> {
     );
   }
 
+  Future<void> _finalizeActivity(GroupingActivity activity) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Finalize Grouping (Step 10)?'),
+        content: Text(
+          'Are you ready to officially finalize and publish groups for "${activity.title}"? Students will receive their official assignments.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF059669),
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Finalize & Publish'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      try {
+        await _activityService.updateActivity(
+          activity.id!,
+          activity.copyWith(status: 'completed'),
+        );
+        _loadData();
+        if (mounted) {
+          _showFinalizedCelebrationDialog(activity);
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Failed to finalize activity: $e')),
+          );
+        }
+      }
+    }
+  }
+
+  void _showFinalizedCelebrationDialog(GroupingActivity activity) {
+    final totalStudents = activity.studentsCount > 0 ? activity.studentsCount : 30;
+    final totalGroups = activity.numberOfGroups > 0
+        ? activity.numberOfGroups
+        : (totalStudents / (activity.groupCapacity > 0 ? activity.groupCapacity : 5)).ceil();
+
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 440),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 32),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Celebration Icon
+                Container(
+                  width: 72,
+                  height: 72,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFF059669),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Center(
+                    child: Icon(Icons.check, color: Colors.white, size: 40),
+                  ),
+                ),
+                const SizedBox(height: 18),
+                const Text(
+                  'Grouping Successfully Finalized! 🎉',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF0F172A),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  '${activity.className} - ${activity.title}',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
+                ),
+                const SizedBox(height: 20),
+                // Stats badges
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF1F5F9),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.people, size: 18, color: Color(0xFF1E293B)),
+                          const SizedBox(width: 6),
+                          Text(
+                            '$totalStudents Students',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
+                              color: Color(0xFF1E293B),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF1F5F9),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.groups, size: 18, color: Color(0xFF1E293B)),
+                          const SizedBox(width: 6),
+                          Text(
+                            '$totalGroups Groups',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
+                              color: Color(0xFF1E293B),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFECFDF5),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: const Color(0xFFA7F3D0)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: const [
+                      Icon(Icons.check_circle, size: 16, color: Color(0xFF059669)),
+                      SizedBox(width: 8),
+                      Text(
+                        'Official group assignments published',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF065F46),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 24),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF059669),
+                    foregroundColor: Colors.white,
+                    minimumSize: const Size.fromHeight(44),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                  onPressed: () => Navigator.of(ctx).pop(),
+                  child: const Text('Done', style: TextStyle(fontWeight: FontWeight.bold)),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Future<void> _confirmDelete(GroupingActivity activity) async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -1001,6 +1184,7 @@ class _ProfessorActivitiesScreenState extends State<ProfessorActivitiesScreen> {
                 activity: activity,
                 onViewDetails: () => _openDetailsDialog(activity),
                 onScarcityReport: () => _openScarcityDialog(activity),
+                onFinalize: () => _finalizeActivity(activity),
                 onEdit: () => _openEditDialog(activity),
                 onDelete: () => _confirmDelete(activity),
               );
@@ -1019,6 +1203,7 @@ class _ProfessorActivitiesScreenState extends State<ProfessorActivitiesScreen> {
               activity: activity,
               onViewDetails: () => _openDetailsDialog(activity),
               onScarcityReport: () => _openScarcityDialog(activity),
+              onFinalize: () => _finalizeActivity(activity),
               onEdit: () => _openEditDialog(activity),
               onDelete: () => _confirmDelete(activity),
             );

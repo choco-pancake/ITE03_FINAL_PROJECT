@@ -125,16 +125,33 @@ class _StudentClassesScreenState extends State<StudentClassesScreen> {
               if (code.isEmpty) return;
 
               Navigator.pop(ctx);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    'Successfully enrolled in class with code "$code"!',
-                  ),
-                  backgroundColor: const Color(0xFF16A34A),
-                  behavior: SnackBarBehavior.floating,
-                ),
+              final matchedClass = _allClasses.cast<AcademicClass?>().firstWhere(
+                (c) => c != null && c.classCode.toLowerCase() == code.toLowerCase(),
+                orElse: () => null,
               );
-              _loadClasses();
+
+              if (matchedClass != null) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      'Successfully enrolled in "${matchedClass.name}" ($code)!',
+                    ),
+                    backgroundColor: const Color(0xFF16A34A),
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+                _loadClasses();
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      'Class code "$code" not found. Please verify with your instructor.',
+                    ),
+                    backgroundColor: const Color(0xFFDC2626),
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+              }
             },
             child: const Text('Enroll Now'),
           ),
@@ -527,7 +544,10 @@ class _StudentClassesScreenState extends State<StudentClassesScreen> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (_) => const StudentGroupsScreen(),
+                      builder: (_) => StudentGroupsScreen(
+                        initialClassId: c.id,
+                        initialClassName: c.displayName,
+                      ),
                     ),
                   );
                 },

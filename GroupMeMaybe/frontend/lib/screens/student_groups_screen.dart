@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'widgets/bottom_right_notification.dart';
 import 'widgets/portal_top_actions.dart';
 import 'widgets/student_sidebar.dart';
 import '../models/grouping_activity.dart';
@@ -224,12 +225,9 @@ class _StudentGroupsScreenState extends State<StudentGroupsScreen>
           _groupReviewStatus = 'accepted';
           _isActionInProgress = false;
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Group assignment officially accepted! Final assignments will be published soon.'),
-            backgroundColor: Color(0xFF059669),
-            behavior: SnackBarBehavior.floating,
-          ),
+        AppNotification.showSuccess(
+          context,
+          'Group assignment officially accepted! Final assignments will be published soon.',
         );
       }
     } catch (_) {
@@ -238,12 +236,9 @@ class _StudentGroupsScreenState extends State<StudentGroupsScreen>
           _groupReviewStatus = 'accepted';
           _isActionInProgress = false;
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Group assignment accepted!'),
-            backgroundColor: Color(0xFF059669),
-            behavior: SnackBarBehavior.floating,
-          ),
+        AppNotification.showSuccess(
+          context,
+          'Group assignment accepted!',
         );
       }
     }
@@ -261,7 +256,7 @@ class _StudentGroupsScreenState extends State<StudentGroupsScreen>
     showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
-        builder: (context, setModalState) => AlertDialog(
+        builder: (dialogCtx, setModalState) => AlertDialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           title: Row(
             children: const [
@@ -348,7 +343,6 @@ class _StudentGroupsScreenState extends State<StudentGroupsScreen>
                 foregroundColor: Colors.white,
               ),
               onPressed: () async {
-                final messenger = ScaffoldMessenger.of(context);
                 Navigator.pop(ctx);
                 setState(() {
                   _groupReviewStatus = 'under_review';
@@ -367,12 +361,9 @@ class _StudentGroupsScreenState extends State<StudentGroupsScreen>
                 }
 
                 if (mounted) {
-                  messenger.showSnackBar(
-                    const SnackBar(
-                      content: Text('Modification request submitted! Your group status is now Under Review by the professor.'),
-                      backgroundColor: Color(0xFF2563EB),
-                      behavior: SnackBarBehavior.floating,
-                    ),
+                  AppNotification.showInfo(
+                    context,
+                    'Modification request submitted! Your group status is now Under Review by the professor.',
                   );
                 }
               },

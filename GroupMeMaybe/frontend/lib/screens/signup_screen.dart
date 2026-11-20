@@ -6,7 +6,7 @@ import '../services/auth_service.dart';
 import '../services/profile_service.dart';
 import 'login_screen.dart';
 import 'professor_dashboard_screen.dart';
-import 'student_settings_screen.dart';
+import 'student_dashboard_screen.dart';
 import 'widgets/bottom_right_notification.dart';
 import 'widgets/google_auth_button.dart';
 import '../models/class_sections.dart';
@@ -105,12 +105,9 @@ class _SignupScreenState extends State<SignupScreen> {
     if (!_formKey.currentState!.validate()) return;
 
     if (!_agreedToTerms) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please accept the Terms of Service to proceed.'),
-          backgroundColor: Color(0xFFDC2626),
-          behavior: SnackBarBehavior.floating,
-        ),
+      AppNotification.showError(
+        context,
+        'Please accept the Terms of Service to proceed.',
       );
       return;
     }
@@ -170,10 +167,7 @@ class _SignupScreenState extends State<SignupScreen> {
         Navigator.pushAndRemoveUntil(
           context,
           MaterialPageRoute(
-            builder: (_) => const StudentSettingsScreen(
-              initialTab: 0,
-              requireCompletion: true,
-            ),
+            builder: (_) => const StudentDashboardScreen(),
           ),
           (route) => false,
         );
@@ -236,10 +230,7 @@ class _SignupScreenState extends State<SignupScreen> {
         Navigator.pushAndRemoveUntil(
           context,
           MaterialPageRoute(
-            builder: (_) => const StudentSettingsScreen(
-              initialTab: 0,
-              requireCompletion: true,
-            ),
+            builder: (_) => const StudentDashboardScreen(),
           ),
           (route) => false,
         );

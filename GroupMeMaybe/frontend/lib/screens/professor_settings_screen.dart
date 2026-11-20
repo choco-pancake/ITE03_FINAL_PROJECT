@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'widgets/bottom_right_notification.dart';
 import '../services/notification_service.dart';
 import 'widgets/portal_top_actions.dart';
 
@@ -50,10 +51,9 @@ class _ProfessorSettingsScreenState extends State<ProfessorSettingsScreen> {
     } catch (_) {
       if (mounted) {
         setState(() => _notifyCustomSkills = !value);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Could not save notification preference.'),
-          ),
+        AppNotification.showError(
+          context,
+          'Could not save notification preference.',
         );
       }
     }
@@ -69,12 +69,9 @@ class _ProfessorSettingsScreenState extends State<ProfessorSettingsScreen> {
   }
 
   void _saveSettings() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Faculty settings updated successfully!'),
-        backgroundColor: Color(0xFF16A34A),
-        behavior: SnackBarBehavior.floating,
-      ),
+    AppNotification.showSuccess(
+      context,
+      'Faculty settings updated successfully!',
     );
   }
 

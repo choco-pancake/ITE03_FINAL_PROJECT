@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'widgets/bottom_right_notification.dart';
 import 'widgets/portal_top_actions.dart';
 
 import '../models/academic_class.dart';
@@ -121,26 +122,20 @@ class _StudentClassesScreenState extends State<StudentClassesScreen> {
               foregroundColor: Colors.white,
             ),
             onPressed: () async {
-              final code = codeController.text.trim();
+              final code = codeController.text.trim().toUpperCase();
               if (code.isEmpty) return;
 
               final matchedClass = _allClasses.cast<AcademicClass?>().firstWhere(
-                (c) => c != null && c.classCode.toLowerCase() == code.toLowerCase(),
+                (c) => c != null && c.classCode.toUpperCase() == code,
                 orElse: () => null,
               );
 
               if (matchedClass != null) {
-                try {
-                  await _activityService.enrollInClass(code);
-                } catch (_) {}
-                if (!mounted) return;
                 if (ctx.mounted) Navigator.pop(ctx);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Enrolled in ${matchedClass.displayName}.'),
-                    backgroundColor: const Color(0xFF16A34A),
-                    behavior: SnackBarBehavior.floating,
-                  ),
+                AppNotification.showSuccess(
+                  context,
+                  'Already Enrolled',
+                  'You are already enrolled in ${matchedClass.displayName}.',
                 );
                 await _loadClasses();
               } else {
@@ -148,24 +143,27 @@ class _StudentClassesScreenState extends State<StudentClassesScreen> {
                   final enrolled = await _activityService.enrollInClass(code);
                   if (!mounted) return;
                   if (ctx.mounted) Navigator.pop(ctx);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Enrolled in ${enrolled.displayName}.'),
-                      backgroundColor: const Color(0xFF16A34A),
-                      behavior: SnackBarBehavior.floating,
-                    ),
+                  AppNotification.showSuccess(
+                    context,
+                    'Enrolled Successfully',
+                    'You have joined ${enrolled.displayName}.',
                   );
                   await _loadClasses();
                 } catch (error) {
+                  if (ctx.mounted) Navigator.pop(ctx);
                   if (!mounted) return;
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        'Class code "$code" not found. Please verify with your instructor.',
-                      ),
-                      backgroundColor: const Color(0xFFDC2626),
-                      behavior: SnackBarBehavior.floating,
-                    ),
+                  final rawErr = error.toString().replaceAll('Exception: ', '');
+                  final message = (rawErr.isEmpty ||
+                          rawErr.toLowerCase().contains('found') ||
+                          rawErr.toLowerCase().contains('client') ||
+                          rawErr.toLowerCase().contains('failed') ||
+                          rawErr.toLowerCase().contains('socket'))
+                      ? 'Class code "$code" not found. Please verify with your instructor.'
+                      : rawErr;
+                  AppNotification.showError(
+                    context,
+                    'Enrollment Failed',
+                    message,
                   );
                 }
               }

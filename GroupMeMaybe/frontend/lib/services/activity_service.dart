@@ -232,8 +232,15 @@ class ActivityService {
       AuthService.authToken = null;
       throw Exception('Session expired or unauthenticated. Please log in again.');
     }
-    final body = jsonDecode(response.body) as Map<String, dynamic>;
-    throw Exception(body['message'] ?? 'Could not enroll in class.');
+    try {
+      final body = jsonDecode(response.body);
+      if (body is Map<String, dynamic> && body['message'] != null) {
+        throw Exception(body['message']);
+      }
+    } catch (e) {
+      if (e is! FormatException) rethrow;
+    }
+    throw Exception('Class code "$classCode" not found. Please verify with your instructor.');
   }
 
   /// Get skill distribution and scarcity analysis for an activity

@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 
 import 'login_screen.dart';
+import 'widgets/bottom_right_notification.dart';
 import 'widgets/portal_top_actions.dart';
 
 import 'package:flutter/services.dart';
@@ -60,31 +61,24 @@ class _ProfessorClassesScreenState extends State<ProfessorClassesScreen> {
         final isAuth = errorStr.contains('401') ||
             errorStr.toLowerCase().contains('unauthenticated') ||
             errorStr.toLowerCase().contains('session');
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              isAuth
-                  ? 'Your session expired or is unauthenticated. Please log in again.'
-                  : 'Could not load classes: $e',
-            ),
-            backgroundColor: isAuth ? Colors.red.shade700 : null,
-            behavior: SnackBarBehavior.floating,
-            action: isAuth
-                ? SnackBarAction(
-                    label: 'Log In',
-                    textColor: Colors.white,
-                    onPressed: () {
-                      Navigator.pushAndRemoveUntil(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const LoginScreen(),
-                        ),
-                        (route) => false,
-                      );
-                    },
-                  )
-                : null,
-          ),
+        AppNotification.notify(
+          context,
+          isAuth
+              ? 'Your session expired or is unauthenticated. Please log in again.'
+              : 'Could not load classes: $e',
+          type: NotificationType.error,
+          actionLabel: isAuth ? 'Log In' : null,
+          onAction: isAuth
+              ? () {
+                  Navigator.pushAndRemoveUntil(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const LoginScreen(),
+                    ),
+                    (route) => false,
+                  );
+                }
+              : null,
         );
       }
     }
@@ -125,9 +119,7 @@ class _ProfessorClassesScreenState extends State<ProfessorClassesScreen> {
       _loadClasses();
     } catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not delete class: $error')),
-        );
+        AppNotification.showError(context, 'Could not delete class: $error');
       }
     }
   }
@@ -148,7 +140,6 @@ class _ProfessorClassesScreenState extends State<ProfessorClassesScreen> {
   }
 
   void _showCreateClassDialog() {
-    final messenger = ScaffoldMessenger.of(context);
     final courseCodeController = TextEditingController();
     final courseNameController = TextEditingController();
     final descriptionController = TextEditingController();
@@ -159,7 +150,7 @@ class _ProfessorClassesScreenState extends State<ProfessorClassesScreen> {
     showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
-        builder: (context, setDialogState) {
+        builder: (dialogCtx, setDialogState) {
           final availableBlocks =
               ClassSections.byYear[selectedYearLevel] ?? [];
 
@@ -411,18 +402,13 @@ class _ProfessorClassesScreenState extends State<ProfessorClassesScreen> {
 
                   Navigator.pop(ctx);
 
-                  try {
+                    try {
                     await _activityService.createClass(newClass);
                     _loadClasses();
                     if (mounted) {
-                      messenger.showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            'Class "$fullName" created for $selectedBlock with code: $generatedCode',
-                          ),
-                          backgroundColor: const Color(0xFF16A34A),
-                          behavior: SnackBarBehavior.floating,
-                        ),
+                      AppNotification.showSuccess(
+                        context,
+                        'Class "$fullName" created for $selectedBlock with code: $generatedCode',
                       );
                     }
                   } catch (error) {
@@ -431,31 +417,24 @@ class _ProfessorClassesScreenState extends State<ProfessorClassesScreen> {
                       final isAuth = errorStr.contains('401') ||
                           errorStr.toLowerCase().contains('unauthenticated') ||
                           errorStr.toLowerCase().contains('session');
-                      messenger.showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            isAuth
-                                ? 'Your session expired or is unauthenticated. Please log in again.'
-                                : 'Could not create class: $error',
-                          ),
-                          backgroundColor: isAuth ? Colors.red.shade700 : null,
-                          behavior: SnackBarBehavior.floating,
-                          action: isAuth
-                              ? SnackBarAction(
-                                  label: 'Log In',
-                                  textColor: Colors.white,
-                                  onPressed: () {
-                                    Navigator.pushAndRemoveUntil(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (_) => const LoginScreen(),
-                                      ),
-                                      (route) => false,
-                                    );
-                                  },
-                                )
-                              : null,
-                        ),
+                      AppNotification.notify(
+                        context,
+                        isAuth
+                            ? 'Your session expired or is unauthenticated. Please log in again.'
+                            : 'Could not create class: $error',
+                        type: NotificationType.error,
+                        actionLabel: isAuth ? 'Log In' : null,
+                        onAction: isAuth
+                            ? () {
+                                Navigator.pushAndRemoveUntil(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => const LoginScreen(),
+                                  ),
+                                  (route) => false,
+                                );
+                              }
+                            : null,
                       );
                     }
                   }
@@ -484,15 +463,16 @@ class _ProfessorClassesScreenState extends State<ProfessorClassesScreen> {
         ));
         await _loadClasses();
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text('Rotated enrollment code for "${c.name}" to "$newCode"!'),
-            backgroundColor: const Color(0xFF16A34A),
-          ));
+          AppNotification.showSuccess(
+            context,
+            'Rotated enrollment code for "${c.name}" to "$newCode"!',
+          );
         }
       } catch (error) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Could not rotate class code: $error')),
+          AppNotification.showError(
+            context,
+            'Could not rotate class code: $error',
           );
         }
       }
@@ -501,12 +481,9 @@ class _ProfessorClassesScreenState extends State<ProfessorClassesScreen> {
 
   void _copyToClipboard(String code) {
     Clipboard.setData(ClipboardData(text: code));
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Class code "$code" copied to clipboard!'),
-        backgroundColor: const Color(0xFF1E40AF),
-        behavior: SnackBarBehavior.floating,
-      ),
+    AppNotification.showInfo(
+      context,
+      'Class code "$code" copied to clipboard!',
     );
   }
 

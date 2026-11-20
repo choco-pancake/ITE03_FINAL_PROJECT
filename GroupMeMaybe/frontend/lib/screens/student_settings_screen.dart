@@ -461,10 +461,10 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
       );
     } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Could not save notification preference.'),
-          ),
+        AppNotification.showError(
+          context,
+          'Preferences',
+          'Could not save notification preference.',
         );
       }
     }
@@ -725,7 +725,7 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
                   Text(
                     _isSavedAsComplete
                         ? '✅ Complete & Active in Matching'
-                        : 'Draft / Incomplete',
+                        : 'Profile Incomplete (Required)',
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
@@ -1233,7 +1233,7 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
               ),
             ),
             onPressed: () => Navigator.pop(ctx, 'save_exit'),
-            child: Text(_isSavedAsComplete ? 'Save & Exit' : 'Save Draft & Exit'),
+            child: const Text('Save & Exit'),
           ),
         ],
       ),
@@ -1256,7 +1256,7 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
       return true;
     } else if (result == 'save_exit') {
       return await _validateAndSave(
-        isDraft: !_isSavedAsComplete,
+        isDraft: false,
         showModal: false,
       );
     }
@@ -1264,7 +1264,7 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
   }
 
   Future<bool> _validateAndSave({
-    required bool isDraft,
+    bool isDraft = false,
     bool showModal = true,
   }) async {
     setState(() {
@@ -1298,14 +1298,10 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
 
       if (_invalidCards.isNotEmpty) {
         setState(() => _isSaving = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Please complete the highlighted sections to save your full profile.',
-            ),
-            backgroundColor: Color(0xFFDC2626),
-            behavior: SnackBarBehavior.floating,
-          ),
+        AppNotification.showError(
+          context,
+          'Incomplete Profile',
+          'Please complete the highlighted sections to save your full profile.',
         );
         return false;
       }
@@ -1394,10 +1390,10 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
     } catch (error) {
       if (mounted) {
         setState(() => _isSaving = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(error.toString().replaceAll('Exception: ', '')),
-          ),
+        AppNotification.showError(
+          context,
+          'Save Error',
+          error.toString().replaceAll('Exception: ', ''),
         );
       }
       return false;
@@ -1746,12 +1742,10 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
                   );
                 } catch (error) {
                   if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          error.toString().replaceAll('Exception: ', ''),
-                        ),
-                      ),
+                    AppNotification.showError(
+                      context,
+                      'Skill Request Error',
+                      error.toString().replaceAll('Exception: ', ''),
                     );
                   }
                   return;
@@ -1790,8 +1784,10 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
       onPopInvokedWithResult: (didPop, result) async {
         if (didPop) return;
         if (widget.requireCompletion && !_isSavedAsComplete) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Complete your profile to continue.')),
+          AppNotification.showError(
+            context,
+            'Incomplete Profile',
+            'Complete your profile to continue.',
           );
           return;
         }
@@ -2001,7 +1997,7 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
                                           Text(
                                             _isSavedAsComplete
                                                 ? '✅ Complete & Active in Matching'
-                                                : 'Draft / Incomplete',
+                                                : 'Profile Incomplete (Required)',
                                             style: TextStyle(
                                               fontSize: 12,
                                               fontWeight: FontWeight.w600,
@@ -3003,25 +2999,6 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
                                         spacing: 12,
                                         runSpacing: 10,
                                         children: [
-                                          if (!_isSavedAsComplete)
-                                            OutlinedButton(
-                                            onPressed: _isSaving
-                                                ? null
-                                                : () => _validateAndSave(
-                                                    isDraft: true,
-                                                  ),
-                                            style: OutlinedButton.styleFrom(
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                    horizontal: 20,
-                                                    vertical: 14,
-                                                  ),
-                                              side: const BorderSide(
-                                                color: Color(0xFFCBD5E1),
-                                              ),
-                                            ),
-                                            child: const Text('Save as Draft'),
-                                          ),
                                           ElevatedButton.icon(
                                             onPressed: _isSaving
                                                 ? null

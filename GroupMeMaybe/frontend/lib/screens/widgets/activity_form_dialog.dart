@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'bottom_right_notification.dart';
 import '../../models/academic_class.dart';
 import '../../models/grouping_activity.dart';
 import '../../services/activity_service.dart';
@@ -139,11 +140,9 @@ class _ActivityFormDialogState extends State<ActivityFormDialog> {
     if (!_formKey.currentState!.validate()) return;
 
     if (_requiredSkills.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please select at least one required skill.'),
-          backgroundColor: Colors.red,
-        ),
+      AppNotification.showError(
+        context,
+        'Please select at least one required skill.',
       );
       return;
     }
@@ -187,11 +186,9 @@ class _ActivityFormDialogState extends State<ActivityFormDialog> {
     } catch (e) {
       if (mounted) {
         setState(() => _isSaving = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to save activity: $e'),
-            backgroundColor: Colors.red,
-          ),
+        AppNotification.showError(
+          context,
+          'Failed to save activity: $e',
         );
       }
     }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'widgets/bottom_right_notification.dart';
 import 'widgets/portal_top_actions.dart';
 
 import 'package:shared_preferences/shared_preferences.dart';
@@ -82,20 +83,6 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
     super.initState();
     _loadDashboardData();
     _loadAlertPreference();
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      final isComplete = await ProfileService().checkProfileComplete();
-      if (!isComplete && mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (_) => const StudentSettingsScreen(
-              initialTab: 0,
-              requireCompletion: true,
-            ),
-          ),
-        );
-      }
-    });
   }
 
   Future<void> _loadAlertPreference() async {
@@ -297,14 +284,10 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
             ),
             onPressed: () {
               Navigator.pop(ctx);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    'Switch request for "$targetTeam" submitted to Project Manager and Professor.',
-                  ),
-                  backgroundColor: const Color(0xFF16A34A),
-                  behavior: SnackBarBehavior.floating,
-                ),
+              AppNotification.showSuccess(
+                context,
+                'Request Submitted',
+                'Switch request for "$targetTeam" submitted to Project Manager and Professor.',
               );
             },
             child: const Text('Send Switch Request'),
@@ -326,38 +309,52 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
             currentDestination: StudentNavDestination.dashboard,
           ),
 
-          // Main Content
+          // Main Content Area with Fixed Top Banner Matching Settings
           Expanded(
-            child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : RefreshIndicator(
-                    onRefresh: _loadDashboardData,
-                    child: SingleChildScrollView(
-                      padding: const EdgeInsets.fromLTRB(32, 28, 32, 28),
-                      child: Align(
-                        alignment: Alignment.topCenter,
-                        child: ConstrainedBox(
-                          constraints: const BoxConstraints(maxWidth: 1100),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              // Top Greeting Banner
-                              _buildWelcomeHeader(),
-                              const SizedBox(height: 20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Stationary / Fixed Top Greeting Banner
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(32, 28, 32, 16),
+                  child: Align(
+                    alignment: Alignment.topCenter,
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 1100),
+                      child: _buildWelcomeHeader(),
+                    ),
+                  ),
+                ),
 
-                              // 24-Hour Urgent Grouping Reminder Alert Banner (Eventful only)
-                              if (_urgentImpendingActivity != null) ...[
-                                _buildDeadlineAlertBanner(
-                                  _urgentImpendingActivity!,
-                                ),
-                                const SizedBox(height: 20),
-                              ],
+                // Scrollable Content Area below the fixed header
+                Expanded(
+                  child: _isLoading
+                      ? const Center(child: CircularProgressIndicator())
+                      : RefreshIndicator(
+                          onRefresh: _loadDashboardData,
+                          child: SingleChildScrollView(
+                            padding: const EdgeInsets.fromLTRB(32, 0, 32, 28),
+                            child: Align(
+                              alignment: Alignment.topCenter,
+                              child: ConstrainedBox(
+                                constraints:
+                                    const BoxConstraints(maxWidth: 1100),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    // 24-Hour Urgent Grouping Reminder Alert Banner (Eventful only)
+                                    if (_urgentImpendingActivity != null) ...[
+                                      _buildDeadlineAlertBanner(
+                                        _urgentImpendingActivity!,
+                                      ),
+                                      const SizedBox(height: 20),
+                                    ],
 
-                              // Metrics Row
-                              _buildMetricsRow(),
-                              const SizedBox(height: 28),
+                                    // Metrics Row
+                                    _buildMetricsRow(),
+                                    const SizedBox(height: 28),
 
-                              // Main Columns: My Teams & Active Projects (Left) vs Classes & Recommendations (Right)
+                                    // Main Columns: My Teams & Active Projects (Left) vs Classes & Recommendations (Right)
                               LayoutBuilder(
                                 builder: (context, constraints) {
                                   final isWide = constraints.maxWidth >= 780;
@@ -395,6 +392,9 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                       ),
                     ),
                   ),
+                ),
+              ],
+            ),
           ),
         ],
       ),

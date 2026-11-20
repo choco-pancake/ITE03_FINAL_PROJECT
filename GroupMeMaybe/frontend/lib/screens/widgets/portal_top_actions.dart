@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'bottom_right_notification.dart';
 import '../../services/auth_service.dart';
 import '../../services/notification_service.dart';
 import '../landing_screen.dart';
@@ -92,14 +93,11 @@ class _PortalTopActionsState extends State<PortalTopActions> {
                           _handleNotificationClick(item);
                         } catch (error) {
                           if (dialogContext.mounted) {
-                            ScaffoldMessenger.of(dialogContext).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  error.toString().replaceAll(
-                                    'Exception: ',
-                                    '',
-                                  ),
-                                ),
+                            AppNotification.showError(
+                              dialogContext,
+                              error.toString().replaceAll(
+                                'Exception: ',
+                                '',
                               ),
                             );
                           }

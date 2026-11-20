@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'bottom_right_notification.dart';
 import '../../models/grouping_activity.dart';
 import '../../models/scarcity_report.dart';
 import '../../services/activity_service.dart';
@@ -81,24 +82,18 @@ class _ScarcityReportDialogState extends State<ScarcityReportDialog> {
 
       if (mounted) {
         setState(() => _isAutoForming = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              result['message'] as String? ??
-                  'Successfully auto-formed unassigned students!',
-            ),
-            backgroundColor: const Color(0xFF059669),
-          ),
+        AppNotification.showSuccess(
+          context,
+          result['message'] as String? ??
+              'Successfully auto-formed unassigned students!',
         );
       }
     } catch (e) {
       if (mounted) {
         setState(() => _isAutoForming = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Auto-form failed: $e'),
-            backgroundColor: Colors.red,
-          ),
+        AppNotification.showError(
+          context,
+          'Auto-form failed: $e',
         );
       }
     }
@@ -121,21 +116,17 @@ class _ScarcityReportDialogState extends State<ScarcityReportDialog> {
       await _loadReport();
       if (mounted) {
         setState(() => _isAddingSkill = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Added "$skill" to activity.'),
-            backgroundColor: const Color(0xFF059669),
-          ),
+        AppNotification.showSuccess(
+          context,
+          'Added "$skill" to activity.',
         );
       }
     } catch (e) {
       if (mounted) {
         setState(() => _isAddingSkill = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to add skill: $e'),
-            backgroundColor: Colors.red,
-          ),
+        AppNotification.showError(
+          context,
+          'Failed to add skill: $e',
         );
       }
     }

@@ -108,9 +108,18 @@ class AcademicClassController extends Controller
         }
 
         $validated = $request->validate(['class_code' => 'required|string|max:255']);
-        $class = AcademicClass::where('class_code', strtoupper(trim($validated['class_code'])))->first();
+        $rawCode = trim($validated['class_code']);
+        $upperCode = strtoupper($rawCode);
+
+        $class = AcademicClass::where('class_code', $upperCode)
+            ->orWhere('class_code', $rawCode)
+            ->orWhereRaw('UPPER(TRIM(class_code)) = ?', [$upperCode])
+            ->first();
+
         if ($class === null) {
-            return response()->json(['message' => 'Class code not found.'], 404);
+            return response()->json([
+                'message' => "Class code \"{$rawCode}\" not found. Please verify the code with your instructor.",
+            ], 404);
         }
 
         DB::transaction(function () use ($class, $request): void {

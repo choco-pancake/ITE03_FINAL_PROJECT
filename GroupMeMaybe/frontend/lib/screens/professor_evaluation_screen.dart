@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'widgets/bottom_right_notification.dart';
 import '../models/student_record.dart';
 import '../services/student_record_service.dart';
 import 'widgets/portal_top_actions.dart';
@@ -257,9 +258,7 @@ class _ProfessorEvaluationScreenState extends State<ProfessorEvaluationScreen> {
     if (saved == true && mounted) {
       await _loadStudents();
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Student record updated.')),
-        );
+        AppNotification.showSuccess(context, 'Student record updated.');
       }
     }
   }
@@ -603,11 +602,9 @@ class _ProfessorEvaluationScreenState extends State<ProfessorEvaluationScreen> {
                                         req.status = _Status.rejected;
                                         req.history.add(_HistoryEntry(DateTime.now(), 'Rejected by professor'));
                                       });
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(
-                                          content: Text('Rejected ${req.studentName}\'s request.'),
-                                          backgroundColor: const Color(0xFFDC2626),
-                                        ),
+                                      AppNotification.showError(
+                                        context,
+                                        'Rejected ${req.studentName}\'s request.',
                                       );
                                     },
                                     child: const Text('Reject'),
@@ -623,11 +620,9 @@ class _ProfessorEvaluationScreenState extends State<ProfessorEvaluationScreen> {
                                         req.status = _Status.approved;
                                         req.history.add(_HistoryEntry(DateTime.now(), 'Approved by professor'));
                                       });
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(
-                                          content: Text('Approved ${req.studentName}\'s request.'),
-                                          backgroundColor: const Color(0xFF16A34A),
-                                        ),
+                                      AppNotification.showSuccess(
+                                        context,
+                                        'Approved ${req.studentName}\'s request.',
                                       );
                                     },
                                     child: const Text('Approve'),

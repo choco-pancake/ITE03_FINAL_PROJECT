@@ -9,7 +9,6 @@ import 'admin_dashboard_screen.dart';
 import 'professor_dashboard_screen.dart';
 import 'signup_screen.dart';
 import 'student_dashboard_screen.dart';
-import 'student_settings_screen.dart';
 import 'widgets/bottom_right_notification.dart';
 import 'widgets/google_auth_button.dart';
 import 'widgets/landing_top_bar.dart';
@@ -99,17 +98,12 @@ class _LoginScreenState extends State<LoginScreen> {
           (route) => false,
         );
       } else {
-        final isComplete = await ProfileService().checkProfileComplete();
+        await ProfileService().checkProfileComplete();
         if (!mounted) return;
         Navigator.pushAndRemoveUntil(
           context,
           MaterialPageRoute(
-            builder: (_) => isComplete
-                ? const StudentDashboardScreen()
-                : const StudentSettingsScreen(
-                    initialTab: 0,
-                    requireCompletion: true,
-                  ),
+            builder: (_) => const StudentDashboardScreen(),
           ),
           (route) => false,
         );
@@ -156,17 +150,12 @@ class _LoginScreenState extends State<LoginScreen> {
           (route) => false,
         );
       } else {
-        final isComplete = await ProfileService().checkProfileComplete();
+        await ProfileService().checkProfileComplete();
         if (!mounted) return;
         Navigator.pushAndRemoveUntil(
           context,
           MaterialPageRoute(
-            builder: (_) => isComplete
-                ? const StudentDashboardScreen()
-                : const StudentSettingsScreen(
-                    initialTab: 0,
-                    requireCompletion: true,
-                  ),
+            builder: (_) => const StudentDashboardScreen(),
           ),
           (route) => false,
         );
@@ -515,13 +504,9 @@ class _LoginScreenState extends State<LoginScreen> {
                                         MaterialTapTargetSize.shrinkWrap,
                                   ),
                                   onPressed: () {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text(
-                                          'Please contact your department administrator to reset credentials.',
-                                        ),
-                                        behavior: SnackBarBehavior.floating,
-                                      ),
+                                    AppNotification.showInfo(
+                                      context,
+                                      'Please contact your department administrator to reset credentials.',
                                     );
                                   },
                                   child: const Text(

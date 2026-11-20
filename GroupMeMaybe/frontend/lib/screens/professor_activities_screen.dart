@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'widgets/bottom_right_notification.dart';
 import 'widgets/portal_top_actions.dart';
 
 import '../models/activity_summary.dart';
@@ -82,11 +83,9 @@ class _ProfessorActivitiesScreenState extends State<ProfessorActivitiesScreen> {
       builder: (ctx) => ActivityFormDialog(
         onSaved: () {
           _loadData();
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Activity created successfully!'),
-              backgroundColor: Colors.green,
-            ),
+          AppNotification.showSuccess(
+            context,
+            'Activity created successfully!',
           );
         },
       ),
@@ -101,11 +100,9 @@ class _ProfessorActivitiesScreenState extends State<ProfessorActivitiesScreen> {
         activity: activity,
         onSaved: () {
           _loadData();
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Activity updated successfully!'),
-              backgroundColor: Colors.green,
-            ),
+          AppNotification.showSuccess(
+            context,
+            'Activity updated successfully!',
           );
         },
       ),
@@ -169,8 +166,9 @@ class _ProfessorActivitiesScreenState extends State<ProfessorActivitiesScreen> {
         }
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Failed to finalize activity: $e')),
+          AppNotification.showError(
+            context,
+            'Failed to finalize activity: $e',
           );
         }
       }
@@ -344,17 +342,14 @@ class _ProfessorActivitiesScreenState extends State<ProfessorActivitiesScreen> {
       try {
         await _activityService.deleteActivity(activity.id!);
         if (mounted) {
-          ScaffoldMessenger.of(context)
-              .showSnackBar(const SnackBar(content: Text('Activity deleted.')));
+          AppNotification.showSuccess(context, 'Activity deleted.');
           _loadData();
         }
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Error deleting activity: $e'),
-              backgroundColor: Colors.red,
-            ),
+          AppNotification.showError(
+            context,
+            'Error deleting activity: $e',
           );
         }
       }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'bottom_right_notification.dart';
 import '../../services/profile_service.dart';
 import '../student_classes_screen.dart';
 import '../student_dashboard_screen.dart';
@@ -90,18 +91,8 @@ class StudentSidebar extends StatelessWidget {
             icon: Icons.dashboard_outlined,
             title: 'Dashboard',
             isSelected: currentDestination == StudentNavDestination.dashboard,
-            isLocked: !ProfileService.isProfileComplete,
+            isLocked: false,
             onTap: () async {
-              if (!ProfileService.isProfileComplete) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text(
-                      'Please complete your profile in Settings before accessing the dashboard.',
-                    ),
-                  ),
-                );
-                return;
-              }
               if (currentDestination != StudentNavDestination.dashboard) {
                 if (onBeforeNavigate != null) {
                   final canProceed = await onBeforeNavigate!();
@@ -125,12 +116,9 @@ class StudentSidebar extends StatelessWidget {
             isLocked: !ProfileService.isProfileComplete,
             onTap: () async {
               if (!ProfileService.isProfileComplete) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text(
-                      'Please complete your profile in Settings before accessing classes.',
-                    ),
-                  ),
+                AppNotification.showWarning(
+                  context,
+                  'Please complete your profile in Settings before accessing classes.',
                 );
                 return;
               }
@@ -157,12 +145,9 @@ class StudentSidebar extends StatelessWidget {
             isLocked: !ProfileService.isProfileComplete,
             onTap: () async {
               if (!ProfileService.isProfileComplete) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text(
-                      'Please complete your profile in Settings before accessing team groups.',
-                    ),
-                  ),
+                AppNotification.showWarning(
+                  context,
+                  'Please complete your profile in Settings before accessing team groups.',
                 );
                 return;
               }

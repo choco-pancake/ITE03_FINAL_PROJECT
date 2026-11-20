@@ -310,10 +310,9 @@ class _ProfessorDashboardScreenState extends State<ProfessorDashboardScreen> {
       }
     } catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(error.toString().replaceAll('Exception: ', '')),
-          ),
+        AppNotification.showError(
+          context,
+          error.toString().replaceAll('Exception: ', ''),
         );
       }
     }
@@ -547,14 +546,9 @@ class _ProfessorDashboardScreenState extends State<ProfessorDashboardScreen> {
       _unassignedStudents.removeWhere((s) => s.id == student.id);
     });
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'Successfully assigned ${student.name} to ${targetTeam.name}!',
-        ),
-        backgroundColor: const Color(0xFF16A34A),
-        behavior: SnackBarBehavior.floating,
-      ),
+    AppNotification.showSuccess(
+      context,
+      'Successfully assigned ${student.name} to ${targetTeam.name}!',
     );
   }
 

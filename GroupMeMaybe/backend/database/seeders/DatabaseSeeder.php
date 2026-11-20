@@ -18,14 +18,14 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // Clear previous records for clean seeding
+        // Clear previous records for clean seeding (preserve real user accounts from testing)
         Schema::disableForeignKeyConstraints();
         DB::table('student_record_changes')->truncate();
         DB::table('academic_class_enrollments')->truncate();
         GroupingActivity::truncate();
         AcademicClass::truncate();
-        Profile::truncate();
-        User::truncate();
+        Profile::where('email', 'like', '%@student.edu')->orWhere('email', 'like', '%@university.edu')->delete();
+        User::where('email', 'like', '%@student.edu')->orWhere('email', 'like', '%@university.edu')->delete();
         Schema::enableForeignKeyConstraints();
 
         // 0. Seed Demo Accounts
@@ -48,11 +48,39 @@ class DatabaseSeeder extends Seeder
         ]);
 
         $carlos = User::create([
+            'first_name' => 'Carlos',
+            'middle_name' => 'Santos',
+            'last_name' => 'Mendoza',
             'name' => 'Carlos Mendoza',
             'email' => 'carlos.mendoza@student.edu',
             'password' => Hash::make('password123'),
             'role' => 'student',
-            'department_or_section' => 'BSIT 2A',
+            'department_or_section' => '21-ITEW-01',
+        ]);
+
+        Profile::create([
+            'name' => 'Carlos Mendoza',
+            'first_name' => 'Carlos',
+            'middle_name' => 'Santos',
+            'last_name' => 'Mendoza',
+            'email' => 'carlos.mendoza@student.edu',
+            'skills' => ['Frontend Development', 'Backend Development', 'JavaScript', 'Laravel'],
+            'interests' => ['Web Development', 'Mobile Systems'],
+            'preferred_role' => 'Full-Stack Developer',
+            'availability' => '21-ITEW-01',
+            'details' => [
+                'student_id' => '2023-00142-TG-0',
+                'year_level' => '2nd Year',
+                'block' => '21-ITEW-01',
+                'roles' => ['Full-Stack Developer', 'Frontend Developer'],
+                'tools' => ['VS Code', 'Git', 'Postman', 'Flutter'],
+                'available_days' => ['Mon', 'Wed', 'Fri'],
+                'meeting_start' => '08:00 AM',
+                'meeting_end' => '05:00 PM',
+                'collaboration_mode' => 'Hybrid',
+                'experience' => 'Built academic web applications and mobile apps.',
+                'is_complete' => true,
+            ],
         ]);
 
         // 1. Seed Academic Classes
@@ -347,9 +375,55 @@ class DatabaseSeeder extends Seeder
             ],
         ];
 
-        foreach ($profilesData as $data) {
-            Profile::create($data);
+        foreach ($profilesData as $i => $data) {
+            $parts = explode(' ', $data['name']);
+            $firstName = $parts[0];
+            $lastName = count($parts) > 1 ? end($parts) : 'Student';
+            $middleName = count($parts) > 2 ? $parts[1] : 'M.';
+            $studentId = '2023-' . sprintf('%04d', $i + 1) . '-TG-0';
+            $block = '21-ITEW-01';
+            $yearLevel = '2nd Year';
+
+            $studentUser = User::create([
+                'first_name' => $firstName,
+                'middle_name' => $middleName,
+                'last_name' => $lastName,
+                'name' => $data['name'],
+                'email' => $data['email'],
+                'password' => Hash::make('password123'),
+                'role' => 'student',
+                'department_or_section' => $block,
+            ]);
+
+            Profile::create([
+                ...$data,
+                'first_name' => $firstName,
+                'middle_name' => $middleName,
+                'last_name' => $lastName,
+                'details' => [
+                    'student_id' => $studentId,
+                    'year_level' => $yearLevel,
+                    'block' => $block,
+                    'roles' => [$data['preferred_role']],
+                    'tools' => ['Git', 'VS Code', 'Figma'],
+                    'available_days' => ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
+                    'meeting_start' => '09:00 AM',
+                    'meeting_end' => '04:00 PM',
+                    'collaboration_mode' => 'Hybrid',
+                    'experience' => 'Active student contributor with course project experience.',
+                    'is_complete' => true,
+                ],
+            ]);
+
+            $class1->students()->attach($studentUser->id);
         }
+
+        // Auto-enroll any existing real student accounts into the primary class
+        $realStudents = User::where('role', 'student')->where('email', 'not like', '%@student.edu')->get();
+        foreach ($realStudents as $realStudent) {
+            $class1->students()->syncWithoutDetaching([$realStudent->id]);
+        }
+        $class1->update(['student_count' => $class1->students()->count()]);
 
         // 3. Seed Grouping Activities (Aivhan's Module)
 

@@ -31,16 +31,36 @@ class StudentRecordController extends Controller
             $profile = $profiles->get($student->email);
             $details = $profile?->details ?? [];
 
+            $realStudentId = trim((string) ($details['student_id'] ?? ''));
+            if ($realStudentId === '') {
+                $realStudentId = '2024-' . str_pad((string) $student->id, 4, '0', STR_PAD_LEFT) . '-TG-0';
+            }
+
+            $realYearLevel = trim((string) ($details['year_level'] ?? ''));
+            if ($realYearLevel === '') {
+                $realYearLevel = '2nd Year';
+            }
+
+            $realBlock = trim((string) ($details['block'] ?? $student->department_or_section ?? ''));
+            if ($realBlock === '') {
+                $realBlock = '21-ITEW-01';
+            }
+
+            $nameParts = preg_split('/\s+/', trim($student->name));
+            $fallbackFirst = $nameParts[0] ?? 'Student';
+            $fallbackLast = count($nameParts) > 1 ? end($nameParts) : 'User';
+            $fallbackMiddle = count($nameParts) > 2 ? implode(' ', array_slice($nameParts, 1, count($nameParts) - 2)) : '';
+
             return [
                 'id' => $student->id,
                 'name' => $student->name,
                 'email' => $student->email,
-                'first_name' => $profile?->first_name ?: $student->first_name,
-                'middle_name' => $profile?->middle_name ?? $student->middle_name,
-                'last_name' => $profile?->last_name ?: $student->last_name,
-                'student_id' => $details['student_id'] ?? '',
-                'year_level' => $details['year_level'] ?? '',
-                'block' => $details['block'] ?? $student->department_or_section,
+                'first_name' => $profile?->first_name ?: ($student->first_name ?: $fallbackFirst),
+                'middle_name' => $profile?->middle_name ?? ($student->middle_name ?? $fallbackMiddle),
+                'last_name' => $profile?->last_name ?: ($student->last_name ?: $fallbackLast),
+                'student_id' => $realStudentId,
+                'year_level' => $realYearLevel,
+                'block' => $realBlock,
                 'classes' => $student->academicClasses->map(fn ($class): array => [
                     'id' => $class->id,
                     'name' => $class->name,
@@ -83,7 +103,23 @@ class StudentRecordController extends Controller
             $lockedStudent = User::whereKey($student->id)->lockForUpdate()->firstOrFail();
             $profile = Profile::where('email', $lockedStudent->email)->lockForUpdate()->first();
             if ($profile === null) {
-                throw ValidationException::withMessages(['record' => 'Student profile is missing.']);
+                $profile = Profile::create([
+                    'name' => $lockedStudent->name,
+                    'email' => $lockedStudent->email,
+                    'first_name' => $validated['first_name'],
+                    'middle_name' => $validated['middle_name'] ?? null,
+                    'last_name' => $validated['last_name'],
+                    'skills' => [],
+                    'interests' => [],
+                    'preferred_role' => 'Frontend Developer',
+                    'availability' => $validated['block'],
+                    'details' => [
+                        'student_id' => $validated['student_id'],
+                        'year_level' => $validated['year_level'],
+                        'block' => $validated['block'],
+                        'is_complete' => true,
+                    ],
+                ]);
             }
 
             $details = $profile->details ?? [];

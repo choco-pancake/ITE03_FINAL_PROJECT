@@ -361,13 +361,95 @@ class _ProfessorEvaluationScreenState extends State<ProfessorEvaluationScreen> {
                                                 const SizedBox(height: 10),
                                             itemBuilder: (context, index) {
                                               final student = visible[index];
+                                              final idText = student.studentId.isNotEmpty
+                                                  ? student.studentId
+                                                  : 'ID Pending';
+                                              final academicInfo = [
+                                                if (student.yearLevel.isNotEmpty)
+                                                  student.yearLevel,
+                                                if (student.block.isNotEmpty)
+                                                  student.block,
+                                              ].join(' • ');
+                                              final classInfo = student.classes.isNotEmpty
+                                                  ? student.classes.join(', ')
+                                                  : 'No classes enrolled';
+
                                               return Card(
-                                                child: ListTile(
-                                                  title: Text(student.name),
-                                                  subtitle: Text(
-                                                    '${student.studentId} | ${student.classes.join(', ')}',
+                                                elevation: 0,
+                                                shape: RoundedRectangleBorder(
+                                                  borderRadius: BorderRadius.circular(12),
+                                                  side: const BorderSide(
+                                                    color: Color(0xFFE2E8F0),
                                                   ),
-                                                  trailing: const Icon(Icons.edit_outlined),
+                                                ),
+                                                child: ListTile(
+                                                  contentPadding:
+                                                      const EdgeInsets.symmetric(
+                                                    horizontal: 16,
+                                                    vertical: 8,
+                                                  ),
+                                                  leading: CircleAvatar(
+                                                    radius: 20,
+                                                    backgroundColor:
+                                                        const Color(0xFF1E40AF),
+                                                    child: Text(
+                                                      student.name.isNotEmpty
+                                                          ? student.name[0].toUpperCase()
+                                                          : 'S',
+                                                      style: const TextStyle(
+                                                        color: Colors.white,
+                                                        fontWeight: FontWeight.bold,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                  title: Row(
+                                                    children: [
+                                                      Expanded(
+                                                        child: Text(
+                                                          student.name,
+                                                          style: const TextStyle(
+                                                            fontWeight: FontWeight.bold,
+                                                            fontSize: 16,
+                                                          ),
+                                                        ),
+                                                      ),
+                                                      Container(
+                                                        padding: const EdgeInsets.symmetric(
+                                                          horizontal: 8,
+                                                          vertical: 2,
+                                                        ),
+                                                        decoration: BoxDecoration(
+                                                          color: const Color(0xFFEFF6FF),
+                                                          borderRadius:
+                                                              BorderRadius.circular(6),
+                                                        ),
+                                                        child: Text(
+                                                          idText,
+                                                          style: const TextStyle(
+                                                            fontSize: 12,
+                                                            fontWeight: FontWeight.w600,
+                                                            color: Color(0xFF1D4ED8),
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                  subtitle: Padding(
+                                                    padding: const EdgeInsets.only(top: 4),
+                                                    child: Text(
+                                                      academicInfo.isNotEmpty
+                                                          ? '$academicInfo | $classInfo'
+                                                          : classInfo,
+                                                      style: const TextStyle(
+                                                        fontSize: 13,
+                                                        color: Color(0xFF64748B),
+                                                      ),
+                                                    ),
+                                                  ),
+                                                  trailing: const Icon(
+                                                    Icons.edit_outlined,
+                                                    color: Color(0xFF1E40AF),
+                                                  ),
                                                   onTap: () => _editStudent(student),
                                                 ),
                                               );

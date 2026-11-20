@@ -387,11 +387,21 @@ class _ProfessorDashboardScreenState extends State<ProfessorDashboardScreen> {
                     ? ProfileCompletionStatus.incomplete
                     : ProfileCompletionStatus.uninitialized);
 
+          final details = p.details;
+          final realStudentId = (details['student_id'] != null &&
+                  details['student_id'].toString().trim().isNotEmpty)
+              ? details['student_id'].toString().trim()
+              : '2023-${(p.id ?? 1).toString().padLeft(4, '0')}';
+          final realBlock = (details['block'] != null &&
+                  details['block'].toString().trim().isNotEmpty)
+              ? details['block'].toString().trim()
+              : (p.availability.isNotEmpty ? p.availability : 'General');
+
           return StudentRosterItem(
             id: 's-${p.id ?? DateTime.now().millisecond}',
             name: p.name,
-            studentId: '2023-${(p.id ?? 1).toString().padLeft(4, '0')}',
-            block: p.availability.isNotEmpty ? p.availability : 'General',
+            studentId: realStudentId,
+            block: realBlock,
             status: status,
             primaryRole: p.preferredRole.isNotEmpty ? p.preferredRole : null,
             skillLevel: p.skills.length >= 4

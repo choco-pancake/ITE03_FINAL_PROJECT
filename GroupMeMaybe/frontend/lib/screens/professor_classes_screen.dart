@@ -11,7 +11,7 @@ import 'package:flutter/services.dart';
 import '../models/academic_class.dart';
 import '../models/class_sections.dart';
 import '../services/activity_service.dart';
-import 'profile_list_screen.dart';
+import 'professor_activities_screen.dart';
 import 'widgets/professor_sidebar.dart';
 
 class ProfessorClassesScreen extends StatefulWidget {
@@ -733,24 +733,36 @@ class _ProfessorClassesScreenState extends State<ProfessorClassesScreen> {
     );
   }
 
-  Widget _buildClassCard(AcademicClass c) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x06000000),
-            blurRadius: 10,
-            offset: Offset(0, 2),
-          ),
-        ],
+  void _navigateToClassProjects(AcademicClass c) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ProfessorActivitiesScreen(selectedClass: c),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
+    );
+  }
+
+  Widget _buildClassCard(AcademicClass c) {
+    return InkWell(
+      onTap: () => _navigateToClassProjects(c),
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: const Color(0xFFE2E8F0)),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x06000000),
+              blurRadius: 10,
+              offset: Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -920,21 +932,23 @@ class _ProfessorClassesScreenState extends State<ProfessorClassesScreen> {
                   ],
                 ),
               ),
-              TextButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const ProfileListScreen(),
-                    ),
-                  );
-                },
-                child: const Text(
-                  'View Groups',
+              FilledButton.icon(
+                onPressed: () => _navigateToClassProjects(c),
+                icon: const Icon(Icons.arrow_forward, size: 14),
+                label: const Text(
+                  'Manage Projects',
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFF1E40AF),
+                  ),
+                ),
+                style: FilledButton.styleFrom(
+                  backgroundColor: const Color(0xFF1E40AF),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  minimumSize: Size.zero,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(6),
                   ),
                 ),
               ),
@@ -942,6 +956,7 @@ class _ProfessorClassesScreenState extends State<ProfessorClassesScreen> {
           ),
         ],
       ),
-    );
+    ),
+  );
   }
 }

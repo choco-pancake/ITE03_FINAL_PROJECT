@@ -9,9 +9,15 @@ import '../../services/activity_service.dart';
 /// "Grouping Activity Configuration"
 class ActivityFormDialog extends StatefulWidget {
   final GroupingActivity? activity;
+  final AcademicClass? initialClass;
   final VoidCallback onSaved;
 
-  const ActivityFormDialog({super.key, this.activity, required this.onSaved});
+  const ActivityFormDialog({
+    super.key,
+    this.activity,
+    this.initialClass,
+    required this.onSaved,
+  });
 
   @override
   State<ActivityFormDialog> createState() => _ActivityFormDialogState();
@@ -74,8 +80,8 @@ class _ActivityFormDialogState extends State<ActivityFormDialog> {
       text: (a?.numberOfGroups ?? 6).toString(),
     );
 
-    _selectedClassDisplay = a?.className;
-    _selectedClassId = a?.academicClassId;
+    _selectedClassDisplay = widget.initialClass?.displayName ?? a?.className;
+    _selectedClassId = widget.initialClass?.id ?? a?.academicClassId;
 
     _groupingDeadline =
         a?.groupingDeadline ?? DateTime.now().add(const Duration(days: 21));
@@ -113,7 +119,12 @@ class _ActivityFormDialogState extends State<ActivityFormDialog> {
         setState(() {
           _availableClasses = classes;
           _loadingClasses = false;
-          if (_selectedClassDisplay == null && classes.isNotEmpty) {
+          if (_selectedClassId != null) {
+            final match = classes.where((c) => c.id == _selectedClassId).firstOrNull;
+            if (match != null) {
+              _selectedClassDisplay = match.displayName;
+            }
+          } else if (_selectedClassDisplay == null && classes.isNotEmpty) {
             _selectedClassDisplay = classes.first.displayName;
             _selectedClassId = classes.first.id;
           }

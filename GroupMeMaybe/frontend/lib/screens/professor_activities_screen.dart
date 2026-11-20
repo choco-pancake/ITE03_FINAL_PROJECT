@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'widgets/bottom_right_notification.dart';
 import 'widgets/portal_top_actions.dart';
 
+import '../models/academic_class.dart';
 import '../models/activity_summary.dart';
 import '../models/grouping_activity.dart';
 import '../services/activity_service.dart';
@@ -12,9 +13,17 @@ import 'widgets/activity_form_dialog.dart';
 import 'widgets/professor_sidebar.dart';
 import 'widgets/scarcity_report_dialog.dart';
 import 'widgets/summary_cards_row.dart';
+import 'professor_classes_screen.dart';
 
 class ProfessorActivitiesScreen extends StatefulWidget {
-  const ProfessorActivitiesScreen({super.key});
+  final AcademicClass? selectedClass;
+  final int? selectedClassId;
+
+  const ProfessorActivitiesScreen({
+    super.key,
+    this.selectedClass,
+    this.selectedClassId,
+  });
 
   @override
   State<ProfessorActivitiesScreen> createState() =>
@@ -28,6 +37,8 @@ class _ProfessorActivitiesScreenState extends State<ProfessorActivitiesScreen> {
 
   List<GroupingActivity> _activities = [];
   ActivitySummary _summary = const ActivitySummary();
+  AcademicClass? _currentClass;
+  List<AcademicClass> _availableClasses = [];
 
   bool _isLoading = true;
   String? _errorMessage;
@@ -38,7 +49,48 @@ class _ProfessorActivitiesScreenState extends State<ProfessorActivitiesScreen> {
   @override
   void initState() {
     super.initState();
+    _currentClass = widget.selectedClass;
+    _loadClassesList();
     _loadData();
+  }
+
+  Future<void> _loadClassesList() async {
+    try {
+      final list = await _activityService.getClasses();
+      if (mounted) {
+        setState(() {
+          _availableClasses = list;
+          if (_currentClass == null && widget.selectedClassId != null) {
+            _currentClass = list.where((c) => c.id == widget.selectedClassId).firstOrNull;
+          }
+        });
+      }
+    } catch (_) {}
+  }
+
+  List<GroupingActivity> get _filteredActivities {
+    if (_currentClass == null) return _activities;
+    final cls = _currentClass!;
+    return _activities.where((a) {
+      if (a.academicClassId != null && cls.id != null) {
+        return a.academicClassId == cls.id;
+      }
+      return a.className.toLowerCase().contains(cls.name.toLowerCase());
+    }).toList();
+  }
+
+  ActivitySummary get _effectiveSummary {
+    if (_currentClass == null) return _summary;
+    final acts = _filteredActivities;
+    final active = acts.where((a) => a.status.toLowerCase() == 'active').length;
+    final upcoming = acts.where((a) => a.status.toLowerCase().contains('upcoming')).length;
+    final completed = acts.where((a) => a.status.toLowerCase() == 'completed').length;
+    return ActivitySummary(
+      total: acts.length,
+      active: active,
+      upcoming: upcoming,
+      completed: completed,
+    );
   }
 
   @override
@@ -81,6 +133,7 @@ class _ProfessorActivitiesScreenState extends State<ProfessorActivitiesScreen> {
       context: context,
       barrierDismissible: false,
       builder: (ctx) => ActivityFormDialog(
+        initialClass: _currentClass,
         onSaved: () {
           _loadData();
           AppNotification.showSuccess(
@@ -385,7 +438,7 @@ class _ProfessorActivitiesScreenState extends State<ProfessorActivitiesScreen> {
                   if (_activeProjectTab == 0) ...[
                     // Summary Cards
                     SummaryCardsRow(
-                      summary: _summary,
+                      summary: _effectiveSummary,
                       selectedFilter: _selectedStatus,
                       onSelectFilter: (filterKey) {
                         setState(() => _selectedStatus = filterKey);
@@ -408,7 +461,7 @@ class _ProfessorActivitiesScreenState extends State<ProfessorActivitiesScreen> {
                       )
                     else if (_errorMessage != null)
                       _buildErrorState()
-                    else if (_activities.isEmpty)
+                    else if (_filteredActivities.isEmpty)
                       _buildEmptyState()
                     else
                       _buildActivityGrid(),
@@ -506,7 +559,7 @@ class _ProfessorActivitiesScreenState extends State<ProfessorActivitiesScreen> {
     final query = _groupSearchController.text.trim().toLowerCase();
     final List<Map<String, dynamic>> groups = [];
 
-    for (final act in _activities) {
+    for (final act in _filteredActivities) {
       if (act.formedTeams != null && act.formedTeams!.isNotEmpty) {
         for (final tm in act.formedTeams!) {
           if (tm is Map) {
@@ -967,9 +1020,34 @@ class _ProfessorActivitiesScreenState extends State<ProfessorActivitiesScreen> {
         final titleBlock = Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Grouping Activities',
-              style: TextStyle(
+            if (_currentClass != null) ...[
+              OutlinedButton.icon(
+                onPressed: () {
+                  if (Navigator.canPop(context)) {
+                    Navigator.pop(context);
+                  } else {
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const ProfessorClassesScreen(),
+                      ),
+                    );
+                  }
+                },
+                icon: const Icon(Icons.arrow_back, size: 14),
+                label: const Text('← All Classes', style: TextStyle(fontSize: 12)),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  minimumSize: Size.zero,
+                ),
+              ),
+              const SizedBox(height: 8),
+            ],
+            Text(
+              _currentClass != null
+                  ? '${_currentClass!.name} • Projects'
+                  : 'Grouping Activities',
+              style: const TextStyle(
                 fontSize: 26,
                 fontWeight: FontWeight.bold,
                 color: Color(0xFF0F172A),
@@ -977,7 +1055,9 @@ class _ProfessorActivitiesScreenState extends State<ProfessorActivitiesScreen> {
             ),
             const SizedBox(height: 4),
             Text(
-              'Create and manage group activities for your classes',
+              _currentClass != null
+                  ? 'Section: ${_currentClass!.section ?? "General"} • Code: ${_currentClass!.classCode} • ${_currentClass!.studentCount} Enrolled'
+                  : 'Create and manage group activities for your classes',
               style: TextStyle(fontSize: 14, color: Colors.blueGrey.shade600),
             ),
           ],
@@ -1001,6 +1081,43 @@ class _ProfessorActivitiesScreenState extends State<ProfessorActivitiesScreen> {
           ),
         );
 
+        Widget? classSwitcher;
+        if (_availableClasses.isNotEmpty) {
+          classSwitcher = Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: const Color(0xFFCBD5E1)),
+            ),
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<int?>(
+                value: _currentClass?.id,
+                hint: const Text('All Classes', style: TextStyle(fontSize: 12)),
+                items: [
+                  const DropdownMenuItem<int?>(
+                    value: null,
+                    child: Text('All Classes (Overview)', style: TextStyle(fontSize: 12)),
+                  ),
+                  ..._availableClasses.map((c) => DropdownMenuItem<int?>(
+                        value: c.id,
+                        child: Text('${c.name} (${c.section ?? ""})', style: const TextStyle(fontSize: 12)),
+                      )),
+                ],
+                onChanged: (int? newId) {
+                  setState(() {
+                    if (newId == null) {
+                      _currentClass = null;
+                    } else {
+                      _currentClass = _availableClasses.firstWhere((c) => c.id == newId);
+                    }
+                  });
+                },
+              ),
+            ),
+          );
+        }
+
         if (isMobile) {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -1013,7 +1130,15 @@ class _ProfessorActivitiesScreenState extends State<ProfessorActivitiesScreen> {
                 ],
               ),
               const SizedBox(height: 12),
-              createButton,
+              Wrap(
+                spacing: 10,
+                runSpacing: 10,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  createButton,
+                  ?classSwitcher,
+                ],
+              ),
             ],
           );
         }
@@ -1023,6 +1148,10 @@ class _ProfessorActivitiesScreenState extends State<ProfessorActivitiesScreen> {
           children: [
             Expanded(child: titleBlock),
             const SizedBox(width: 16),
+            if (classSwitcher != null) ...[
+              classSwitcher,
+              const SizedBox(width: 12),
+            ],
             createButton,
             const SizedBox(width: 16),
             const PortalTopActions(),
@@ -1151,6 +1280,7 @@ class _ProfessorActivitiesScreenState extends State<ProfessorActivitiesScreen> {
   }
 
   Widget _buildActivityGrid() {
+    final acts = _filteredActivities;
     return LayoutBuilder(
       builder: (context, constraints) {
         final isWide = constraints.maxWidth > 950;
@@ -1165,9 +1295,9 @@ class _ProfessorActivitiesScreenState extends State<ProfessorActivitiesScreen> {
               mainAxisSpacing: 16,
               mainAxisExtent: 310,
             ),
-            itemCount: _activities.length,
+            itemCount: acts.length,
             itemBuilder: (context, index) {
-              final activity = _activities[index];
+              final activity = acts[index];
               return ActivityCard(
                 activity: activity,
                 onViewDetails: () => _openDetailsDialog(activity),
@@ -1183,10 +1313,10 @@ class _ProfessorActivitiesScreenState extends State<ProfessorActivitiesScreen> {
         return ListView.separated(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
-          itemCount: _activities.length,
+          itemCount: acts.length,
           separatorBuilder: (context, index) => const SizedBox(height: 14),
           itemBuilder: (context, index) {
-            final activity = _activities[index];
+            final activity = acts[index];
             return ActivityCard(
               activity: activity,
               onViewDetails: () => _openDetailsDialog(activity),

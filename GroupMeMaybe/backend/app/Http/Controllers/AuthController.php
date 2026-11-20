@@ -132,7 +132,8 @@ class AuthController extends Controller
         $validated = $request->validate([
             'id_token' => 'required|string',
             'intent' => 'required|string|in:login,signup',
-            'role' => 'nullable|string|in:student,professor',
+            'role' => 'nullable|string|in:student,professor,admin',
+            'faculty_code' => 'nullable|string|max:255',
             'department_or_section' => 'nullable|string|max:255',
             'preferred_role' => 'nullable|string|max:255',
         ]);
@@ -190,8 +191,19 @@ class AuthController extends Controller
 
         $created = false;
         if ($user === null) {
-            $role = 'student';
-            $departmentOrSection = $validated['department_or_section'] ?? '';
+            $role = $validated['role'] ?? 'student';
+            if ($role === 'professor') {
+                $settings = AdminController::getSettings();
+                $expectedCode = $settings['faculty_code'] ?? env('FACULTY_ACCESS_CODE', 'BSIT-FACULTY-2026');
+                $providedCode = trim($validated['faculty_code'] ?? '');
+                if ($providedCode !== $expectedCode) {
+                    return response()->json([
+                        'message' => 'Invalid Faculty Authorization Code. Please enter the valid code to create an Instructor account.',
+                    ], 403);
+                }
+            }
+
+            $departmentOrSection = $validated['department_or_section'] ?? ($role === 'professor' ? 'College of Computer Studies' : '');
             $googleName = trim((string) ($payload['name'] ?? ''));
             $fullName = $googleName !== '' ? $googleName : explode('@', $email)[0];
             $parts = preg_split('/\s+/', $fullName);

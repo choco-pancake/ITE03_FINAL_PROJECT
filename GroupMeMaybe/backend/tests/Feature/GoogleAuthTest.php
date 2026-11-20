@@ -73,6 +73,24 @@ class GoogleAuthTest extends TestCase
         $this->assertDatabaseHas('users', ['google_sub' => 'google-sub-123']);
     }
 
+    public function test_google_signup_creates_professor_account_with_faculty_code(): void
+    {
+        $this->mockGoogleAccount();
+
+        $this->postJson('/api/google-auth', [
+            'id_token' => 'signed-token',
+            'intent' => 'signup',
+            'role' => 'professor',
+            'faculty_code' => 'BSIT-FACULTY-2026',
+        ])->assertCreated()
+            ->assertJsonPath('user.role', 'professor');
+
+        $this->assertDatabaseHas('users', [
+            'google_sub' => 'google-sub-123',
+            'role' => 'professor',
+        ]);
+    }
+
     public function test_google_login_keeps_the_existing_role(): void
     {
         User::factory()->create([

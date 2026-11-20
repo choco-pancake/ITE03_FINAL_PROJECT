@@ -351,21 +351,27 @@ class AuthService {
     required String idToken,
     required String intent,
     String? role,
+    String? facultyCode,
     String? departmentOrSection,
     String? preferredRole,
   }) async {
     try {
+      final payload = <String, dynamic>{
+        'id_token': idToken,
+        'intent': intent,
+      };
+      if (role != null) payload['role'] = role;
+      if (facultyCode != null) payload['faculty_code'] = facultyCode;
+      if (departmentOrSection != null) {
+        payload['department_or_section'] = departmentOrSection;
+      }
+      if (preferredRole != null) payload['preferred_role'] = preferredRole;
+
       final res = await http
           .post(
             Uri.parse('$baseUrl/google-auth'),
             headers: _headers,
-            body: jsonEncode({
-              'id_token': idToken,
-              'intent': intent,
-              'role': role,
-              'department_or_section': departmentOrSection,
-              'preferred_role': preferredRole,
-            }),
+            body: jsonEncode(payload),
           )
           .timeout(const Duration(seconds: 15));
 

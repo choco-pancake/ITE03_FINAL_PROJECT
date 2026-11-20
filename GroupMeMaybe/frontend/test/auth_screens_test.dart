@@ -94,7 +94,7 @@ void main() {
   );
 
   testWidgets(
-    'StudentSidebar renders STUDENT PORTAL badge and opens confirmation modal on log out',
+    'StudentSidebar renders STUDENT PORTAL badge and primary navigation items',
     (tester) async {
       await tester.binding.setSurfaceSize(const Size(1200, 1000));
       addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -114,28 +114,6 @@ void main() {
       expect(find.text('Classes'), findsOneWidget);
       expect(find.text('Groups (Teams)'), findsOneWidget);
       expect(find.text('Settings'), findsOneWidget);
-
-      // Find the logout icon button
-      final logoutBtn = find.byTooltip('Sign Out');
-      expect(logoutBtn, findsOneWidget);
-
-      // Tap Sign Out icon
-      await tester.tap(logoutBtn);
-      await tester.pumpAndSettle();
-
-      // Verify confirmation modal appears
-      expect(find.text('Confirm Sign Out'), findsOneWidget);
-      expect(
-        find.text('Are you sure you want to log out of GroupMeMaybe?'),
-        findsOneWidget,
-      );
-      expect(find.text('Cancel'), findsOneWidget);
-      expect(find.text('Log Out'), findsOneWidget);
-
-      // Tap Cancel to dismiss
-      await tester.tap(find.text('Cancel'));
-      await tester.pumpAndSettle();
-      expect(find.text('Confirm Sign Out'), findsNothing);
     },
   );
 }

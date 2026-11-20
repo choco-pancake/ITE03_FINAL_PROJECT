@@ -191,6 +191,16 @@ class _SignupScreenState extends State<SignupScreen> {
   }
 
   Future<void> _completeGoogleSignUp(String idToken) async {
+    if (_selectedRole == 'professor' &&
+        _facultyCodeController.text.trim().isEmpty) {
+      setState(() {
+        _errorMessage =
+            'Please enter the Faculty Authorization Code above before signing up with Google.';
+        _isLoading = false;
+      });
+      return;
+    }
+
     setState(() {
       _isLoading = true;
       _errorMessage = null;
@@ -199,7 +209,13 @@ class _SignupScreenState extends State<SignupScreen> {
       final user = await _authService.googleAuth(
         idToken: idToken,
         intent: 'signup',
-        departmentOrSection: _selectedSection,
+        role: _selectedRole,
+        facultyCode: _selectedRole == 'professor'
+            ? _facultyCodeController.text.trim()
+            : null,
+        departmentOrSection: _selectedRole == 'professor'
+            ? 'College of Computer Studies'
+            : _selectedSection,
         preferredRole: _preferredProjectRole,
       );
       await AuthService.saveSession(

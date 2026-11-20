@@ -1,8 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../../services/auth_service.dart';
-import '../landing_screen.dart';
-
 enum AdminNavDestination {
   overview,
   faculty,
@@ -20,67 +17,8 @@ class AdminSidebar extends StatelessWidget {
     this.onDestinationSelected,
   });
 
-  Future<void> _confirmSignOut(BuildContext context) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Row(
-          children: const [
-            Icon(Icons.logout, color: Color(0xFFDC2626), size: 22),
-            SizedBox(width: 10),
-            Text(
-              'Confirm Sign Out',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-          ],
-        ),
-        content: const Text(
-          'Are you sure you want to log out of the Administrator Portal?',
-          style: TextStyle(fontSize: 14, color: Color(0xFF475569)),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text(
-              'Cancel',
-              style: TextStyle(
-                color: Color(0xFF64748B),
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFDC2626),
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Log Out'),
-          ),
-        ],
-      ),
-    );
-
-    if (confirmed == true && context.mounted) {
-      await AuthService().logout();
-      if (context.mounted) {
-        Navigator.pushAndRemoveUntil(
-          context,
-          MaterialPageRoute(builder: (_) => const LandingScreen()),
-          (route) => false,
-        );
-      }
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
-    final user = AuthService.currentUser;
-
     return Container(
       width: 230,
       decoration: const BoxDecoration(
@@ -188,70 +126,7 @@ class AdminSidebar extends StatelessWidget {
             ),
           ),
 
-          const Divider(color: Color(0xFF1E293B), height: 1),
-
-          // User Card & Sign Out
-          Padding(
-            padding: const EdgeInsets.all(12),
-            child: Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: const Color(0xFF1E293B),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Row(
-                children: [
-                  CircleAvatar(
-                    radius: 16,
-                    backgroundColor: const Color(0xFF6B21A8),
-                    child: Text(
-                      (user?.effectiveFirstName ?? 'A')
-                          .substring(0, 1)
-                          .toUpperCase(),
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          user?.name ?? 'Department Chair',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const Text(
-                          'Administrator',
-                          style: TextStyle(
-                            color: Color(0xFF94A3B8),
-                            fontSize: 10,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  IconButton(
-                    icon: const Icon(
-                      Icons.logout,
-                      color: Color(0xFF94A3B8),
-                      size: 18,
-                    ),
-                    tooltip: 'Log Out',
-                    onPressed: () => _confirmSignOut(context),
-                  ),
-                ],
-              ),
-            ),
-          ),
+          const SizedBox(height: 16),
         ],
       ),
     );

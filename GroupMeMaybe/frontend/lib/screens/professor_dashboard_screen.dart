@@ -10,6 +10,8 @@ import '../services/auth_service.dart';
 import '../services/profile_service.dart';
 import '../services/skill_approval_service.dart';
 import 'professor_evaluation_screen.dart';
+import 'professor_activities_screen.dart';
+import 'professor_classes_screen.dart';
 import 'widgets/bottom_right_notification.dart';
 import '../models/academic_class.dart';
 import 'widgets/professor_sidebar.dart';
@@ -128,6 +130,10 @@ class _ProfessorDashboardScreenState extends State<ProfessorDashboardScreen> {
 
   // Dynamic Teams
   List<TeamOverviewItem> _teams = [];
+
+  // Dynamic Classes & Activities
+  List<AcademicClass> _classes = [];
+  List<GroupingActivity> _activities = [];
 
   // Unassigned Students past deadline
   List<UnassignedStudent> _unassignedStudents = [];
@@ -338,6 +344,9 @@ class _ProfessorDashboardScreenState extends State<ProfessorDashboardScreen> {
       if (!mounted) return;
 
       setState(() {
+        _classes = classes;
+        _activities = activities;
+
         // If the professor has not created any classes yet, no students or unassigned students should appear
         if (classes.isEmpty) {
           _allStudents = [];
@@ -1053,45 +1062,54 @@ class _ProfessorDashboardScreenState extends State<ProfessorDashboardScreen> {
     int incomplete,
     int uninit,
   ) {
-    final total = complete + incomplete + uninit;
-    final completePct = total > 0 ? (complete / total * 100).toInt() : 0;
-    final incompletePct = total > 0 ? (incomplete / total * 100).toInt() : 0;
-    final uninitPct = total > 0 ? (uninit / total * 100).toInt() : 0;
-
     return LayoutBuilder(
       builder: (context, constraints) {
         final cards = [
           _buildMetricCard(
-            title: 'Complete Profiles',
-            count: '$complete ($completePct%)',
-            subtitle: 'Ready & active in matching algorithms',
-            icon: Icons.check_circle_outline,
+            title: 'Total Students',
+            count: '${_allStudents.length}',
+            subtitle: '$complete complete • $incomplete in progress',
+            icon: Icons.people_alt_outlined,
             color: const Color(0xFF047857),
             bg: const Color(0xFFECFDF5),
           ),
           _buildMetricCard(
-            title: 'Incomplete Profiles',
-            count: '$incomplete ($incompletePct%)',
-            subtitle: 'Draft saved or missing priority roles',
-            icon: Icons.edit_note,
-            color: const Color(0xFFD97706),
-            bg: const Color(0xFFFFFBEB),
+            title: 'Total Classes',
+            count: '${_classes.length}',
+            subtitle: 'Course sections & class codes',
+            icon: Icons.school_outlined,
+            color: const Color(0xFF1E40AF),
+            bg: const Color(0xFFEFF6FF),
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => const ProfessorClassesScreen(),
+                ),
+              );
+            },
           ),
           _buildMetricCard(
-            title: 'Uninitialized',
-            count: '$uninit ($uninitPct%)',
-            subtitle: 'Has not yet opened profile setup',
-            icon: Icons.person_off_outlined,
-            color: const Color(0xFF64748B),
-            bg: const Color(0xFFF1F5F9),
+            title: 'Active Projects & Teams',
+            count: '${_activities.length} Projects',
+            subtitle: '${_teams.length} teams formed',
+            icon: Icons.groups_outlined,
+            color: const Color(0xFFD97706),
+            bg: const Color(0xFFFFFBEB),
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => const ProfessorActivitiesScreen(),
+                ),
+              );
+            },
           ),
           _buildMetricCard(
             title: 'Evaluation & Requests',
-            count: 'Review Pending',
+            count: '${_skillService.requests.where((r) => r.status == SkillApprovalStatus.pending).length} Pending',
             subtitle: 'Modification requests & reviews',
             icon: Icons.fact_check_outlined,
-            color: const Color(0xFF1E40AF),
-            bg: const Color(0xFFEFF6FF),
+            color: const Color(0xFF7C3AED),
+            bg: const Color(0xFFF3E8FF),
             onTap: () {
               Navigator.of(context).push(
                 MaterialPageRoute(

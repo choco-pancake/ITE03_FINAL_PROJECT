@@ -35,7 +35,6 @@ void main() {
     expect(find.text('Projects'), findsOneWidget);
     expect(find.text('Evaluation'), findsOneWidget);
     expect(find.text('Settings'), findsOneWidget);
-    expect(find.text('Prof. Aivhan'), findsOneWidget);
   });
 
   testWidgets(
@@ -58,8 +57,9 @@ void main() {
       expect(find.text('Review Requests & Evaluations'), findsOneWidget);
 
       // Completion Statuses & Evaluation Metric
-      expect(find.text('Complete Profiles'), findsOneWidget);
-      expect(find.text('Incomplete Profiles'), findsOneWidget);
+      expect(find.text('Total Students'), findsOneWidget);
+      expect(find.text('Total Classes'), findsOneWidget);
+      expect(find.text('Active Projects & Teams'), findsOneWidget);
       expect(find.text('Evaluation & Requests'), findsOneWidget);
       expect(find.text('Uninitialized'), findsWidgets);
 

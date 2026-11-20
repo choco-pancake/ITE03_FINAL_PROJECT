@@ -9,7 +9,7 @@ class StudentRecordService {
   Map<String, String> get _headers => {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
-    if (AuthService.authToken != null)
+    if (AuthService.authToken != null && AuthService.authToken!.isNotEmpty)
       'Authorization': 'Bearer ${AuthService.authToken}',
   };
 
@@ -18,6 +18,10 @@ class StudentRecordService {
       Uri.parse('${AuthService.baseUrl}/professor/students'),
       headers: _headers,
     );
+    if (response.statusCode == 401) {
+      AuthService.authToken = null;
+      throw Exception('Session expired or unauthenticated. Please log in again.');
+    }
     if (response.statusCode != 200) {
       throw Exception(_message(response, 'Could not load students.'));
     }
@@ -33,6 +37,10 @@ class StudentRecordService {
       headers: _headers,
       body: jsonEncode(values),
     );
+    if (response.statusCode == 401) {
+      AuthService.authToken = null;
+      throw Exception('Session expired or unauthenticated. Please log in again.');
+    }
     if (response.statusCode != 200) {
       throw Exception(_message(response, 'Could not update student record.'));
     }

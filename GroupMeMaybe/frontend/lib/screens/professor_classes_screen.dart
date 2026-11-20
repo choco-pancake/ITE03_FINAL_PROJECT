@@ -2,6 +2,7 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 
+import 'login_screen.dart';
 import 'widgets/portal_top_actions.dart';
 
 import 'package:flutter/services.dart';
@@ -55,10 +56,34 @@ class _ProfessorClassesScreenState extends State<ProfessorClassesScreen> {
           _classes = [];
           _isLoading = false;
         });
+        final errorStr = e.toString();
+        final isAuth = errorStr.contains('401') ||
+            errorStr.toLowerCase().contains('unauthenticated') ||
+            errorStr.toLowerCase().contains('session');
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Could not load classes: $e'),
+            content: Text(
+              isAuth
+                  ? 'Your session expired or is unauthenticated. Please log in again.'
+                  : 'Could not load classes: $e',
+            ),
+            backgroundColor: isAuth ? Colors.red.shade700 : null,
             behavior: SnackBarBehavior.floating,
+            action: isAuth
+                ? SnackBarAction(
+                    label: 'Log In',
+                    textColor: Colors.white,
+                    onPressed: () {
+                      Navigator.pushAndRemoveUntil(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const LoginScreen(),
+                        ),
+                        (route) => false,
+                      );
+                    },
+                  )
+                : null,
           ),
         );
       }
@@ -402,10 +427,34 @@ class _ProfessorClassesScreenState extends State<ProfessorClassesScreen> {
                     }
                   } catch (error) {
                     if (mounted) {
+                      final errorStr = error.toString();
+                      final isAuth = errorStr.contains('401') ||
+                          errorStr.toLowerCase().contains('unauthenticated') ||
+                          errorStr.toLowerCase().contains('session');
                       messenger.showSnackBar(
                         SnackBar(
-                          content: Text('Could not create class: $error'),
+                          content: Text(
+                            isAuth
+                                ? 'Your session expired or is unauthenticated. Please log in again.'
+                                : 'Could not create class: $error',
+                          ),
+                          backgroundColor: isAuth ? Colors.red.shade700 : null,
                           behavior: SnackBarBehavior.floating,
+                          action: isAuth
+                              ? SnackBarAction(
+                                  label: 'Log In',
+                                  textColor: Colors.white,
+                                  onPressed: () {
+                                    Navigator.pushAndRemoveUntil(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) => const LoginScreen(),
+                                      ),
+                                      (route) => false,
+                                    );
+                                  },
+                                )
+                              : null,
                         ),
                       );
                     }

@@ -16,7 +16,8 @@ class NotificationService {
   Map<String, String> get _headers => {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
-    'Authorization': 'Bearer ${AuthService.authToken ?? ''}',
+    if (AuthService.authToken != null && AuthService.authToken!.isNotEmpty)
+      'Authorization': 'Bearer ${AuthService.authToken}',
   };
 
   Future<NotificationSnapshot> getNotifications() async {
@@ -24,6 +25,10 @@ class NotificationService {
       Uri.parse('${AuthService.baseUrl}/notifications'),
       headers: _headers,
     );
+    if (response.statusCode == 401) {
+      AuthService.authToken = null;
+      throw Exception('Session expired or unauthenticated. Please log in again.');
+    }
     if (response.statusCode != 200) {
       throw Exception('Could not load notifications.');
     }

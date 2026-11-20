@@ -18,110 +18,122 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // Clear previous records for clean seeding (preserve real user accounts from testing)
+        // Clear previous volatile records for clean seeding (preserve real user accounts & custom classes)
         Schema::disableForeignKeyConstraints();
         DB::table('student_record_changes')->truncate();
         DB::table('academic_class_enrollments')->truncate();
-        GroupingActivity::truncate();
-        AcademicClass::truncate();
-        Profile::where('email', 'like', '%@student.edu')->orWhere('email', 'like', '%@university.edu')->delete();
-        User::where('email', 'like', '%@student.edu')->orWhere('email', 'like', '%@university.edu')->delete();
         Schema::enableForeignKeyConstraints();
 
         // 0. Seed Demo Accounts
-        User::create([
-            'name' => 'Dean Eleanor Vance',
-            'first_name' => 'Eleanor',
-            'last_name' => 'Vance',
-            'email' => 'admin@university.edu',
-            'password' => Hash::make('admin123456'),
-            'role' => 'admin',
-            'department_or_section' => 'Dean - College of Computer Studies',
-        ]);
+        User::updateOrCreate(
+            ['email' => 'admin@university.edu'],
+            [
+                'name' => 'Dean Eleanor Vance',
+                'first_name' => 'Eleanor',
+                'last_name' => 'Vance',
+                'password' => Hash::make('admin123456'),
+                'role' => 'admin',
+                'department_or_section' => 'Dean - College of Computer Studies',
+            ]
+        );
 
-        $professor = User::create([
-            'name' => 'Prof. Aivhan',
-            'email' => 'prof.aivhan@university.edu',
-            'password' => Hash::make('password123'),
-            'role' => 'professor',
-            'department_or_section' => 'College of Computer Studies',
-        ]);
+        $professor = User::updateOrCreate(
+            ['email' => 'prof.aivhan@university.edu'],
+            [
+                'name' => 'Prof. Aivhan',
+                'password' => Hash::make('password123'),
+                'role' => 'professor',
+                'department_or_section' => 'College of Computer Studies',
+            ]
+        );
 
-        $carlos = User::create([
-            'first_name' => 'Carlos',
-            'middle_name' => 'Santos',
-            'last_name' => 'Mendoza',
-            'name' => 'Carlos Mendoza',
-            'email' => 'carlos.mendoza@student.edu',
-            'password' => Hash::make('password123'),
-            'role' => 'student',
-            'department_or_section' => '21-ITEW-01',
-        ]);
+        $carlos = User::updateOrCreate(
+            ['email' => 'carlos.mendoza@student.edu'],
+            [
+                'first_name' => 'Carlos',
+                'middle_name' => 'Santos',
+                'last_name' => 'Mendoza',
+                'name' => 'Carlos Mendoza',
+                'password' => Hash::make('password123'),
+                'role' => 'student',
+                'department_or_section' => '21-ITEW-01',
+            ]
+        );
 
-        Profile::create([
-            'name' => 'Carlos Mendoza',
-            'first_name' => 'Carlos',
-            'middle_name' => 'Santos',
-            'last_name' => 'Mendoza',
-            'email' => 'carlos.mendoza@student.edu',
-            'skills' => ['Frontend Development', 'Backend Development', 'JavaScript', 'Laravel'],
-            'interests' => ['Web Development', 'Mobile Systems'],
-            'preferred_role' => 'Full-Stack Developer',
-            'availability' => '21-ITEW-01',
-            'details' => [
-                'student_id' => '2023-00142-TG-0',
-                'year_level' => '2nd Year',
-                'block' => '21-ITEW-01',
-                'roles' => ['Full-Stack Developer', 'Frontend Developer'],
-                'tools' => ['VS Code', 'Git', 'Postman', 'Flutter'],
-                'available_days' => ['Mon', 'Wed', 'Fri'],
-                'meeting_start' => '08:00 AM',
-                'meeting_end' => '05:00 PM',
-                'collaboration_mode' => 'Hybrid',
-                'experience' => 'Built academic web applications and mobile apps.',
-                'is_complete' => true,
-            ],
-        ]);
+        Profile::updateOrCreate(
+            ['email' => 'carlos.mendoza@student.edu'],
+            [
+                'name' => 'Carlos Mendoza',
+                'first_name' => 'Carlos',
+                'middle_name' => 'Santos',
+                'last_name' => 'Mendoza',
+                'skills' => ['Frontend Development', 'Backend Development', 'JavaScript', 'Laravel'],
+                'interests' => ['Web Development', 'Mobile Systems'],
+                'preferred_role' => 'Full-Stack Developer',
+                'availability' => '21-ITEW-01',
+                'details' => [
+                    'student_id' => '2023-00142-TG-0',
+                    'year_level' => '2nd Year',
+                    'block' => '21-ITEW-01',
+                    'roles' => ['Full-Stack Developer', 'Frontend Developer'],
+                    'tools' => ['VS Code', 'Git', 'Postman', 'Flutter'],
+                    'available_days' => ['Mon', 'Wed', 'Fri'],
+                    'meeting_start' => '08:00 AM',
+                    'meeting_end' => '05:00 PM',
+                    'collaboration_mode' => 'Hybrid',
+                    'experience' => 'Built academic web applications and mobile apps.',
+                    'is_complete' => true,
+                ],
+            ]
+        );
 
         // 1. Seed Academic Classes
-        $class1 = AcademicClass::create([
-            'professor_id' => $professor->id,
-            'name' => 'Web Development',
-            'section' => 'BSIT 2A',
-            'class_code' => 'WD2A-7K92',
-            'description' => 'Full stack web development course covering frontend, backend, and API integrations.',
-            'student_count' => 0,
-        ]);
+        $class1 = AcademicClass::firstOrCreate(
+            ['class_code' => 'WD2A-7K92'],
+            [
+                'professor_id' => $professor->id,
+                'name' => 'Web Development',
+                'section' => 'BSIT 2A',
+                'description' => 'Full stack web development course covering frontend, backend, and API integrations.',
+                'student_count' => 0,
+            ]
+        );
 
-        $class2 = AcademicClass::create([
-            'professor_id' => $professor->id,
-            'name' => 'Mobile Application Development',
-            'section' => 'BSCS 3B',
-            'class_code' => 'MAD3-8M14',
-            'description' => 'Cross-platform mobile application development using Flutter and modern frameworks.',
-            'student_count' => 0,
-        ]);
+        $class2 = AcademicClass::firstOrCreate(
+            ['class_code' => 'MAD3-8M14'],
+            [
+                'professor_id' => $professor->id,
+                'name' => 'Mobile Application Development',
+                'section' => 'BSCS 3B',
+                'description' => 'Cross-platform mobile application development using Flutter and modern frameworks.',
+                'student_count' => 0,
+            ]
+        );
 
-        $class3 = AcademicClass::create([
-            'professor_id' => $professor->id,
-            'name' => 'Database Management Systems',
-            'section' => 'BSIT 2B',
-            'class_code' => 'DBMS-9Q32',
-            'description' => 'Relational database schema modeling, normalization, SQL optimization, and NoSQL.',
-            'student_count' => 0,
-        ]);
+        $class3 = AcademicClass::firstOrCreate(
+            ['class_code' => 'DBMS-9Q32'],
+            [
+                'professor_id' => $professor->id,
+                'name' => 'Database Management Systems',
+                'section' => 'BSIT 2B',
+                'description' => 'Relational database schema modeling, normalization, SQL optimization, and NoSQL.',
+                'student_count' => 0,
+            ]
+        );
 
-        $class4 = AcademicClass::create([
-            'professor_id' => $professor->id,
-            'name' => 'Information Assurance & Security',
-            'section' => 'BSCS 4A',
-            'class_code' => 'IAS4-2V88',
-            'description' => 'Cybersecurity fundamentals, network defense, vulnerability assessment, and cryptography.',
-            'student_count' => 0,
-        ]);
+        $class4 = AcademicClass::firstOrCreate(
+            ['class_code' => 'IAS4-2V88'],
+            [
+                'professor_id' => $professor->id,
+                'name' => 'Information Assurance & Security',
+                'section' => 'BSCS 4A',
+                'description' => 'Cybersecurity fundamentals, network defense, vulnerability assessment, and cryptography.',
+                'student_count' => 0,
+            ]
+        );
 
-        $class1->students()->attach($carlos->id);
-        $class1->update(['student_count' => 1]);
+        $class1->students()->syncWithoutDetaching([$carlos->id]);
+        $class1->update(['student_count' => $class1->students()->count()]);
 
         // 2. Seed 30 Realistic Student Profiles
         $profilesData = [
@@ -384,38 +396,43 @@ class DatabaseSeeder extends Seeder
             $block = '21-ITEW-01';
             $yearLevel = '2nd Year';
 
-            $studentUser = User::create([
-                'first_name' => $firstName,
-                'middle_name' => $middleName,
-                'last_name' => $lastName,
-                'name' => $data['name'],
-                'email' => $data['email'],
-                'password' => Hash::make('password123'),
-                'role' => 'student',
-                'department_or_section' => $block,
-            ]);
+            $studentUser = User::updateOrCreate(
+                ['email' => $data['email']],
+                [
+                    'first_name' => $firstName,
+                    'middle_name' => $middleName,
+                    'last_name' => $lastName,
+                    'name' => $data['name'],
+                    'password' => Hash::make('password123'),
+                    'role' => 'student',
+                    'department_or_section' => $block,
+                ]
+            );
 
-            Profile::create([
-                ...$data,
-                'first_name' => $firstName,
-                'middle_name' => $middleName,
-                'last_name' => $lastName,
-                'details' => [
-                    'student_id' => $studentId,
-                    'year_level' => $yearLevel,
-                    'block' => $block,
-                    'roles' => [$data['preferred_role']],
-                    'tools' => ['Git', 'VS Code', 'Figma'],
-                    'available_days' => ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
-                    'meeting_start' => '09:00 AM',
-                    'meeting_end' => '04:00 PM',
-                    'collaboration_mode' => 'Hybrid',
-                    'experience' => 'Active student contributor with course project experience.',
-                    'is_complete' => true,
-                ],
-            ]);
+            Profile::updateOrCreate(
+                ['email' => $data['email']],
+                [
+                    ...$data,
+                    'first_name' => $firstName,
+                    'middle_name' => $middleName,
+                    'last_name' => $lastName,
+                    'details' => [
+                        'student_id' => $studentId,
+                        'year_level' => $yearLevel,
+                        'block' => $block,
+                        'roles' => [$data['preferred_role']],
+                        'tools' => ['Git', 'VS Code', 'Figma'],
+                        'available_days' => ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
+                        'meeting_start' => '09:00 AM',
+                        'meeting_end' => '04:00 PM',
+                        'collaboration_mode' => 'Hybrid',
+                        'experience' => 'Active student contributor with course project experience.',
+                        'is_complete' => true,
+                    ],
+                ]
+            );
 
-            $class1->students()->attach($studentUser->id);
+            $class1->students()->syncWithoutDetaching([$studentUser->id]);
         }
 
         // Auto-enroll any existing real student accounts into the primary class
@@ -428,116 +445,128 @@ class DatabaseSeeder extends Seeder
         // 3. Seed Grouping Activities (Aivhan's Module)
 
         // Activity 1: Hybrid mode with a partially formed student team (Alex's team)
-        $act1 = GroupingActivity::create([
-            'academic_class_id' => $class1->id,
-            'class_name' => $class1->display_name,
-            'title' => 'Final Capstone Project',
-            'description' => 'Design, build, and present a complete web application with dynamic database integration, responsive UI, and secure API endpoints.',
-            'grouping_method' => 'hybrid',
-            'group_capacity' => 5,
-            'number_of_groups' => 6,
-            'required_skills' => [
-                'Frontend Development',
-                'Backend Development',
-                'Database Management',
-            ],
-            'preferred_skills' => [
-                'UI/UX Design',
-                'Technical Documentation',
-            ],
-            'min_proficiency_level' => 'Intermediate',
-            'min_common_hours' => 5,
-            'grouping_deadline' => now()->addDays(20),
-            'student_modification_deadline' => now()->addDays(23),
-            'status' => 'open',
-            'students_count' => 30,
-            'formed_teams' => null,
-        ]);
+        $act1 = GroupingActivity::firstOrCreate(
+            ['academic_class_id' => $class1->id, 'title' => 'Final Capstone Project'],
+            [
+                'class_name' => $class1->display_name,
+                'description' => 'Design, build, and present a complete web application with dynamic database integration, responsive UI, and secure API endpoints.',
+                'grouping_method' => 'hybrid',
+                'group_capacity' => 5,
+                'number_of_groups' => 6,
+                'required_skills' => [
+                    'Frontend Development',
+                    'Backend Development',
+                    'Database Management',
+                ],
+                'preferred_skills' => [
+                    'UI/UX Design',
+                    'Technical Documentation',
+                ],
+                'min_proficiency_level' => 'Intermediate',
+                'min_common_hours' => 5,
+                'grouping_deadline' => now()->addDays(20),
+                'student_modification_deadline' => now()->addDays(23),
+                'status' => 'open',
+                'students_count' => 30,
+                'formed_teams' => null,
+            ]
+        );
 
         // Activity 2: Auto mode, grouping in progress (not completed yet, no formed teams yet)
-        $act2 = GroupingActivity::create([
-            'academic_class_id' => $class2->id,
-            'class_name' => $class2->display_name,
-            'title' => 'Cross-Platform Mobile App Sprint',
-            'description' => 'Develop a cross-platform mobile client with offline caching, push notifications, and clean UI/UX interaction flows.',
-            'grouping_method' => 'auto',
-            'group_capacity' => 4,
-            'number_of_groups' => 7,
-            'required_skills' => [
-                'Mobile App Development',
-                'API Development and Integration',
-                'UI/UX Design',
-            ],
-            'preferred_skills' => [
-                'Software Testing and Quality Assurance',
-                'Cybersecurity',
-            ],
-            'min_proficiency_level' => 'Intermediate',
-            'min_common_hours' => 4,
-            'grouping_deadline' => now()->addDays(7),
-            'student_modification_deadline' => now()->addDays(9),
-            'status' => 'grouping in progress',
-            'students_count' => 28,
-            'formed_teams' => null,
-        ]);
+        $act2 = GroupingActivity::firstOrCreate(
+            ['academic_class_id' => $class2->id, 'title' => 'Cross-Platform Mobile App Sprint'],
+            [
+                'class_name' => $class2->display_name,
+                'description' => 'Develop a cross-platform mobile client with offline caching, push notifications, and clean UI/UX interaction flows.',
+                'grouping_method' => 'auto',
+                'group_capacity' => 4,
+                'number_of_groups' => 7,
+                'required_skills' => [
+                    'Mobile App Development',
+                    'API Development and Integration',
+                    'UI/UX Design',
+                ],
+                'preferred_skills' => [
+                    'Software Testing and Quality Assurance',
+                    'Cybersecurity',
+                ],
+                'min_proficiency_level' => 'Intermediate',
+                'min_common_hours' => 4,
+                'grouping_deadline' => now()->addDays(7),
+                'student_modification_deadline' => now()->addDays(9),
+                'status' => 'grouping in progress',
+                'students_count' => 28,
+                'formed_teams' => null,
+            ]
+        );
 
         // Activity 3: Completed activity with finalized teams
-        $act3 = GroupingActivity::create([
-            'academic_class_id' => $class3->id,
-            'class_name' => $class3->display_name,
-            'title' => 'Enterprise Schema Modeling & Query Optimization',
-            'description' => 'Form balanced teams to develop a normalized schema, migration scripts, and perform indexing and query profiling benchmarks.',
-            'grouping_method' => 'manual',
-            'group_capacity' => 4,
-            'number_of_groups' => 8,
-            'required_skills' => [
-                'Database Management',
-                'System Analysis and Design',
-                'Technical Documentation',
-            ],
-            'preferred_skills' => [
-                'Backend Development',
-                'Research and Problem Solving',
-            ],
-            'min_proficiency_level' => 'Beginner',
-            'min_common_hours' => 3,
-            'grouping_deadline' => now()->subDays(5),
-            'student_modification_deadline' => now()->subDays(3),
-            'status' => 'completed',
-            'students_count' => 32,
-            'formed_teams' => null,
-        ]);
+        $act3 = GroupingActivity::firstOrCreate(
+            ['academic_class_id' => $class3->id, 'title' => 'Enterprise Schema Modeling & Query Optimization'],
+            [
+                'class_name' => $class3->display_name,
+                'description' => 'Form balanced teams to develop a normalized schema, migration scripts, and perform indexing and query profiling benchmarks.',
+                'grouping_method' => 'manual',
+                'group_capacity' => 4,
+                'number_of_groups' => 8,
+                'required_skills' => [
+                    'Database Management',
+                    'System Analysis and Design',
+                    'Technical Documentation',
+                ],
+                'preferred_skills' => [
+                    'Backend Development',
+                    'Research and Problem Solving',
+                ],
+                'min_proficiency_level' => 'Beginner',
+                'min_common_hours' => 3,
+                'grouping_deadline' => now()->subDays(5),
+                'student_modification_deadline' => now()->subDays(3),
+                'status' => 'completed',
+                'students_count' => 32,
+                'formed_teams' => null,
+            ]
+        );
 
         // Activity 4: Draft mode
-        $act4 = GroupingActivity::create([
-            'academic_class_id' => $class4->id,
-            'class_name' => $class4->display_name,
-            'title' => 'Network Vulnerability Audit & Defense Plan',
-            'description' => 'Execute simulated penetration tests, packet inspection, and author a comprehensive mitigation roadmap for enterprise infrastructure.',
-            'grouping_method' => 'auto',
-            'group_capacity' => 5,
-            'number_of_groups' => 5,
-            'required_skills' => [
-                'Cybersecurity',
-                'Networking',
-                'Research and Problem Solving',
-            ],
-            'preferred_skills' => [
-                'Technical Documentation',
-            ],
-            'min_proficiency_level' => 'Advanced',
-            'min_common_hours' => 6,
-            'grouping_deadline' => now()->addDays(14),
-            'student_modification_deadline' => now()->addDays(16),
-            'status' => 'draft',
-            'students_count' => 25,
-            'formed_teams' => null,
-        ]);
+        $act4 = GroupingActivity::firstOrCreate(
+            ['academic_class_id' => $class4->id, 'title' => 'Network Vulnerability Audit & Defense Plan'],
+            [
+                'class_name' => $class4->display_name,
+                'description' => 'Execute simulated penetration tests, packet inspection, and author a comprehensive mitigation roadmap for enterprise infrastructure.',
+                'grouping_method' => 'auto',
+                'group_capacity' => 5,
+                'number_of_groups' => 5,
+                'required_skills' => [
+                    'Cybersecurity',
+                    'Networking',
+                    'Research and Problem Solving',
+                ],
+                'preferred_skills' => [
+                    'Technical Documentation',
+                ],
+                'min_proficiency_level' => 'Advanced',
+                'min_common_hours' => 6,
+                'grouping_deadline' => now()->addDays(14),
+                'student_modification_deadline' => now()->addDays(16),
+                'status' => 'draft',
+                'students_count' => 25,
+                'formed_teams' => null,
+            ]
+        );
 
         $groupingController = app(\App\Http\Controllers\GroupingActivityController::class);
-        $groupingController->generateBalancedTeams($act1);
-        $groupingController->generateBalancedTeams($act2);
-        $groupingController->generateBalancedTeams($act3);
-        $groupingController->generateBalancedTeams($act4);
+        if ($act1->wasRecentlyCreated || empty($act1->formed_teams)) {
+            $groupingController->generateBalancedTeams($act1);
+        }
+        if ($act2->wasRecentlyCreated || empty($act2->formed_teams)) {
+            $groupingController->generateBalancedTeams($act2);
+        }
+        if ($act3->wasRecentlyCreated || empty($act3->formed_teams)) {
+            $groupingController->generateBalancedTeams($act3);
+        }
+        if ($act4->wasRecentlyCreated || empty($act4->formed_teams)) {
+            $groupingController->generateBalancedTeams($act4);
+        }
     }
 }

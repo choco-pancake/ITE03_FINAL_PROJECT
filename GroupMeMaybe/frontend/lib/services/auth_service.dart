@@ -208,6 +208,24 @@ class AuthService {
     return null;
   }
 
+  /// Retrieve the active authentication token, checking memory first and storage fallback
+  static Future<String?> getValidToken() async {
+    if (authToken != null && authToken!.trim().isNotEmpty) {
+      return authToken;
+    }
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString(_prefKeyActiveToken) ??
+          prefs.getString(_prefKeySavedToken) ??
+          prefs.getString('auth_token');
+      if (token != null && token.trim().isNotEmpty) {
+        authToken = token;
+        return token;
+      }
+    } catch (_) {}
+    return null;
+  }
+
   /// Save or clear Remember Me credentials in persistent storage
   static Future<void> saveRememberedEmail(String email, bool rememberMe) async {
     try {

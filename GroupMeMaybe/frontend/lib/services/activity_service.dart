@@ -17,7 +17,7 @@ class ActivityService {
 
   static Map<String, String> get _classHeaders => {
     ..._headers,
-    if (AuthService.authToken != null)
+    if (AuthService.authToken != null && AuthService.authToken!.isNotEmpty)
       'Authorization': 'Bearer ${AuthService.authToken}',
   };
 
@@ -137,6 +137,11 @@ class ActivityService {
       return data.map((json) => AcademicClass.fromJson(json)).toList();
     }
 
+    if (response.statusCode == 401) {
+      AuthService.authToken = null;
+      throw Exception('Session expired or unauthenticated. Please log in again.');
+    }
+
     throw Exception('Failed to load classes (${response.statusCode})');
   }
 
@@ -156,6 +161,11 @@ class ActivityService {
 
     if (response.statusCode == 201) {
       return AcademicClass.fromJson(jsonDecode(response.body));
+    }
+
+    if (response.statusCode == 401) {
+      AuthService.authToken = null;
+      throw Exception('Session expired or unauthenticated. Please log in again.');
     }
 
     throw Exception(
@@ -184,6 +194,11 @@ class ActivityService {
       return AcademicClass.fromJson(jsonDecode(response.body));
     }
 
+    if (response.statusCode == 401) {
+      AuthService.authToken = null;
+      throw Exception('Session expired or unauthenticated. Please log in again.');
+    }
+
     throw Exception(
       'Failed to update class (${response.statusCode}): ${response.body}',
     );
@@ -193,6 +208,11 @@ class ActivityService {
   Future<void> deleteClass(int id) async {
     final uri = Uri.parse('${ApiService.baseUrl}/classes/$id');
     final response = await http.delete(uri, headers: _classHeaders);
+
+    if (response.statusCode == 401) {
+      AuthService.authToken = null;
+      throw Exception('Session expired or unauthenticated. Please log in again.');
+    }
 
     if (response.statusCode != 200 && response.statusCode != 204) {
       throw Exception('Failed to delete class (${response.statusCode})');
@@ -207,6 +227,10 @@ class ActivityService {
     );
     if (response.statusCode == 200) {
       return AcademicClass.fromJson(jsonDecode(response.body));
+    }
+    if (response.statusCode == 401) {
+      AuthService.authToken = null;
+      throw Exception('Session expired or unauthenticated. Please log in again.');
     }
     final body = jsonDecode(response.body) as Map<String, dynamic>;
     throw Exception(body['message'] ?? 'Could not enroll in class.');

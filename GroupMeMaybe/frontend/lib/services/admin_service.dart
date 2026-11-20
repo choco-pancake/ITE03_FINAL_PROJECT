@@ -114,7 +114,7 @@ class AdminService {
   Map<String, String> get _headers => {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
-        if (AuthService.authToken != null)
+        if (AuthService.authToken != null && AuthService.authToken!.isNotEmpty)
           'Authorization': 'Bearer ${AuthService.authToken}',
       };
 

@@ -42,8 +42,9 @@ class NotificationFlowTest extends TestCase
     public function test_deadline_notifications_only_target_matching_section_and_respect_preference(): void
     {
         $student = User::factory()->create(['role' => 'student', 'department_or_section' => '21-ITEM-03']);
-        $matching = AcademicClass::create(['name' => 'Programming', 'section' => '21-ITEM-03', 'class_code' => 'PRG1']);
-        $other = AcademicClass::create(['name' => 'Networks', 'section' => '21-CSE-01', 'class_code' => 'NET1']);
+        $professor = User::factory()->create(['role' => 'professor']);
+        $matching = AcademicClass::create(['name' => 'Programming', 'section' => '21-ITEM-03', 'class_code' => 'PRG1', 'professor_id' => $professor->id]);
+        $other = AcademicClass::create(['name' => 'Networks', 'section' => '21-CSE-01', 'class_code' => 'NET1', 'professor_id' => $professor->id]);
         foreach ([$matching, $other] as $class) {
             GroupingActivity::create([
                 'academic_class_id' => $class->id,

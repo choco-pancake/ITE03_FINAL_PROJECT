@@ -307,6 +307,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       body: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           // Unified Sidebar
           const StudentSidebar(
@@ -320,8 +321,9 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                 : RefreshIndicator(
                     onRefresh: _loadDashboardData,
                     child: SingleChildScrollView(
-                      padding: const EdgeInsets.fromLTRB(32, 20, 32, 28),
-                      child: Center(
+                      padding: const EdgeInsets.fromLTRB(32, 28, 32, 28),
+                      child: Align(
+                        alignment: Alignment.topCenter,
                         child: ConstrainedBox(
                           constraints: const BoxConstraints(maxWidth: 1100),
                           child: Column(

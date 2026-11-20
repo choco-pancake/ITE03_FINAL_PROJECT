@@ -1233,7 +1233,7 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
               ),
             ),
             onPressed: () => Navigator.pop(ctx, 'save_exit'),
-            child: const Text('Save Draft & Exit'),
+            child: Text(_isSavedAsComplete ? 'Save & Exit' : 'Save Draft & Exit'),
           ),
         ],
       ),
@@ -1255,7 +1255,10 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
       _isDirty = false;
       return true;
     } else if (result == 'save_exit') {
-      return await _validateAndSave(isDraft: true, showModal: false);
+      return await _validateAndSave(
+        isDraft: !_isSavedAsComplete,
+        showModal: false,
+      );
     }
     return false;
   }
@@ -2039,6 +2042,16 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
                                   icon: Icons.person_outline,
                                   child: Column(
                                     children: [
+                                      if (_isSavedAsComplete) ...[
+                                        const Align(
+                                          alignment: Alignment.centerLeft,
+                                          child: Text(
+                                            'Your name and academic details are locked after profile completion. Your instructor can update them.',
+                                            style: TextStyle(color: Color(0xFF64748B)),
+                                          ),
+                                        ),
+                                        const SizedBox(height: 12),
+                                      ],
                                       Row(
                                         children: [
                                           Expanded(
@@ -2046,6 +2059,7 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
                                               label: 'First Name',
                                               controller: _firstNameController,
                                               hint: 'e.g. Carlos',
+                                              readOnly: _isSavedAsComplete,
                                             ),
                                           ),
                                           const SizedBox(width: 14),
@@ -2054,6 +2068,7 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
                                               label: 'Middle Name (Optional)',
                                               controller: _middleNameController,
                                               hint: 'e.g. Alvarez',
+                                              readOnly: _isSavedAsComplete,
                                             ),
                                           ),
                                           const SizedBox(width: 14),
@@ -2062,6 +2077,7 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
                                               label: 'Last Name',
                                               controller: _lastNameController,
                                               hint: 'e.g. Mendoza',
+                                              readOnly: _isSavedAsComplete,
                                             ),
                                           ),
                                         ],
@@ -2075,6 +2091,7 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
                                               label: 'Student ID Number',
                                               controller: _studentIdController,
                                               hint: 'e.g. 2023-10492',
+                                              readOnly: _isSavedAsComplete,
                                             ),
                                           ),
                                           const SizedBox(width: 14),
@@ -2134,7 +2151,7 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
                                                             ),
                                                       )
                                                       .toList(),
-                                                  onChanged: (year) {
+                                                  onChanged: _isSavedAsComplete ? null : (year) {
                                                     if (year == null) return;
                                                     setState(() {
                                                       _selectedYearLevel = year;
@@ -2206,7 +2223,7 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
                                                         ),
                                                       )
                                                       .toList(),
-                                                  onChanged: (val) {
+                                                  onChanged: _isSavedAsComplete ? null : (val) {
                                                     if (val != null) {
                                                       setState(() {
                                                         _selectedBlock = val;
@@ -2986,7 +3003,8 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
                                         spacing: 12,
                                         runSpacing: 10,
                                         children: [
-                                          OutlinedButton(
+                                          if (!_isSavedAsComplete)
+                                            OutlinedButton(
                                             onPressed: _isSaving
                                                 ? null
                                                 : () => _validateAndSave(

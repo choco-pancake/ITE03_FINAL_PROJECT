@@ -6,6 +6,33 @@ import 'package:frontend/screens/professor_dashboard_screen.dart';
 import 'package:frontend/screens/professor_evaluation_screen.dart';
 import 'package:frontend/screens/professor_settings_screen.dart';
 import 'package:frontend/screens/widgets/professor_sidebar.dart';
+import 'package:frontend/models/student_record.dart';
+import 'package:frontend/services/student_record_service.dart';
+
+class _FakeStudentRecordService extends StudentRecordService {
+  Map<String, String>? savedValues;
+
+  @override
+  Future<List<StudentRecord>> getStudents() async => const [
+    StudentRecord(
+      id: 7,
+      name: 'Maria Santos',
+      email: 'maria@example.com',
+      firstName: 'Maria',
+      middleName: '',
+      lastName: 'Santos',
+      studentId: '2026-001',
+      yearLevel: '2nd Year',
+      block: 'BSIT 2A',
+      classes: ['Web Development'],
+    ),
+  ];
+
+  @override
+  Future<void> updateStudent(int studentId, Map<String, String> values) async {
+    savedValues = values;
+  }
+}
 
 void main() {
   testWidgets('ProfessorSidebar renders all 5 navigation destinations', (
@@ -33,7 +60,7 @@ void main() {
     expect(find.text('Dashboard'), findsOneWidget);
     expect(find.text('Classes'), findsOneWidget);
     expect(find.text('Projects'), findsOneWidget);
-    expect(find.text('Evaluation'), findsOneWidget);
+    expect(find.text('Student Records'), findsOneWidget);
     expect(find.text('Settings'), findsOneWidget);
   });
 
@@ -54,13 +81,13 @@ void main() {
 
       // Welcome Header
       expect(find.textContaining('Welcome, Prof. Aivhan!'), findsOneWidget);
-      expect(find.text('Review Requests & Evaluations'), findsOneWidget);
+      expect(find.text('Manage Student Records'), findsOneWidget);
 
       // Completion Statuses & Evaluation Metric
       expect(find.text('Total Students'), findsOneWidget);
       expect(find.text('Total Classes'), findsOneWidget);
       expect(find.text('Active Projects & Teams'), findsOneWidget);
-      expect(find.text('Evaluation & Requests'), findsOneWidget);
+      expect(find.text('Student Records'), findsWidgets);
       expect(find.text('Uninitialized'), findsWidgets);
 
       // Teams Section
@@ -79,11 +106,11 @@ void main() {
       expect(find.text('Add Skill Request'), findsNothing);
 
       // Tap Review Requests & Evaluations button to navigate
-      await tester.tap(find.text('Review Requests & Evaluations'));
+      await tester.tap(find.text('Manage Student Records'));
       await tester.pumpAndSettle();
 
       // Verify navigates to Modification Requests / Professor Evaluation
-      expect(find.text('Modification Requests'), findsOneWidget);
+      expect(find.text('Student Records'), findsWidgets);
     },
   );
 
@@ -128,7 +155,7 @@ void main() {
   );
 
   testWidgets(
-    'ProfessorEvaluationScreen renders with sidebar and modification requests',
+    'ProfessorEvaluationScreen edits an enrolled student record',
     (tester) async {
       tester.view.physicalSize = const Size(1280, 800);
       tester.view.devicePixelRatio = 1.0;
@@ -137,18 +164,22 @@ void main() {
         tester.view.resetDevicePixelRatio();
       });
 
+      final service = _FakeStudentRecordService();
       await tester.pumpWidget(
-        const MaterialApp(home: ProfessorEvaluationScreen()),
+        MaterialApp(home: ProfessorEvaluationScreen(service: service)),
       );
       await tester.pumpAndSettle();
 
-      // Sidebar
-      expect(find.text('Evaluation'), findsOneWidget);
-
-      // Main Content
-      expect(find.text('Modification Requests'), findsOneWidget);
-      expect(find.text('Pending'), findsWidgets);
-      expect(find.text('Under review'), findsWidgets);
+      expect(find.text('Student Records'), findsWidgets);
+      expect(find.text('Maria Santos'), findsOneWidget);
+      expect(find.text('New Request'), findsNothing);
+      await tester.tap(find.text('Maria Santos'));
+      await tester.pumpAndSettle();
+      expect(find.text('Edit Maria Santos'), findsOneWidget);
+      await tester.enterText(find.widgetWithText(TextFormField, 'Last name'), 'Reyes');
+      await tester.tap(find.text('Save record'));
+      await tester.pumpAndSettle();
+      expect(service.savedValues?['last_name'], 'Reyes');
     },
   );
 
@@ -171,6 +202,19 @@ void main() {
       expect(find.text('Create Class & Generate Code'), findsOneWidget);
       expect(find.text('No classes found.'), findsOneWidget);
       expect(find.text('Create New Class'), findsOneWidget);
+
+      // Open create class dialog
+      await tester.tap(find.text('Create Class & Generate Code'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Course Code'), findsOneWidget);
+      expect(find.text('Course Name / Title'), findsOneWidget);
+      expect(find.text('Year Level'), findsOneWidget);
+      expect(find.text('Section / Block'), findsOneWidget);
+      expect(find.text('Generated Enrollment Code'), findsOneWidget);
+
+      await tester.tap(find.text('Cancel'));
+      await tester.pumpAndSettle();
     },
   );
 

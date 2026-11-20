@@ -62,6 +62,7 @@ void main() {
 
       expect(find.text('Create Student Account'), findsOneWidget);
       expect(find.byType(GoogleAuthButton), findsOneWidget);
+      expect(find.textContaining('Sign up with your Google account as a student.'), findsOneWidget);
 
       // Faculty code should not be visible for student
       expect(find.text('Faculty Authorization Code'), findsNothing);
@@ -85,6 +86,7 @@ void main() {
       // Instructor should have Faculty Authorization Code
       expect(find.text('Faculty Authorization Code'), findsOneWidget);
       expect(find.text('Create Instructor Account'), findsOneWidget);
+      expect(find.textContaining('Sign up with your Google account as an Instructor'), findsOneWidget);
 
       // Student-specific fields should be hidden for Instructor
       expect(find.text('Year Level'), findsNothing);

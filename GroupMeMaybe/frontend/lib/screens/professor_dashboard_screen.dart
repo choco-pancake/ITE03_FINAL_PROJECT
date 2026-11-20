@@ -967,7 +967,7 @@ class _ProfessorDashboardScreenState extends State<ProfessorDashboardScreen> {
               );
             },
             icon: const Icon(Icons.rate_review_outlined, size: 16),
-            label: const Text('Review Requests & Evaluations'),
+            label: const Text('Manage Student Records'),
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF1E40AF),
               foregroundColor: Colors.white,
@@ -1104,9 +1104,9 @@ class _ProfessorDashboardScreenState extends State<ProfessorDashboardScreen> {
             },
           ),
           _buildMetricCard(
-            title: 'Evaluation & Requests',
-            count: '${_skillService.requests.where((r) => r.status == SkillApprovalStatus.pending).length} Pending',
-            subtitle: 'Modification requests & reviews',
+            title: 'Student Records',
+            count: 'Manage Records',
+            subtitle: 'Edit students in your classes',
             icon: Icons.fact_check_outlined,
             color: const Color(0xFF7C3AED),
             bg: const Color(0xFFF3E8FF),

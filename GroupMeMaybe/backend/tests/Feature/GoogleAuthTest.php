@@ -60,17 +60,17 @@ class GoogleAuthTest extends TestCase
         $this->assertDatabaseHas('profiles', ['email' => 'maria@gmail.com']);
     }
 
-    public function test_google_login_creates_student_account_when_missing(): void
+    public function test_google_login_requires_signup_when_account_is_missing(): void
     {
         $this->mockGoogleAccount();
 
         $this->postJson('/api/google-auth', [
             'id_token' => 'signed-token',
             'intent' => 'login',
-        ])->assertCreated()
-            ->assertJsonPath('user.role', 'student');
+        ])->assertNotFound()
+            ->assertJsonPath('message', 'No account found for this Google account. Choose Student or Instructor on the Sign Up page first.');
 
-        $this->assertDatabaseHas('users', ['google_sub' => 'google-sub-123']);
+        $this->assertDatabaseMissing('users', ['google_sub' => 'google-sub-123']);
     }
 
     public function test_google_signup_creates_professor_account_with_faculty_code(): void
@@ -89,6 +89,40 @@ class GoogleAuthTest extends TestCase
             'google_sub' => 'google-sub-123',
             'role' => 'professor',
         ]);
+    }
+
+    public function test_google_signup_upgrades_existing_student_to_professor_with_faculty_code(): void
+    {
+        User::factory()->create([
+            'email' => 'maria@gmail.com',
+            'role' => 'student',
+            'google_sub' => 'google-sub-123',
+        ]);
+        $this->mockGoogleAccount();
+
+        $this->postJson('/api/google-auth', [
+            'id_token' => 'signed-token',
+            'intent' => 'signup',
+            'role' => 'professor',
+            'faculty_code' => 'BSIT-FACULTY-2026',
+        ])->assertOk()
+            ->assertJsonPath('user.role', 'professor');
+
+        $this->assertDatabaseHas('users', [
+            'email' => 'maria@gmail.com',
+            'role' => 'professor',
+        ]);
+    }
+
+    public function test_google_signup_cannot_create_an_admin_account(): void
+    {
+        $this->postJson('/api/google-auth', [
+            'id_token' => 'signed-token',
+            'intent' => 'signup',
+            'role' => 'admin',
+        ])->assertUnprocessable();
+
+        $this->assertDatabaseCount('users', 0);
     }
 
     public function test_google_login_keeps_the_existing_role(): void

@@ -95,6 +95,31 @@ void main() {
     expect(find.text('Enrolled Classes'), findsOneWidget);
   });
 
+  testWidgets('dashboard welcome stays aligned with Settings at different heights', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1280, 800);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
+    await tester.pumpWidget(const MaterialApp(home: StudentDashboardScreen()));
+    await tester.pumpAndSettle();
+    final shortTop = tester.getTopLeft(find.textContaining('Welcome back')).dy;
+
+    tester.view.physicalSize = const Size(1280, 1400);
+    await tester.pumpAndSettle();
+    final tallTop = tester.getTopLeft(find.textContaining('Welcome back')).dy;
+    expect(tallTop, closeTo(shortTop, 2));
+
+    await tester.pumpWidget(const MaterialApp(home: StudentSettingsScreen()));
+    await tester.pumpAndSettle();
+    final settingsTop = tester.getTopLeft(find.text('Settings').last).dy;
+    expect(tallTop, closeTo(settingsTop, 16));
+  });
+
   testWidgets('StudentClassesScreen renders title and enroll button', (
     tester,
   ) async {

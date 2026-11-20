@@ -137,7 +137,7 @@ class ProfessorSidebar extends StatelessWidget {
           _buildItem(
             context: context,
             icon: Icons.fact_check_outlined,
-            title: 'Evaluation',
+            title: 'Student Records',
             isSelected:
                 currentDestination == ProfessorNavDestination.evaluation,
             onTap: () {

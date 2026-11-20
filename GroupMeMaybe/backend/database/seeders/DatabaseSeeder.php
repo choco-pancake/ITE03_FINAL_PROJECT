@@ -7,6 +7,8 @@ use App\Models\GroupingActivity;
 use App\Models\Profile;
 use App\Models\User;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Schema;
 
 class DatabaseSeeder extends Seeder
@@ -18,6 +20,8 @@ class DatabaseSeeder extends Seeder
     {
         // Clear previous records for clean seeding
         Schema::disableForeignKeyConstraints();
+        DB::table('student_record_changes')->truncate();
+        DB::table('academic_class_enrollments')->truncate();
         GroupingActivity::truncate();
         AcademicClass::truncate();
         Profile::truncate();
@@ -30,59 +34,66 @@ class DatabaseSeeder extends Seeder
             'first_name' => 'Eleanor',
             'last_name' => 'Vance',
             'email' => 'admin@university.edu',
-            'password' => \Illuminate\Support\Facades\Hash::make('admin123456'),
+            'password' => Hash::make('admin123456'),
             'role' => 'admin',
             'department_or_section' => 'Dean - College of Computer Studies',
         ]);
 
-        User::create([
+        $professor = User::create([
             'name' => 'Prof. Aivhan',
             'email' => 'prof.aivhan@university.edu',
-            'password' => \Illuminate\Support\Facades\Hash::make('password123'),
+            'password' => Hash::make('password123'),
             'role' => 'professor',
             'department_or_section' => 'College of Computer Studies',
         ]);
 
-        User::create([
+        $carlos = User::create([
             'name' => 'Carlos Mendoza',
             'email' => 'carlos.mendoza@student.edu',
-            'password' => \Illuminate\Support\Facades\Hash::make('password123'),
+            'password' => Hash::make('password123'),
             'role' => 'student',
             'department_or_section' => 'BSIT 2A',
         ]);
 
         // 1. Seed Academic Classes
         $class1 = AcademicClass::create([
+            'professor_id' => $professor->id,
             'name' => 'Web Development',
             'section' => 'BSIT 2A',
             'class_code' => 'WD2A-7K92',
             'description' => 'Full stack web development course covering frontend, backend, and API integrations.',
-            'student_count' => 30,
+            'student_count' => 0,
         ]);
 
         $class2 = AcademicClass::create([
+            'professor_id' => $professor->id,
             'name' => 'Mobile Application Development',
             'section' => 'BSCS 3B',
             'class_code' => 'MAD3-8M14',
             'description' => 'Cross-platform mobile application development using Flutter and modern frameworks.',
-            'student_count' => 28,
+            'student_count' => 0,
         ]);
 
         $class3 = AcademicClass::create([
+            'professor_id' => $professor->id,
             'name' => 'Database Management Systems',
             'section' => 'BSIT 2B',
             'class_code' => 'DBMS-9Q32',
             'description' => 'Relational database schema modeling, normalization, SQL optimization, and NoSQL.',
-            'student_count' => 32,
+            'student_count' => 0,
         ]);
 
         $class4 = AcademicClass::create([
+            'professor_id' => $professor->id,
             'name' => 'Information Assurance & Security',
             'section' => 'BSCS 4A',
             'class_code' => 'IAS4-2V88',
             'description' => 'Cybersecurity fundamentals, network defense, vulnerability assessment, and cryptography.',
-            'student_count' => 25,
+            'student_count' => 0,
         ]);
+
+        $class1->students()->attach($carlos->id);
+        $class1->update(['student_count' => 1]);
 
         // 2. Seed 30 Realistic Student Profiles
         $profilesData = [

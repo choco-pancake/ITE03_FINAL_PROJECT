@@ -7,11 +7,18 @@ import '../models/activity_summary.dart';
 import '../models/grouping_activity.dart';
 import '../models/scarcity_report.dart';
 import 'api_service.dart';
+import 'auth_service.dart';
 
 class ActivityService {
   static const Map<String, String> _headers = {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
+  };
+
+  static Map<String, String> get _classHeaders => {
+    ..._headers,
+    if (AuthService.authToken != null)
+      'Authorization': 'Bearer ${AuthService.authToken}',
   };
 
   /// Get list of grouping activities with optional filters
@@ -123,7 +130,7 @@ class ActivityService {
   /// Get list of classes for dropdown
   Future<List<AcademicClass>> getClasses() async {
     final uri = Uri.parse('${ApiService.baseUrl}/classes');
-    final response = await http.get(uri, headers: _headers);
+    final response = await http.get(uri, headers: _classHeaders);
 
     if (response.statusCode == 200) {
       final List<dynamic> data = jsonDecode(response.body);
@@ -138,13 +145,12 @@ class ActivityService {
     final uri = Uri.parse('${ApiService.baseUrl}/classes');
     final response = await http.post(
       uri,
-      headers: _headers,
+      headers: _classHeaders,
       body: jsonEncode({
         'name': academicClass.name,
         'class_code': academicClass.classCode,
         'section': academicClass.section,
         'description': academicClass.description,
-        'student_count': academicClass.studentCount,
       }),
     );
 
@@ -165,13 +171,12 @@ class ActivityService {
     final uri = Uri.parse('${ApiService.baseUrl}/classes/$id');
     final response = await http.put(
       uri,
-      headers: _headers,
+      headers: _classHeaders,
       body: jsonEncode({
         'name': academicClass.name,
         'class_code': academicClass.classCode,
         'section': academicClass.section,
         'description': academicClass.description,
-        'student_count': academicClass.studentCount,
       }),
     );
 
@@ -187,11 +192,24 @@ class ActivityService {
   /// Delete an academic class from backend
   Future<void> deleteClass(int id) async {
     final uri = Uri.parse('${ApiService.baseUrl}/classes/$id');
-    final response = await http.delete(uri, headers: _headers);
+    final response = await http.delete(uri, headers: _classHeaders);
 
     if (response.statusCode != 200 && response.statusCode != 204) {
       throw Exception('Failed to delete class (${response.statusCode})');
     }
+  }
+
+  Future<AcademicClass> enrollInClass(String classCode) async {
+    final response = await http.post(
+      Uri.parse('${ApiService.baseUrl}/classes/enroll'),
+      headers: _classHeaders,
+      body: jsonEncode({'class_code': classCode.trim()}),
+    );
+    if (response.statusCode == 200) {
+      return AcademicClass.fromJson(jsonDecode(response.body));
+    }
+    final body = jsonDecode(response.body) as Map<String, dynamic>;
+    throw Exception(body['message'] ?? 'Could not enroll in class.');
   }
 
   /// Get skill distribution and scarcity analysis for an activity

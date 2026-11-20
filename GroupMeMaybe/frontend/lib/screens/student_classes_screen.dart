@@ -120,21 +120,27 @@ class _StudentClassesScreenState extends State<StudentClassesScreen> {
               backgroundColor: const Color(0xFF1E40AF),
               foregroundColor: Colors.white,
             ),
-            onPressed: () {
+            onPressed: () async {
               final code = codeController.text.trim();
               if (code.isEmpty) return;
-
-              Navigator.pop(ctx);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    'Successfully enrolled in class with code "$code"!',
+              try {
+                final enrolled = await _activityService.enrollInClass(code);
+                if (!mounted) return;
+                if (ctx.mounted) Navigator.pop(ctx);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Enrolled in ${enrolled.displayName}.'),
+                    backgroundColor: const Color(0xFF16A34A),
+                    behavior: SnackBarBehavior.floating,
                   ),
-                  backgroundColor: const Color(0xFF16A34A),
-                  behavior: SnackBarBehavior.floating,
-                ),
-              );
-              _loadClasses();
+                );
+                await _loadClasses();
+              } catch (error) {
+                if (!mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text(error.toString().replaceFirst('Exception: ', ''))),
+                );
+              }
             },
             child: const Text('Enroll Now'),
           ),

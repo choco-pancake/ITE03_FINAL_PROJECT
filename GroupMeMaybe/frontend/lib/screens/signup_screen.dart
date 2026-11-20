@@ -1167,10 +1167,12 @@ class _SignupScreenState extends State<SignupScreen> {
                             isBusy: _isLoading,
                           ),
                           const SizedBox(height: 8),
-                          const Text(
-                            'New Google accounts are created as students. Existing instructors keep their account role.',
+                          Text(
+                            isStudent
+                                ? 'Sign up with your Google account as a student.'
+                                : 'Sign up with your Google account as an Instructor (requires Faculty Authorization Code above).',
                             textAlign: TextAlign.center,
-                            style: TextStyle(
+                            style: const TextStyle(
                               fontSize: 12,
                               color: Color(0xFF64748B),
                             ),

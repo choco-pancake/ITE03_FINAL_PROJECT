@@ -36,8 +36,8 @@ on the Laravel server and in the Flutter web build:
    ```
 
 The Google button reports a configuration message until the client ID is set.
-Google login opens existing accounts; new users choose Student or Instructor on
-the signup page before using Google.
+Either Google button opens Google's account picker. A new Google account is
+created as a student; an existing account keeps its current role.
 
 ## Browser crash recovery
 

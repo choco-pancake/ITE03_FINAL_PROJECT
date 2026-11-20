@@ -54,17 +54,17 @@ class GoogleAuthTest extends TestCase
         $this->assertDatabaseHas('profiles', ['email' => 'maria@gmail.com']);
     }
 
-    public function test_google_login_requires_an_existing_account(): void
+    public function test_google_login_creates_student_account_when_missing(): void
     {
         $this->mockGoogleAccount();
 
         $this->postJson('/api/google-auth', [
             'id_token' => 'signed-token',
             'intent' => 'login',
-        ])->assertNotFound()
-            ->assertJsonPath('message', 'No account found. Please sign up with Google first.');
+        ])->assertCreated()
+            ->assertJsonPath('user.role', 'student');
 
-        $this->assertDatabaseMissing('users', ['google_sub' => 'google-sub-123']);
+        $this->assertDatabaseHas('users', ['google_sub' => 'google-sub-123']);
     }
 
     public function test_google_login_keeps_the_existing_role(): void
@@ -97,7 +97,7 @@ class GoogleAuthTest extends TestCase
         $this->assertDatabaseCount('users', 0);
     }
 
-    public function test_google_cannot_link_an_existing_external_email_without_password_proof(): void
+    public function test_google_links_an_existing_account_with_verified_email(): void
     {
         User::factory()->create(['email' => 'maria@example.com']);
         $this->mockGoogleAccount(['email' => 'maria@example.com']);
@@ -105,9 +105,9 @@ class GoogleAuthTest extends TestCase
         $this->postJson('/api/google-auth', [
             'id_token' => 'signed-token',
             'intent' => 'login',
-        ])->assertStatus(409);
+        ])->assertOk();
 
-        $this->assertDatabaseMissing('users', ['google_sub' => 'google-sub-123']);
+        $this->assertDatabaseHas('users', ['google_sub' => 'google-sub-123']);
     }
 
     public function test_missing_google_client_id_returns_configuration_error(): void
@@ -120,5 +120,20 @@ class GoogleAuthTest extends TestCase
             'role' => 'student',
         ])->assertStatus(503)
             ->assertJsonPath('message', 'Google sign-in is not configured on the server.');
+    }
+
+    public function test_email_text_cannot_bypass_google_token_verification(): void
+    {
+        $this->mock(GoogleTokenVerifier::class)
+            ->shouldReceive('verify')
+            ->once()
+            ->andReturn(null);
+
+        $this->postJson('/api/google-auth', [
+            'id_token' => 'maria@gmail.com',
+            'intent' => 'login',
+        ])->assertUnauthorized();
+
+        $this->assertDatabaseCount('users', 0);
     }
 }

@@ -6,6 +6,7 @@ class Profile {
   final List<String> interests;
   final String preferredRole;
   final String availability;
+  final Map<String, dynamic> details;
 
   Profile({
     this.id,
@@ -15,6 +16,7 @@ class Profile {
     this.interests = const [],
     required this.preferredRole,
     required this.availability,
+    this.details = const {},
   });
 
   factory Profile.fromJson(Map<String, dynamic> json) => Profile(
@@ -25,6 +27,7 @@ class Profile {
     interests: List<String>.from(json['interests'] ?? []),
     preferredRole: json['preferred_role'],
     availability: json['availability'],
+    details: Map<String, dynamic>.from(json['details'] ?? {}),
   );
 
   Map<String, dynamic> toJson() => {
@@ -34,5 +37,6 @@ class Profile {
     'interests': interests,
     'preferred_role': preferredRole,
     'availability': availability,
+    'details': details,
   };
 }

@@ -214,9 +214,11 @@ class AuthService {
 
     final computedName = (name != null && name.trim().isNotEmpty)
         ? name.trim()
-        : [firstName, middleName, lastName]
-            .where((s) => s != null && s.trim().isNotEmpty)
-            .join(' ');
+        : [
+            firstName,
+            middleName,
+            lastName,
+          ].where((s) => s != null && s.trim().isNotEmpty).join(' ');
 
     try {
       final res = await http
@@ -278,7 +280,7 @@ class AuthService {
               'preferred_role': preferredRole,
             }),
           )
-          .timeout(const Duration(milliseconds: 2500));
+          .timeout(const Duration(seconds: 15));
 
       if (res.statusCode == 200 || res.statusCode == 201) {
         final data = jsonDecode(res.body);
@@ -315,5 +317,50 @@ class AuthService {
       await prefs.remove(_prefKeySavedToken);
       await prefs.remove(_prefKeySavedUser);
     } catch (_) {}
+  }
+
+  Future<void> changePassword({
+    required String password,
+    String? currentPassword,
+    String? idToken,
+  }) async {
+    final res = await http.post(
+      Uri.parse('$baseUrl/account/password'),
+      headers: {..._headers, 'Authorization': 'Bearer $authToken'},
+      body: jsonEncode({
+        'current_password': currentPassword,
+        'id_token': idToken,
+        'password': password,
+        'password_confirmation': password,
+      }),
+    );
+    if (res.statusCode != 200) {
+      throw Exception(_responseMessage(res, 'Password change failed'));
+    }
+  }
+
+  Future<void> deleteAccount({String? currentPassword, String? idToken}) async {
+    final preferencePrefix =
+        'gmm_notifications_${currentUser?.id ?? currentUser?.email ?? 'guest'}';
+    final res = await http.delete(
+      Uri.parse('$baseUrl/account'),
+      headers: {..._headers, 'Authorization': 'Bearer $authToken'},
+      body: jsonEncode({
+        'current_password': currentPassword,
+        'id_token': idToken,
+      }),
+    );
+    if (res.statusCode != 200) {
+      throw Exception(_responseMessage(res, 'Account deletion failed'));
+    }
+    currentUser = null;
+    authToken = null;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_prefKeySavedToken);
+    await prefs.remove(_prefKeySavedUser);
+    await prefs.remove(_prefKeySavedEmail);
+    await prefs.remove(_prefKeyRememberMe);
+    await prefs.remove('${preferencePrefix}_group');
+    await prefs.remove('${preferencePrefix}_skills');
   }
 }

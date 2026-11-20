@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/academic_class.dart';
 import '../models/grouping_activity.dart';
@@ -24,6 +25,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
   List<GroupingActivity> _activities = [];
   List<AcademicClass> _classes = [];
   bool _isLoading = true;
+  bool _showGroupActivityAlerts = true;
 
   // Student info state
   String get _studentName => (AuthService.currentUser?.name.isNotEmpty == true)
@@ -31,12 +33,13 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
       : 'Student User';
   String get _studentBlock =>
       (AuthService.currentUser?.departmentOrSection?.isNotEmpty == true)
-          ? AuthService.currentUser!.departmentOrSection!
-          : 'BSIT 2A';
+      ? AuthService.currentUser!.departmentOrSection!
+      : 'BSIT 2A';
   String _primaryRole = 'Frontend Developer';
   String _skillLevel = 'Intermediate';
 
   GroupingActivity? get _urgentImpendingActivity {
+    if (!_showGroupActivityAlerts) return null;
     if (_activities.isEmpty) return null;
     final studentName = _studentName.toLowerCase();
 
@@ -47,8 +50,9 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
           if (team is Map) {
             final members = (team['members'] as List?) ?? [];
             for (final m in members) {
-              final mName =
-                  (m is Map) ? (m['name']?.toString() ?? '') : m.toString();
+              final mName = (m is Map)
+                  ? (m['name']?.toString() ?? '')
+                  : m.toString();
               if (mName.toLowerCase() == studentName) {
                 inTeam = true;
                 break;
@@ -73,6 +77,16 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
   void initState() {
     super.initState();
     _loadDashboardData();
+    _loadAlertPreference();
+  }
+
+  Future<void> _loadAlertPreference() async {
+    final prefs = await SharedPreferences.getInstance();
+    final user = AuthService.currentUser;
+    final key = 'gmm_notifications_${user?.id ?? user?.email ?? 'guest'}_group';
+    if (mounted) {
+      setState(() => _showGroupActivityAlerts = prefs.getBool(key) ?? true);
+    }
   }
 
   Future<void> _loadDashboardData() async {
@@ -91,11 +105,10 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
         final profiles = results[2] as List<Profile>;
         final currentEmail = AuthService.currentUser?.email ?? '';
         final myProfile = profiles.cast<Profile?>().firstWhere(
-              (p) =>
-                  p != null &&
-                  p.email.toLowerCase() == currentEmail.toLowerCase(),
-              orElse: () => null,
-            );
+          (p) =>
+              p != null && p.email.toLowerCase() == currentEmail.toLowerCase(),
+          orElse: () => null,
+        );
 
         setState(() {
           _activities = results[0] as List<GroupingActivity>;
@@ -108,8 +121,8 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
               _skillLevel = myProfile.skills.length >= 4
                   ? 'Advanced'
                   : (myProfile.skills.length >= 2
-                      ? 'Intermediate'
-                      : 'Beginner');
+                        ? 'Intermediate'
+                        : 'Beginner');
             }
           }
           _isLoading = false;

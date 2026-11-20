@@ -7,6 +7,8 @@ import 'login_screen.dart';
 import 'professor_dashboard_screen.dart';
 import 'student_dashboard_screen.dart';
 import 'widgets/bottom_right_notification.dart';
+import 'widgets/google_auth_button.dart';
+import '../models/class_sections.dart';
 import 'widgets/landing_top_bar.dart';
 
 class SignupScreen extends StatefulWidget {
@@ -31,7 +33,7 @@ class _SignupScreenState extends State<SignupScreen> {
 
   late String _selectedRole; // 'student' or 'professor'
   String _selectedYearLevel = '2nd Year';
-  String _selectedSection = 'BSIT 2A';
+  String _selectedSection = '21-ITEW-01';
   String _preferredProjectRole = 'Frontend Developer';
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
@@ -40,12 +42,7 @@ class _SignupScreenState extends State<SignupScreen> {
   bool _isLoading = false;
   String? _errorMessage;
 
-  static const Map<String, List<String>> _yearSections = {
-    '1st Year': ['BSIT 1A', 'BSIT 1B', 'BSIT 1C'],
-    '2nd Year': ['BSIT 2A', 'BSIT 2B', 'BSIT 2C'],
-    '3rd Year': ['BSIT 3A', 'BSIT 3B'],
-    '4th Year': ['BSIT 4A', 'BSIT 4B'],
-  };
+  static const Map<String, List<String>> _yearSections = ClassSections.byYear;
 
   static const List<String> _studentRoles = [
     'Project Leader / Team Leader',
@@ -186,147 +183,40 @@ class _SignupScreenState extends State<SignupScreen> {
     }
   }
 
-  Future<void> _handleGoogleSignUp() async {
-    final emailCtrl = TextEditingController(text: 'student@university.edu');
-    final nameCtrl = TextEditingController(text: 'University Student');
-    String selectedRole = _selectedRole;
-
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: Row(
-            children: [
-              _buildGoogleLogo(),
-              const SizedBox(width: 10),
-              const Text(
-                'Google Institutional Sign-Up',
-                style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
-              ),
-            ],
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Sign up using your authorized university Google Account to instantly create your profile.',
-                style: TextStyle(fontSize: 13, color: Color(0xFF64748B)),
-              ),
-              const SizedBox(height: 14),
-              TextField(
-                controller: emailCtrl,
-                decoration: const InputDecoration(
-                  labelText: 'Institutional Email',
-                  prefixIcon: Icon(Icons.email_outlined, size: 18),
-                ),
-              ),
-              const SizedBox(height: 10),
-              TextField(
-                controller: nameCtrl,
-                decoration: const InputDecoration(
-                  labelText: 'Full Name',
-                  prefixIcon: Icon(Icons.person_outline, size: 18),
-                ),
-              ),
-              const SizedBox(height: 12),
-              const Text(
-                'Sign up as:',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF475569),
-                ),
-              ),
-              const SizedBox(height: 6),
-              Row(
-                children: [
-                  ChoiceChip(
-                    label: const Text('Student'),
-                    selected: selectedRole == 'student',
-                    selectedColor: const Color(0xFFDBEAFE),
-                    onSelected: (val) => setDialogState(() => selectedRole = 'student'),
-                  ),
-                  const SizedBox(width: 8),
-                  ChoiceChip(
-                    label: const Text('Instructor'),
-                    selected: selectedRole == 'professor',
-                    selectedColor: const Color(0xFFE0E7FF),
-                    onSelected: (val) => setDialogState(() => selectedRole = 'professor'),
-                  ),
-                ],
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF1E40AF),
-                foregroundColor: Colors.white,
-              ),
-              onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Continue with Google'),
-            ),
-          ],
-        ),
-      ),
-    );
-
-    if (confirmed != true) return;
-
+  Future<void> _completeGoogleSignUp(String idToken) async {
     setState(() {
       _isLoading = true;
       _errorMessage = null;
     });
-
     try {
-      final email = emailCtrl.text.trim();
-      final name = nameCtrl.text.trim();
-
-      final user = await _authService.register(
-        name: name.isNotEmpty ? name : 'Google User',
-        email: email.isNotEmpty ? email : 'google.user@university.edu',
-        password: 'GoogleOAuthGeneratedSecret#2026',
-        role: selectedRole,
-        facultyCode: selectedRole == 'professor' ? 'BSIT-FACULTY-2026' : null,
-        departmentOrSection: selectedRole == 'professor'
-            ? 'Department of Information Technology (BSIT)'
-            : _selectedSection,
-        preferredRole: selectedRole == 'student' ? _preferredProjectRole : null,
+      final user = await _authService.googleAuth(
+        idToken: idToken,
+        intent: 'signup',
+        departmentOrSection: _selectedSection,
+        preferredRole: _preferredProjectRole,
       );
-
-      unawaited(
-        AuthService.saveSession(
-          user: user,
-          token: AuthService.authToken ?? '',
-          rememberMe: true,
-        ),
+      await AuthService.saveSession(
+        user: user,
+        token: AuthService.authToken ?? '',
+        rememberMe: true,
       );
-
       if (!mounted) return;
       AppNotification.showWelcome(context, user.name);
-
-      if (user.isProfessor) {
-        Navigator.pushAndRemoveUntil(
-          context,
-          MaterialPageRoute(builder: (_) => const ProfessorDashboardScreen()),
-          (route) => false,
-        );
-      } else {
-        Navigator.pushAndRemoveUntil(
-          context,
-          MaterialPageRoute(builder: (_) => const StudentDashboardScreen()),
-          (route) => false,
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(
+          builder: (_) => user.isProfessor
+              ? const ProfessorDashboardScreen()
+              : const StudentDashboardScreen(),
+        ),
+        (route) => false,
+      );
+    } catch (error) {
+      if (mounted) {
+        setState(
+          () => _errorMessage = error.toString().replaceAll('Exception: ', ''),
         );
       }
-    } catch (e) {
-      if (!mounted) return;
-      setState(() => _errorMessage = e.toString().replaceAll('Exception: ', ''));
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -588,19 +478,25 @@ class _SignupScreenState extends State<SignupScreen> {
                                 vertical: 12,
                               ),
                               border: OutlineInputBorder(
-                                borderRadius: BorderRadius.all(Radius.circular(8)),
+                                borderRadius: BorderRadius.all(
+                                  Radius.circular(8),
+                                ),
                                 borderSide: BorderSide(
                                   color: Color(0xFFCBD5E1),
                                 ),
                               ),
                               enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.all(Radius.circular(8)),
+                                borderRadius: BorderRadius.all(
+                                  Radius.circular(8),
+                                ),
                                 borderSide: BorderSide(
                                   color: Color(0xFFCBD5E1),
                                 ),
                               ),
                               focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.all(Radius.circular(8)),
+                                borderRadius: BorderRadius.all(
+                                  Radius.circular(8),
+                                ),
                                 borderSide: BorderSide(
                                   color: Color(0xFF1E40AF),
                                   width: 1.5,
@@ -675,7 +571,8 @@ class _SignupScreenState extends State<SignupScreen> {
                                 // Year Level Dropdown
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       const Text(
                                         'Year Level',
@@ -690,17 +587,20 @@ class _SignupScreenState extends State<SignupScreen> {
                                         initialValue: _selectedYearLevel,
                                         isExpanded: true,
                                         decoration: InputDecoration(
-                                          contentPadding: const EdgeInsets.symmetric(
-                                            horizontal: 12,
-                                            vertical: 12,
-                                          ),
+                                          contentPadding:
+                                              const EdgeInsets.symmetric(
+                                                horizontal: 12,
+                                                vertical: 12,
+                                              ),
                                           prefixIcon: const Icon(
                                             Icons.calendar_today_outlined,
                                             size: 18,
                                             color: Color(0xFF64748B),
                                           ),
                                           border: OutlineInputBorder(
-                                            borderRadius: BorderRadius.circular(8),
+                                            borderRadius: BorderRadius.circular(
+                                              8,
+                                            ),
                                           ),
                                         ),
                                         items: _yearSections.keys
@@ -709,7 +609,9 @@ class _SignupScreenState extends State<SignupScreen> {
                                                 value: year,
                                                 child: Text(
                                                   year,
-                                                  style: const TextStyle(fontSize: 13),
+                                                  style: const TextStyle(
+                                                    fontSize: 13,
+                                                  ),
                                                 ),
                                               ),
                                             )
@@ -723,7 +625,8 @@ class _SignupScreenState extends State<SignupScreen> {
                                 // Section / Block Dropdown
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       const Text(
                                         'Class Section / Block',
@@ -738,33 +641,42 @@ class _SignupScreenState extends State<SignupScreen> {
                                         initialValue: _selectedSection,
                                         isExpanded: true,
                                         decoration: InputDecoration(
-                                          contentPadding: const EdgeInsets.symmetric(
-                                            horizontal: 12,
-                                            vertical: 12,
-                                          ),
+                                          contentPadding:
+                                              const EdgeInsets.symmetric(
+                                                horizontal: 12,
+                                                vertical: 12,
+                                              ),
                                           prefixIcon: const Icon(
                                             Icons.group_work_outlined,
                                             size: 18,
                                             color: Color(0xFF64748B),
                                           ),
                                           border: OutlineInputBorder(
-                                            borderRadius: BorderRadius.circular(8),
+                                            borderRadius: BorderRadius.circular(
+                                              8,
+                                            ),
                                           ),
                                         ),
-                                        items: (_yearSections[_selectedYearLevel] ?? ['BSIT 2A'])
-                                            .map(
-                                              (sec) => DropdownMenuItem(
-                                                value: sec,
-                                                child: Text(
-                                                  sec,
-                                                  style: const TextStyle(fontSize: 13),
-                                                ),
-                                              ),
-                                            )
-                                            .toList(),
+                                        items:
+                                            (_yearSections[_selectedYearLevel] ??
+                                                    ['BSIT 2A'])
+                                                .map(
+                                                  (sec) => DropdownMenuItem(
+                                                    value: sec,
+                                                    child: Text(
+                                                      sec,
+                                                      style: const TextStyle(
+                                                        fontSize: 13,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                )
+                                                .toList(),
                                         onChanged: (val) {
                                           if (val != null) {
-                                            setState(() => _selectedSection = val);
+                                            setState(
+                                              () => _selectedSection = val,
+                                            );
                                           }
                                         },
                                       ),
@@ -827,11 +739,17 @@ class _SignupScreenState extends State<SignupScreen> {
                               decoration: BoxDecoration(
                                 color: const Color(0xFFEEF2FF),
                                 borderRadius: BorderRadius.circular(8),
-                                border: Border.all(color: const Color(0xFFC7D2FE)),
+                                border: Border.all(
+                                  color: const Color(0xFFC7D2FE),
+                                ),
                               ),
                               child: Row(
                                 children: const [
-                                  Icon(Icons.verified_user, color: Color(0xFF4338CA), size: 18),
+                                  Icon(
+                                    Icons.verified_user,
+                                    color: Color(0xFF4338CA),
+                                    size: 18,
+                                  ),
                                   SizedBox(width: 8),
                                   Expanded(
                                     child: Text(
@@ -881,7 +799,8 @@ class _SignupScreenState extends State<SignupScreen> {
                                   ),
                                   onPressed: () {
                                     setState(() {
-                                      _obscureFacultyCode = !_obscureFacultyCode;
+                                      _obscureFacultyCode =
+                                          !_obscureFacultyCode;
                                     });
                                   },
                                 ),
@@ -941,7 +860,8 @@ class _SignupScreenState extends State<SignupScreen> {
                               if (value == null || value.trim().isEmpty) {
                                 return 'Please enter your email address';
                               }
-                              if (!value.contains('@') || !value.contains('.')) {
+                              if (!value.contains('@') ||
+                                  !value.contains('.')) {
                                 return 'Please enter a valid university email address';
                               }
                               return null;
@@ -1161,24 +1081,18 @@ class _SignupScreenState extends State<SignupScreen> {
                           const SizedBox(height: 14),
 
                           // Google Auth Button
-                          OutlinedButton.icon(
-                            onPressed: _isLoading ? null : _handleGoogleSignUp,
-                            icon: _buildGoogleLogo(),
-                            label: const Text(
-                              'Sign up with Google',
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFF0F172A),
-                              ),
-                            ),
-                            style: OutlinedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                              side: const BorderSide(color: Color(0xFFCBD5E1)),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                            ),
+                          GoogleAuthButton(
+                            signup: true,
+                            onIdToken: _completeGoogleSignUp,
+                            onError: (message) =>
+                                setState(() => _errorMessage = message),
+                            isBusy: _isLoading,
+                          ),
+                          const SizedBox(height: 8),
+                          const Text(
+                            'New Google accounts are created as students. Existing instructors keep their account role.',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
                           ),
                           const SizedBox(height: 22),
 
@@ -1270,35 +1184,6 @@ class _SignupScreenState extends State<SignupScreen> {
               ),
             ),
           ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildGoogleLogo() {
-    return Container(
-      width: 22,
-      height: 22,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(4),
-      ),
-      child: Center(
-        child: Text(
-          'G',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            foreground: Paint()
-              ..shader = const LinearGradient(
-                colors: [
-                  Color(0xFF4285F4),
-                  Color(0xFF34A853),
-                  Color(0xFFFBBC05),
-                  Color(0xFFEA4335),
-                ],
-              ).createShader(const Rect.fromLTWH(0, 0, 22, 22)),
-          ),
         ),
       ),
     );

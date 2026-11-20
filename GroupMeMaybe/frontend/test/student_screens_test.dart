@@ -6,8 +6,73 @@ import 'package:frontend/screens/student_settings_screen.dart';
 import 'package:frontend/screens/student_groups_screen.dart';
 import 'package:frontend/screens/widgets/student_sidebar.dart';
 import 'package:frontend/services/auth_service.dart';
+import 'package:frontend/models/class_sections.dart';
+import 'package:frontend/models/profile.dart';
 
 void main() {
+  test('year levels use the requested class sections', () {
+    expect(ClassSections.byYear['1st Year'], [
+      '11-ITEM-01',
+      '11-ITEM-02',
+      '11-ITEN-01',
+      '11-ITEN-02',
+      '11-ITEN-03',
+      '11-ITEW-01',
+      '11-ITEW-02',
+      '11-ITEW-03',
+      '11-CSE-01',
+      '11-CSE-02',
+    ]);
+    expect(ClassSections.byYear['2nd Year'], [
+      '21-ITEM-01',
+      '21-ITEM-02',
+      '21-ITEN-01',
+      '21-ITEN-02',
+      '21-ITEN-03',
+      '21-ITEW-01',
+      '21-ITEW-02',
+      '21-ITEW-03',
+      '21-ITEW-04',
+      '21-CSE-01',
+    ]);
+    expect(ClassSections.byYear['3rd Year'], [
+      '31-ITE-01',
+      '31-ITE-02',
+      '31-ITE-03',
+      '31-ITE-04',
+      '31-ITE-05',
+      '31-ITE-06',
+      '31-ITE-07',
+      '31-ITE-08',
+      '31-ITE-09',
+      '31-CSE-01',
+    ]);
+    expect(ClassSections.byYear['4th Year'], [
+      '41-ITE-01',
+      '41-ITE-02',
+      '41-ITE-03',
+      '41-ITE-04',
+      '41-ITE-05',
+      '41-CSE-01',
+    ]);
+  });
+
+  test('profile details survive JSON serialization', () {
+    final profile = Profile(
+      name: 'Maria Santos',
+      email: 'maria@example.com',
+      skills: ['Flutter'],
+      preferredRole: 'Frontend developer',
+      availability: '21-ITEM-03',
+      details: {
+        'year_level': '2nd Year',
+        'block': '21-ITEM-03',
+        'available_days': ['Mon'],
+      },
+    );
+    expect(Profile.fromJson(profile.toJson()).details, profile.details);
+  });
+
   testWidgets('StudentDashboardScreen renders welcome header and metrics', (
     tester,
   ) async {
@@ -60,11 +125,15 @@ void main() {
       await tester.pumpWidget(const MaterialApp(home: StudentSettingsScreen()));
       await tester.pumpAndSettle();
 
-      expect(find.text('My Profile'), findsOneWidget);
+      expect(find.widgetWithText(ChoiceChip, 'My Profile'), findsOneWidget);
+      expect(find.text('Account & Security'), findsOneWidget);
+      expect(find.text('Notifications'), findsOneWidget);
+      // Profile view mode is rendered by default
       expect(find.text('1. Personal & Academic Information'), findsOneWidget);
       expect(find.text('2. Technical Skills'), findsOneWidget);
-      expect(find.text('3. Preferred Project Roles'), findsOneWidget);
-      expect(find.text('4. Tools & Technologies'), findsOneWidget);
+      expect(find.text('Edit Profile'), findsOneWidget);
+      await tester.tap(find.text('Edit Profile'));
+      await tester.pumpAndSettle();
       expect(find.text('Save Profile'), findsOneWidget);
     },
   );
@@ -93,7 +162,7 @@ void main() {
     addTearDown(() => AuthService.currentUser = null);
     await tester.pumpWidget(const MaterialApp(home: StudentSettingsScreen()));
     expect(tester.takeException(), isNull);
-    expect(find.text('My Profile'), findsOneWidget);
+    expect(find.widgetWithText(ChoiceChip, 'My Profile'), findsOneWidget);
   });
 
   testWidgets('Groups uses the shared student sidebar', (tester) async {

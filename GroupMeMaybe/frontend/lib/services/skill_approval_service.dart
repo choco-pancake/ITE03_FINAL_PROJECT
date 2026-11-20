@@ -66,6 +66,11 @@ class SkillApprovalService extends ChangeNotifier {
     notifyListeners();
   }
 
+  void removeRequestsForStudent(String studentId) {
+    _requests.removeWhere((request) => request.studentId == studentId);
+    notifyListeners();
+  }
+
   bool isSkillApproved(String skill) {
     return _approvedSkills.contains(skill);
   }

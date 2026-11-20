@@ -4,6 +4,7 @@ import 'package:frontend/screens/login_screen.dart';
 import 'package:frontend/screens/signup_screen.dart';
 import 'package:frontend/screens/widgets/landing_top_bar.dart';
 import 'package:frontend/screens/widgets/student_sidebar.dart';
+import 'package:frontend/screens/widgets/google_auth_button.dart';
 
 void main() {
   testWidgets(
@@ -19,7 +20,7 @@ void main() {
       expect(find.text('Password'), findsOneWidget);
       expect(find.text('Remember me'), findsOneWidget);
       expect(find.text('Sign In'), findsOneWidget);
-      expect(find.text('Continue with Google'), findsOneWidget);
+      expect(find.byType(GoogleAuthButton), findsOneWidget);
 
       // Verify quick demo buttons and topbar back arrow/signup are removed
       expect(find.text('Demo Professor (Prof. Aivhan)'), findsNothing);
@@ -60,7 +61,7 @@ void main() {
       expect(find.text('Preferred Project Role'), findsOneWidget);
 
       expect(find.text('Create Student Account'), findsOneWidget);
-      expect(find.text('Sign up with Google'), findsOneWidget);
+      expect(find.byType(GoogleAuthButton), findsOneWidget);
 
       // Faculty code should not be visible for student
       expect(find.text('Faculty Authorization Code'), findsNothing);

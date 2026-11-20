@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/profile.dart';
+import '../models/class_sections.dart';
 import '../services/auth_service.dart';
 import '../services/profile_service.dart';
 import '../services/skill_approval_service.dart';
 import 'widgets/student_sidebar.dart';
+import 'widgets/bottom_right_notification.dart';
+import 'student_account_tab.dart';
 
 class StudentSettingsScreen extends StatefulWidget {
   const StudentSettingsScreen({super.key});
@@ -20,7 +24,12 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
   final _lastNameController = TextEditingController();
   final _studentIdController = TextEditingController();
   final _emailController = TextEditingController();
-  String _selectedBlock = 'BSIT 2A';
+  String _selectedYearLevel = '2nd Year';
+  String _selectedBlock = '21-ITEW-01';
+  int _activeTab = 0;
+  bool _editingProfile = false;
+  bool _notifyGroupActivity = true;
+  bool _notifyCustomSkills = true;
 
   final ProfileService _profileService = ProfileService();
   int? _existingProfileId;
@@ -73,32 +82,30 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
   ];
 
   // Options catalogs
-  static const List<String> _blocks = [
-    'BSIT 2A',
-    'BSIT 2B',
-    'BSCS 3A',
-    'BSCS 3B',
-    'BSCS 4A',
+  List<String> get _blocks => [
+    ...ClassSections.byYear[_selectedYearLevel]!,
+    if (!ClassSections.byYear[_selectedYearLevel]!.contains(_selectedBlock))
+      _selectedBlock,
   ];
 
   static const List<String> _allTechnicalSkills = [
-    'Frontend development',
-    'Backend development',
-    'Full-stack development',
-    'Mobile app development',
-    'UI/UX design',
-    'Database management',
-    'API development and integration',
-    'Software testing and quality assurance',
+    'Frontend Development',
+    'Backend Development',
+    'Full-Stack Development',
+    'Mobile App Development',
+    'UI/UX Design',
+    'Database Management',
+    'API Development and Integration',
+    'Software Testing and Quality Assurance',
     'Cybersecurity',
     'Networking',
     'Artificial Intelligence and Machine Learning',
-    'Data analysis',
-    'System analysis and design',
-    'Technical documentation',
-    'Project management',
-    'Research and problem solving',
-    'Presentation and communication',
+    'Data Analysis',
+    'System Analysis and Design',
+    'Technical Documentation',
+    'Project Management',
+    'Research and Problem Solving',
+    'Presentation and Communication',
   ];
 
   static const List<String> _allProjectRoles = [
@@ -210,6 +217,7 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
     SkillApprovalService().addListener(_onSkillsUpdated);
     _initUserFields();
     _loadExistingProfile();
+    _loadNotificationPreferences();
 
     _firstNameController.addListener(_markDirty);
     _middleNameController.addListener(_markDirty);
@@ -242,6 +250,8 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
       if (user.departmentOrSection != null &&
           user.departmentOrSection!.isNotEmpty) {
         _selectedBlock = user.departmentOrSection!;
+        _selectedYearLevel =
+            ClassSections.yearFor(_selectedBlock) ?? '2nd Year';
       }
       _studentIdController.text =
           '2026-${(user.id ?? 1).toString().padLeft(4, '0')}';
@@ -255,16 +265,47 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
 
   Future<void> _loadExistingProfile() async {
     try {
-      final profiles = await _profileService.getProfiles();
-      final currentEmail = _emailController.text.trim();
-      final myProfile = profiles.cast<Profile?>().firstWhere(
-        (p) => p != null && p.email.toLowerCase() == currentEmail.toLowerCase(),
-        orElse: () => null,
-      );
+      final myProfile = await _profileService.getMyProfile();
 
       if (myProfile != null && mounted) {
         setState(() {
           _existingProfileId = myProfile.id;
+          final details = myProfile.details;
+          final nameParts = myProfile.name.trim().split(RegExp(r'\s+'));
+          _firstNameController.text = nameParts.first;
+          _lastNameController.text = nameParts.length > 1 ? nameParts.last : '';
+          _middleNameController.text = nameParts.length > 2
+              ? nameParts.sublist(1, nameParts.length - 1).join(' ')
+              : '';
+          _studentIdController.text =
+              (details['student_id'] ?? _studentIdController.text).toString();
+          _selectedBlock = (details['block'] ?? _selectedBlock).toString();
+          _selectedYearLevel =
+              (details['year_level'] ??
+                      ClassSections.yearFor(_selectedBlock) ??
+                      '2nd Year')
+                  .toString();
+          if (!ClassSections.byYear.containsKey(_selectedYearLevel)) {
+            _selectedYearLevel = '2nd Year';
+          }
+          _selectedTools
+            ..clear()
+            ..addAll(List<String>.from(details['tools'] ?? []));
+          _selectedDays
+            ..clear()
+            ..addAll(List<String>.from(details['available_days'] ?? []));
+          _startMeetingHour = details['meeting_start'] as String?;
+          _endMeetingHour = details['meeting_end'] as String?;
+          if (_startMeetingHour != null && _endMeetingHour != null) {
+            _selectedMeetingTime = '$_startMeetingHour - $_endMeetingHour';
+          }
+          _collaborationMode =
+              (details['collaboration_mode'] ?? _collaborationMode).toString();
+          _experienceController.text = (details['experience'] ?? '').toString();
+          final roles = List<String>.from(details['roles'] ?? []);
+          if (roles.isNotEmpty) _rolePriority1 = roles[0];
+          _rolePriority2 = roles.length > 1 ? roles[1] : null;
+          _rolePriority3 = roles.length > 2 ? roles[2] : null;
           if (myProfile.skills.isNotEmpty) {
             _selectedSkills.clear();
             _selectedSkills.addAll(myProfile.skills);
@@ -276,13 +317,635 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
             _selectedInterests.clear();
             _selectedInterests.addAll(myProfile.interests);
           }
-          if (_selectedSkills.isNotEmpty && _rolePriority1.isNotEmpty) {
-            _isSavedAsComplete = true;
-          }
+          _isSavedAsComplete = details['is_complete'] == true;
+          _editingProfile = false;
           _isDirty = false;
         });
       }
     } catch (_) {}
+  }
+
+  String get _preferencePrefix =>
+      'gmm_notifications_${AuthService.currentUser?.id ?? AuthService.currentUser?.email ?? 'guest'}';
+
+  Future<void> _loadNotificationPreferences() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
+    setState(() {
+      _notifyGroupActivity =
+          prefs.getBool('${_preferencePrefix}_group') ?? true;
+      _notifyCustomSkills =
+          prefs.getBool('${_preferencePrefix}_skills') ?? true;
+    });
+  }
+
+  Future<void> _saveNotificationPreference(String key, bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('${_preferencePrefix}_$key', value);
+  }
+
+  Widget _buildNotificationTab() => Container(
+    width: double.infinity,
+    padding: const EdgeInsets.all(24),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(12),
+      border: Border.all(color: const Color(0xFFE2E8F0)),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Notifications',
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF0F172A),
+          ),
+        ),
+        const SizedBox(height: 6),
+        const Text(
+          'Manage your notification alerts and in-app preferences.',
+          style: TextStyle(
+            fontSize: 14,
+            color: Color(0xFF64748B),
+          ),
+        ),
+        const SizedBox(height: 20),
+        SwitchListTile(
+          contentPadding: EdgeInsets.zero,
+          title: const Text('Group activity alerts', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
+          subtitle: const Text(
+            'Show in-app alerts for upcoming group deadlines and team invitations.',
+            style: TextStyle(fontSize: 13, color: Color(0xFF64748B)),
+          ),
+          value: _notifyGroupActivity,
+          activeTrackColor: const Color(0xFF1E40AF),
+          onChanged: (value) {
+            setState(() => _notifyGroupActivity = value);
+            _saveNotificationPreference('group', value);
+          },
+        ),
+        const Divider(height: 24, color: Color(0xFFE2E8F0)),
+        SwitchListTile(
+          contentPadding: EdgeInsets.zero,
+          title: const Text('Custom skill updates', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
+          subtitle: const Text(
+            'Show an in-app message when your submitted custom skills are approved or reviewed.',
+            style: TextStyle(fontSize: 13, color: Color(0xFF64748B)),
+          ),
+          value: _notifyCustomSkills,
+          activeTrackColor: const Color(0xFF1E40AF),
+          onChanged: (value) {
+            setState(() => _notifyCustomSkills = value);
+            _saveNotificationPreference('skills', value);
+          },
+        ),
+      ],
+    ),
+  );
+
+  Widget _buildEmptyNotice(String text) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.info_outline, size: 16, color: Color(0xFF94A3B8)),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              text,
+              style: const TextStyle(fontSize: 13, color: Color(0xFF64748B)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildReadOnlyField({required String label, required String value}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: Color(0xFF475569),
+          ),
+        ),
+        const SizedBox(height: 6),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF8FAFC),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: const Color(0xFFE2E8F0)),
+          ),
+          child: Text(
+            value.isEmpty ? '—' : value,
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+              color: Color(0xFF0F172A),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildRoleViewRow({
+    required String priority,
+    required String label,
+    required String role,
+    required Color color,
+  }) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Text(
+              'Priority $priority',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: color,
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Text(
+            '$label: ',
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF475569),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              role,
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF0F172A),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSavedProfile() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Header Row
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: const [
+                  Text(
+                    'My Profile',
+                    style: TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xFF0F172A),
+                    ),
+                  ),
+                  SizedBox(height: 4),
+                  Text(
+                    'Your active profile details for project grouping and team formation.',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Color(0xFF64748B),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            _buildProficiencyBadge(_calculatedProficiencyLevel),
+            const SizedBox(width: 12),
+            FilledButton.icon(
+              onPressed: () => setState(() => _editingProfile = true),
+              icon: const Icon(Icons.edit_outlined, size: 18),
+              label: const Text('Edit Profile'),
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFF1E40AF),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 20),
+
+        // Completion Progress Container
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: const Color(0xFFE2E8F0)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Wrap(
+                alignment: WrapAlignment.spaceBetween,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: 12,
+                runSpacing: 6,
+                children: [
+                  Text(
+                    'Profile Setup Completion (${(_completionProgress * 100).toInt()}%)',
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF334155),
+                    ),
+                  ),
+                  Text(
+                    _isSavedAsComplete
+                        ? '✅ Complete & Active in Matching'
+                        : 'Draft / Incomplete',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: _isSavedAsComplete
+                          ? const Color(0xFF16A34A)
+                          : const Color(0xFFD97706),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(6),
+                child: LinearProgressIndicator(
+                  value: _completionProgress,
+                  minHeight: 8,
+                  backgroundColor: const Color(0xFFE2E8F0),
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    _completionProgress >= 0.8
+                        ? const Color(0xFF16A34A)
+                        : const Color(0xFF2563EB),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 24),
+
+        // 1. Personal & Academic Information Card
+        _buildSectionCard(
+          id: 'info_view',
+          title: '1. Personal & Academic Information',
+          subtitle: 'Basic student credentials and section assignment',
+          icon: Icons.person_outline,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildReadOnlyField(
+                      label: 'First Name',
+                      value: _firstNameController.text.trim(),
+                    ),
+                  ),
+                  if (_middleNameController.text.trim().isNotEmpty) ...[
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: _buildReadOnlyField(
+                        label: 'Middle Name',
+                        value: _middleNameController.text.trim(),
+                      ),
+                    ),
+                  ],
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: _buildReadOnlyField(
+                      label: 'Last Name',
+                      value: _lastNameController.text.trim(),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+              Row(
+                children: [
+                  Expanded(
+                    flex: 2,
+                    child: _buildReadOnlyField(
+                      label: 'Student ID Number',
+                      value: _studentIdController.text.trim(),
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    flex: 3,
+                    child: _buildReadOnlyField(
+                      label: 'Institutional Email',
+                      value: _emailController.text.trim(),
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    flex: 2,
+                    child: _buildReadOnlyField(
+                      label: 'Year Level',
+                      value: _selectedYearLevel,
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    flex: 2,
+                    child: _buildReadOnlyField(
+                      label: 'Class Block / Section',
+                      value: _selectedBlock,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 20),
+
+        // 2. Technical Skills Card (Only selected skills show)
+        _buildSectionCard(
+          id: 'skills_view',
+          title: '2. Technical Skills',
+          subtitle: 'Selected technical skills and competencies',
+          icon: Icons.code,
+          child: _selectedSkills.isEmpty
+              ? _buildEmptyNotice('No technical skills selected.')
+              : Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: _selectedSkills.map((skill) {
+                    return Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFEFF6FF),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: const Color(0xFFBFDBFE)),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.check_circle_outline, size: 16, color: Color(0xFF1E40AF)),
+                          const SizedBox(width: 6),
+                          Text(
+                            skill,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF1E40AF),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                ),
+        ),
+        const SizedBox(height: 20),
+
+        // 3. Preferred Project Roles Card (Only selected roles show)
+        _buildSectionCard(
+          id: 'roles_view',
+          title: '3. Preferred Project Roles (Priority 1 to 3)',
+          subtitle: 'Ordered roles for team assignment',
+          icon: Icons.work_outline,
+          child: (_rolePriority1.isEmpty &&
+                  (_rolePriority2 == null || _rolePriority2!.isEmpty) &&
+                  (_rolePriority3 == null || _rolePriority3!.isEmpty))
+              ? _buildEmptyNotice('No project roles selected.')
+              : Column(
+                  children: [
+                    if (_rolePriority1.isNotEmpty)
+                      _buildRoleViewRow(
+                        priority: '1',
+                        label: 'Primary Role',
+                        role: _rolePriority1,
+                        color: const Color(0xFF1E40AF),
+                      ),
+                    if (_rolePriority2 != null && _rolePriority2!.isNotEmpty) ...[
+                      const SizedBox(height: 10),
+                      _buildRoleViewRow(
+                        priority: '2',
+                        label: 'Secondary Role',
+                        role: _rolePriority2!,
+                        color: const Color(0xFF0284C7),
+                      ),
+                    ],
+                    if (_rolePriority3 != null && _rolePriority3!.isNotEmpty) ...[
+                      const SizedBox(height: 10),
+                      _buildRoleViewRow(
+                        priority: '3',
+                        label: 'Tertiary Role',
+                        role: _rolePriority3!,
+                        color: const Color(0xFF0D9488),
+                      ),
+                    ],
+                  ],
+                ),
+        ),
+        const SizedBox(height: 20),
+
+        // 4. Tools & Technologies Card (Only selected tools show)
+        _buildSectionCard(
+          id: 'tools_view',
+          title: '4. Tools & Technologies',
+          subtitle: 'Selected development tools and technologies',
+          icon: Icons.build_outlined,
+          child: _selectedTools.isEmpty
+              ? _buildEmptyNotice('No tools or technologies selected.')
+              : Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: _selectedTools.map((tool) {
+                    return Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF1F5F9),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: const Color(0xFFCBD5E1)),
+                      ),
+                      child: Text(
+                        tool,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                          color: Color(0xFF334155),
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+        ),
+        const SizedBox(height: 20),
+
+        // 5. Academic / Project Interests Card (Only selected interests show)
+        _buildSectionCard(
+          id: 'interests_view',
+          title: '5. Academic / Project Interests',
+          subtitle: 'Areas of interest for project and team matching',
+          icon: Icons.interests_outlined,
+          child: _selectedInterests.isEmpty
+              ? _buildEmptyNotice('No project interests selected.')
+              : Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: _selectedInterests.map((interest) {
+                    return Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFAF5FF),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: const Color(0xFFE9D5FF)),
+                      ),
+                      child: Text(
+                        interest,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                          color: Color(0xFF7E22CE),
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+        ),
+        const SizedBox(height: 20),
+
+        // 6. Availability & Working Style Card (Only selected availability shows)
+        _buildSectionCard(
+          id: 'availability_view',
+          title: '6. Availability & Working Style',
+          subtitle: 'Schedule and collaboration preferences',
+          icon: Icons.schedule_outlined,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    flex: 3,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Available Days',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF475569),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        _selectedDays.isEmpty
+                            ? const Text(
+                                'None selected',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: Color(0xFF94A3B8),
+                                ),
+                              )
+                            : Wrap(
+                                spacing: 6,
+                                runSpacing: 6,
+                                children: _selectedDays.map((d) {
+                                  return Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 10,
+                                      vertical: 5,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFEFF6FF),
+                                      borderRadius: BorderRadius.circular(6),
+                                      border: Border.all(
+                                        color: const Color(0xFFBFDBFE),
+                                      ),
+                                    ),
+                                    child: Text(
+                                      d,
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                        color: Color(0xFF1E40AF),
+                                      ),
+                                    ),
+                                  );
+                                }).toList(),
+                              ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    flex: 2,
+                    child: _buildReadOnlyField(
+                      label: 'Preferred Meeting Time',
+                      value: (_startMeetingHour != null && _endMeetingHour != null)
+                          ? '$_startMeetingHour - $_endMeetingHour'
+                          : (_selectedMeetingTime.isNotEmpty
+                              ? _selectedMeetingTime
+                              : 'Not specified'),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    flex: 2,
+                    child: _buildReadOnlyField(
+                      label: 'Collaboration Mode',
+                      value: _collaborationMode,
+                    ),
+                  ),
+                ],
+              ),
+              if (_experienceController.text.trim().isNotEmpty) ...[
+                const SizedBox(height: 16),
+                _buildReadOnlyField(
+                  label: 'Previous Project Experience',
+                  value: _experienceController.text.trim(),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ],
+    );
   }
 
   @override
@@ -309,7 +972,7 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
 
   List<String> get _combinedTechnicalSkills {
     final approved = SkillApprovalService().approvedSkills;
-    return {..._allTechnicalSkills, ...approved}.toList();
+    return {..._allTechnicalSkills, ...approved, ..._selectedSkills}.toList();
   }
 
   // Calculate dynamic proficiency level based on skill counts and tools
@@ -376,7 +1039,11 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Row(
           children: const [
-            Icon(Icons.warning_amber_rounded, color: Color(0xFFF59E0B), size: 24),
+            Icon(
+              Icons.warning_amber_rounded,
+              color: Color(0xFFF59E0B),
+              size: 24,
+            ),
             SizedBox(width: 10),
             Text(
               'Unsaved Changes',
@@ -425,17 +1092,30 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
     );
 
     if (result == 'discard') {
+      if (_existingProfileId != null) {
+        await _loadExistingProfile();
+      } else {
+        _selectedSkills.clear();
+        _selectedTools.clear();
+        _selectedInterests.clear();
+        _selectedDays.clear();
+        _rolePriority1 = '';
+        _rolePriority2 = null;
+        _rolePriority3 = null;
+        _initUserFields();
+      }
       _isDirty = false;
       return true;
     } else if (result == 'save_exit') {
-      _validateAndSave(isDraft: true, showModal: false);
-      _isDirty = false;
-      return true;
+      return await _validateAndSave(isDraft: true, showModal: false);
     }
     return false;
   }
 
-  void _validateAndSave({required bool isDraft, bool showModal = true}) async {
+  Future<bool> _validateAndSave({
+    required bool isDraft,
+    bool showModal = true,
+  }) async {
     setState(() {
       _invalidCards.clear();
       _isSaving = true;
@@ -476,7 +1156,7 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
             behavior: SnackBarBehavior.floating,
           ),
         );
-        return;
+        return false;
       }
     }
 
@@ -500,22 +1180,60 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
       availability: _selectedMeetingTime.isNotEmpty
           ? '$_selectedBlock | $_selectedMeetingTime'
           : _selectedBlock,
+      details: {
+        'student_id': _studentIdController.text.trim(),
+        'year_level': _selectedYearLevel,
+        'block': _selectedBlock,
+        'roles': [_rolePriority1, ?_rolePriority2, ?_rolePriority3],
+        'tools': _selectedTools,
+        'available_days': _selectedDays.toList(),
+        'meeting_start': _startMeetingHour,
+        'meeting_end': _endMeetingHour,
+        'collaboration_mode': _collaborationMode,
+        'experience': _experienceController.text.trim(),
+        'is_complete': !isDraft,
+      },
     );
 
     try {
-      if (_existingProfileId != null) {
-        await _profileService.updateProfile(_existingProfileId!, profile);
-      } else {
-        final created = await _profileService.createProfile(profile);
-        _existingProfileId = created.id;
+      final saved = await _profileService.saveMyProfile(profile);
+      _existingProfileId = saved.id;
+      final old = AuthService.currentUser;
+      if (old != null) {
+        AuthService.currentUser = AuthUser(
+          id: old.id,
+          firstName: _firstNameController.text.trim(),
+          middleName: _middleNameController.text.trim(),
+          lastName: _lastNameController.text.trim(),
+          name: saved.name,
+          email: old.email,
+          role: old.role,
+          departmentOrSection: _selectedBlock,
+        );
+        if (await AuthService.isRememberMeEnabled()) {
+          await AuthService.saveSession(
+            user: AuthService.currentUser!,
+            token: AuthService.authToken ?? '',
+            rememberMe: true,
+          );
+        }
       }
-    } catch (_) {
-      // Graceful offline fallback
+    } catch (error) {
+      if (mounted) {
+        setState(() => _isSaving = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(error.toString().replaceAll('Exception: ', '')),
+          ),
+        );
+      }
+      return false;
     }
 
-    if (!mounted) return;
+    if (!mounted) return false;
     setState(() {
       _isSavedAsComplete = !isDraft;
+      _editingProfile = false;
       _isSaving = false;
       _isDirty = false;
     });
@@ -524,18 +1242,25 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
       showDialog(
         context: context,
         builder: (ctx) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
           title: Row(
             children: [
               Icon(
                 isDraft ? Icons.check_circle_outline : Icons.verified,
-                color: isDraft ? const Color(0xFF2563EB) : const Color(0xFF16A34A),
+                color: isDraft
+                    ? const Color(0xFF2563EB)
+                    : const Color(0xFF16A34A),
                 size: 24,
               ),
               const SizedBox(width: 10),
               Text(
                 isDraft ? 'Draft Saved Successfully!' : 'Profile Complete!',
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ],
           ),
@@ -563,6 +1288,7 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
         ),
       );
     }
+    return true;
   }
 
   void _showSkillsChecklistModal() {
@@ -573,10 +1299,11 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
         return StatefulBuilder(
           builder: (dialogContext, setDialogState) {
             final availableSkills = _combinedTechnicalSkills
-                .where((skill) =>
-                    !_selectedSkills.contains(skill) &&
-                    (searchQuery.isEmpty ||
-                        skill.toLowerCase().contains(searchQuery.toLowerCase())))
+                .where(
+                  (skill) =>
+                      searchQuery.isEmpty ||
+                      skill.toLowerCase().contains(searchQuery.toLowerCase()),
+                )
                 .toList();
 
             return Dialog(
@@ -651,7 +1378,9 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
                           ),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(8),
-                            borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
+                            borderSide: const BorderSide(
+                              color: Color(0xFFCBD5E1),
+                            ),
                           ),
                           filled: true,
                           fillColor: const Color(0xFFF8FAFC),
@@ -682,11 +1411,17 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
                             : ListView.separated(
                                 itemCount: availableSkills.length,
                                 separatorBuilder: (context, index) =>
-                                    const Divider(height: 1, color: Color(0xFFF1F5F9)),
+                                    const Divider(
+                                      height: 1,
+                                      color: Color(0xFFF1F5F9),
+                                    ),
                                 itemBuilder: (c, idx) {
                                   final skill = availableSkills[idx];
+                                  final isChecked = _selectedSkills.any(
+                                    (s) => s.trim().toLowerCase() == skill.trim().toLowerCase(),
+                                  );
                                   return CheckboxListTile(
-                                    value: false,
+                                    value: isChecked,
                                     dense: true,
                                     activeColor: const Color(0xFF1E40AF),
                                     title: Text(
@@ -700,13 +1435,17 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
                                     controlAffinity:
                                         ListTileControlAffinity.leading,
                                     onChanged: (bool? checked) {
-                                      if (checked == true) {
-                                        setState(() {
-                                          _selectedSkills.add(skill);
-                                          _isDirty = true;
-                                        });
-                                        setDialogState(() {});
-                                      }
+                                      setState(() {
+                                        if (checked == true) {
+                                          if (!_selectedSkills.any((s) => s.trim().toLowerCase() == skill.trim().toLowerCase())) {
+                                            _selectedSkills.add(skill);
+                                          }
+                                        } else {
+                                          _selectedSkills.removeWhere((s) => s.trim().toLowerCase() == skill.trim().toLowerCase());
+                                        }
+                                        _isDirty = true;
+                                      });
+                                      setDialogState(() {});
                                     },
                                   );
                                 },
@@ -720,9 +1459,11 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
                         children: [
                           OutlinedButton.icon(
                             onPressed: () {
-                              _showAddCustomSkillDialog(onAdded: (s) {
-                                setDialogState(() {});
-                              });
+                              _showAddCustomSkillDialog(
+                                onAdded: (s) {
+                                  setDialogState(() {});
+                                },
+                              );
                             },
                             icon: const Icon(Icons.add, size: 16),
                             label: const Text('Add Custom Skill'),
@@ -827,15 +1568,13 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
                 });
                 onAdded?.call(newSkill);
                 Navigator.pop(ctx);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      'Custom skill "$newSkill" submitted for professor approval.',
-                    ),
-                    backgroundColor: const Color(0xFF16A34A),
-                    behavior: SnackBarBehavior.floating,
-                  ),
-                );
+                if (_notifyCustomSkills) {
+                  AppNotification.showMessage(
+                    context,
+                    'Custom skill requested',
+                    '"$newSkill" submitted for professor approval.',
+                  );
+                }
               }
             },
             child: const Text('Submit Request'),
@@ -866,752 +1605,689 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
               onBeforeNavigate: _promptUnsavedChanges,
             ),
 
-          // Main Scrollable Form Area
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 28),
-              child: Center(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 880),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Header Section
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(
+            // Main Scrollable Form Area
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 32,
+                  vertical: 28,
+                ),
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 880),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Settings',
+                          style: TextStyle(
+                            fontSize: 30,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            ChoiceChip(
+                              label: const Text('My Profile'),
+                              selected: _activeTab == 0,
+                              onSelected: (_) => setState(() => _activeTab = 0),
+                            ),
+                            ChoiceChip(
+                              label: const Text('Account & Security'),
+                              selected: _activeTab == 1,
+                              onSelected: (_) async {
+                                if (await _promptUnsavedChanges() && mounted) {
+                                  setState(() => _activeTab = 1);
+                                }
+                              },
+                            ),
+                            ChoiceChip(
+                              label: const Text('Notifications'),
+                              selected: _activeTab == 2,
+                              onSelected: (_) async {
+                                if (await _promptUnsavedChanges() && mounted) {
+                                  setState(() => _activeTab = 2);
+                                }
+                              },
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 24),
+                        if (_activeTab == -1)
+                          const Card(
+                            child: Padding(
+                              padding: EdgeInsets.all(24),
+                              child: Text(
+                                'Choose a settings tab to view your profile, manage account security, or change notifications.',
+                              ),
+                            ),
+                          ),
+                        if (_activeTab == 1)
+                          StudentAccountTab(
+                            studentId: _studentIdController.text.trim(),
+                          ),
+                        if (_activeTab == 2) _buildNotificationTab(),
+                        if (_activeTab == 0 && !_editingProfile)
+                          _buildSavedProfile(),
+                        if (_activeTab == 0 && _editingProfile) ...[
+                          // Header Section
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: const [
+                                    Text(
+                                      'My Profile',
+                                      style: TextStyle(
+                                        fontSize: 28,
+                                        fontWeight: FontWeight.w800,
+                                        color: Color(0xFF0F172A),
+                                      ),
+                                    ),
+                                    SizedBox(height: 4),
+                                    Text(
+                                      'Tell us about your skills and availability so we can build the best team for you.',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        color: Color(0xFF64748B),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              // System Rating Badge
+                              _buildProficiencyBadge(
+                                _calculatedProficiencyLevel,
+                              ),
+                              const SizedBox(width: 12),
+                              OutlinedButton.icon(
+                                onPressed: () => setState(() => _editingProfile = false),
+                                icon: const Icon(Icons.close, size: 16),
+                                label: const Text('Cancel Edit'),
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: const Color(0xFF64748B),
+                                  side: const BorderSide(color: Color(0xFFCBD5E1)),
+                                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 20),
+
+                          // Progress Bar Container
+                          Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: const Color(0xFFE2E8F0),
+                              ),
+                            ),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
-                              children: const [
-                                Text(
-                                  'My Profile',
-                                  style: TextStyle(
-                                    fontSize: 28,
-                                    fontWeight: FontWeight.w800,
-                                    color: Color(0xFF0F172A),
-                                  ),
+                              children: [
+                                Wrap(
+                                  alignment: WrapAlignment.spaceBetween,
+                                  crossAxisAlignment: WrapCrossAlignment.center,
+                                  spacing: 12,
+                                  runSpacing: 6,
+                                  children: [
+                                    Text(
+                                      'Profile Setup Completion (${(_completionProgress * 100).toInt()}%)',
+                                      style: const TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w700,
+                                        color: Color(0xFF334155),
+                                      ),
+                                    ),
+                                    Text(
+                                      _isSavedAsComplete
+                                          ? '✅ Complete & Active in Matching'
+                                          : 'Draft / Incomplete',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                        color: _isSavedAsComplete
+                                            ? const Color(0xFF16A34A)
+                                            : const Color(0xFFD97706),
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                                SizedBox(height: 4),
-                                Text(
-                                  'Tell us about your skills and availability so we can build the best team for you.',
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    color: Color(0xFF64748B),
+                                const SizedBox(height: 10),
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(6),
+                                  child: LinearProgressIndicator(
+                                    value: _completionProgress,
+                                    minHeight: 8,
+                                    backgroundColor: const Color(0xFFE2E8F0),
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      _completionProgress >= 0.8
+                                          ? const Color(0xFF16A34A)
+                                          : const Color(0xFF2563EB),
+                                    ),
                                   ),
                                 ),
                               ],
                             ),
                           ),
-                          // System Rating Badge
-                          _buildProficiencyBadge(_calculatedProficiencyLevel),
-                        ],
-                      ),
-                      const SizedBox(height: 20),
+                          const SizedBox(height: 24),
 
-                      // Progress Bar Container
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: const Color(0xFFE2E8F0)),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Wrap(
-                              alignment: WrapAlignment.spaceBetween,
-                              crossAxisAlignment: WrapCrossAlignment.center,
-                              spacing: 12,
-                              runSpacing: 6,
+                          // Step 1: Personal & Academic Info Card
+                          _buildSectionCard(
+                            id: 'info',
+                            title: '1. Personal & Academic Information',
+                            subtitle: 'Basic student credentials and section assignment',
+                            icon: Icons.person_outline,
+                            child: Column(
                               children: [
-                                Text(
-                                  'Profile Setup Completion (${(_completionProgress * 100).toInt()}%)',
-                                  style: const TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w700,
-                                    color: Color(0xFF334155),
-                                  ),
-                                ),
-                                Text(
-                                  _isSavedAsComplete
-                                      ? '✅ Complete & Active in Matching'
-                                      : 'Draft / Incomplete',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w600,
-                                    color: _isSavedAsComplete
-                                        ? const Color(0xFF16A34A)
-                                        : const Color(0xFFD97706),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 10),
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(6),
-                              child: LinearProgressIndicator(
-                                value: _completionProgress,
-                                minHeight: 8,
-                                backgroundColor: const Color(0xFFE2E8F0),
-                                valueColor: AlwaysStoppedAnimation<Color>(
-                                  _completionProgress >= 0.8
-                                      ? const Color(0xFF16A34A)
-                                      : const Color(0xFF2563EB),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-
-                      // Step 1: Personal & Academic Info Card
-                      _buildSectionCard(
-                        id: 'info',
-                        title: '1. Personal & Academic Information',
-                        subtitle:
-                            'Basic student credentials and section assignment',
-                        icon: Icons.person_outline,
-                        child: Column(
-                          children: [
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: _buildTextField(
-                                    label: 'First Name',
-                                    controller: _firstNameController,
-                                    hint: 'e.g. Carlos',
-                                  ),
-                                ),
-                                const SizedBox(width: 14),
-                                Expanded(
-                                  child: _buildTextField(
-                                    label: 'Middle Name (Optional)',
-                                    controller: _middleNameController,
-                                    hint: 'e.g. Alvarez',
-                                  ),
-                                ),
-                                const SizedBox(width: 14),
-                                Expanded(
-                                  child: _buildTextField(
-                                    label: 'Last Name',
-                                    controller: _lastNameController,
-                                    hint: 'e.g. Mendoza',
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 14),
-                            Row(
-                              children: [
-                                Expanded(
-                                  flex: 2,
-                                  child: _buildTextField(
-                                    label: 'Student ID Number',
-                                    controller: _studentIdController,
-                                    hint: 'e.g. 2023-10492',
-                                  ),
-                                ),
-                                const SizedBox(width: 14),
-                                Expanded(
-                                  flex: 3,
-                                  child: _buildTextField(
-                                    label: 'Institutional Email',
-                                    controller: _emailController,
-                                    hint: 'carlos.mendoza@student.edu',
-                                  ),
-                                ),
-                                const SizedBox(width: 14),
-                                Expanded(
-                                  flex: 2,
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      const Text(
-                                        'Class Block / Section',
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w600,
-                                          color: Color(0xFF334155),
-                                        ),
-                                      ),
-                                      const SizedBox(height: 6),
-                                      DropdownButtonFormField<String>(
-                                        key: ValueKey(_selectedBlock),
-                                        isExpanded: true,
-                                        initialValue: _selectedBlock,
-                                        decoration: InputDecoration(
-                                          contentPadding:
-                                              const EdgeInsets.symmetric(
-                                                horizontal: 12,
-                                                vertical: 10,
-                                              ),
-                                          border: OutlineInputBorder(
-                                            borderRadius: BorderRadius.circular(
-                                              8,
-                                            ),
-                                          ),
-                                        ),
-                                        items: {..._blocks, _selectedBlock}
-                                            .map(
-                                              (b) => DropdownMenuItem(
-                                                value: b,
-                                                child: Text(
-                                                  b,
-                                                  style: const TextStyle(
-                                                    fontSize: 13,
-                                                  ),
-                                                ),
-                                              ),
-                                            )
-                                            .toList(),
-                                        onChanged: (val) {
-                                          if (val != null) {
-                                            setState(
-                                              () => _selectedBlock = val,
-                                            );
-                                          }
-                                        },
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-
-                      // Step 2: Technical Skills Card
-                      _buildSectionCard(
-                        id: 'skills',
-                        title: '2. Technical Skills',
-                        subtitle: 'Select skills you are proficient in (removable with X). Open the checklist modal to search and pick skills.',
-                        icon: Icons.code,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Wrap(
-                              spacing: 12,
-                              runSpacing: 10,
-                              children: [
-                                ElevatedButton.icon(
-                                  onPressed: _showSkillsChecklistModal,
-                                  icon: const Icon(Icons.playlist_add_check_rounded, size: 20),
-                                  label: const Text('Select Skills (Checklist Modal)'),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: const Color(0xFF1E40AF),
-                                    foregroundColor: Colors.white,
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 18,
-                                      vertical: 12,
-                                    ),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                  ),
-                                ),
-                                OutlinedButton.icon(
-                                  onPressed: () => _showAddCustomSkillDialog(),
-                                  icon: const Icon(Icons.add, size: 16),
-                                  label: const Text('Request Custom Skill'),
-                                  style: OutlinedButton.styleFrom(
-                                    foregroundColor: const Color(0xFF1E40AF),
-                                    side: const BorderSide(
-                                      color: Color(0xFFBFDBFE),
-                                    ),
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 14,
-                                      vertical: 12,
-                                    ),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 16),
-                            if (_selectedSkills.isEmpty)
-                              Container(
-                                width: double.infinity,
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 14,
-                                  vertical: 14,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFF8FAFC),
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(color: const Color(0xFFE2E8F0)),
-                                ),
-                                child: const Row(
+                                Row(
                                   children: [
-                                    Icon(Icons.info_outline, size: 18, color: Color(0xFF64748B)),
-                                    SizedBox(width: 8),
                                     Expanded(
-                                      child: Text(
-                                        'No technical skills chosen yet. Click "Select Skills" above to open the checklist.',
-                                        style: TextStyle(fontSize: 13, color: Color(0xFF64748B)),
+                                      child: _buildTextField(
+                                        label: 'First Name',
+                                        controller: _firstNameController,
+                                        hint: 'e.g. Carlos',
+                                      ),
+                                    ),
+                                    const SizedBox(width: 14),
+                                    Expanded(
+                                      child: _buildTextField(
+                                        label: 'Middle Name (Optional)',
+                                        controller: _middleNameController,
+                                        hint: 'e.g. Alvarez',
+                                      ),
+                                    ),
+                                    const SizedBox(width: 14),
+                                    Expanded(
+                                      child: _buildTextField(
+                                        label: 'Last Name',
+                                        controller: _lastNameController,
+                                        hint: 'e.g. Mendoza',
                                       ),
                                     ),
                                   ],
                                 ),
-                              )
-                            else ...[
-                              Text(
-                                'Selected Skills (${_selectedSkills.length}):',
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                  color: Color(0xFF475569),
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              // Removable Chips with X Icon
-                              Wrap(
-                                spacing: 8,
-                                runSpacing: 8,
-                                children: _selectedSkills.map((skill) {
-                                  return _buildRemovableChip(
-                                    label: skill,
-                                    color: const Color(0xFFDBEAFE),
-                                    textColor: const Color(0xFF1E40AF),
-                                    onRemove: () {
-                                      setState(() {
-                                        _selectedSkills.remove(skill);
-                                        _isDirty = true;
-                                      });
-                                    },
-                                  );
-                                }).toList(),
-                              ),
-                            ],
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-
-                      // Step 3: Preferred Project Roles (Priority 1, 2, 3)
-                      _buildSectionCard(
-                        id: 'roles',
-                        title: '3. Preferred Project Roles',
-                        subtitle: 'Select up to three preferred roles ordered by your personal priority.',
-                        icon: Icons.badge_outlined,
-                        child: LayoutBuilder(
-                          builder: (context, constraints) {
-                            if (constraints.maxWidth < 650) {
-                              return Column(
-                                children: [
-                                  _buildPriorityRoleDropdown(
-                                    priorityLabel:
-                                        '1st Priority (Primary Role)',
-                                    badgeColor: const Color(0xFF16A34A),
-                                    value: _rolePriority1.isNotEmpty ? _rolePriority1 : null,
-                                    onChanged: (val) {
-                                      setState(() {
-                                        _rolePriority1 = val ?? '';
-                                        _isDirty = true;
-                                      });
-                                    },
-                                  ),
-                                  const SizedBox(height: 14),
-                                  _buildPriorityRoleDropdown(
-                                    priorityLabel: '2nd Priority (Secondary)',
-                                    badgeColor: const Color(0xFF2563EB),
-                                    value: _rolePriority2,
-                                    onChanged: (val) {
-                                      setState(() {
-                                        _rolePriority2 = val;
-                                        _isDirty = true;
-                                      });
-                                    },
-                                    isOptional: true,
-                                  ),
-                                  const SizedBox(height: 14),
-                                  _buildPriorityRoleDropdown(
-                                    priorityLabel: '3rd Priority (Tertiary)',
-                                    badgeColor: const Color(0xFF6B7280),
-                                    value: _rolePriority3,
-                                    onChanged: (val) {
-                                      setState(() {
-                                        _rolePriority3 = val;
-                                        _isDirty = true;
-                                      });
-                                    },
-                                    isOptional: true,
-                                  ),
-                                ],
-                              );
-                            }
-                            return Row(
-                              children: [
-                                Expanded(
-                                  child: _buildPriorityRoleDropdown(
-                                    priorityLabel:
-                                        '1st Priority (Primary Role)',
-                                    badgeColor: const Color(0xFF16A34A),
-                                    value: _rolePriority1.isNotEmpty ? _rolePriority1 : null,
-                                    onChanged: (val) {
-                                      setState(() {
-                                        _rolePriority1 = val ?? '';
-                                        _isDirty = true;
-                                      });
-                                    },
-                                  ),
-                                ),
-                                const SizedBox(width: 14),
-                                Expanded(
-                                  child: _buildPriorityRoleDropdown(
-                                    priorityLabel: '2nd Priority (Secondary)',
-                                    badgeColor: const Color(0xFF2563EB),
-                                    value: _rolePriority2,
-                                    onChanged: (val) {
-                                      setState(() {
-                                        _rolePriority2 = val;
-                                        _isDirty = true;
-                                      });
-                                    },
-                                    isOptional: true,
-                                  ),
-                                ),
-                                const SizedBox(width: 14),
-                                Expanded(
-                                  child: _buildPriorityRoleDropdown(
-                                    priorityLabel: '3rd Priority (Tertiary)',
-                                    badgeColor: const Color(0xFF6B7280),
-                                    value: _rolePriority3,
-                                    onChanged: (val) {
-                                      setState(() {
-                                        _rolePriority3 = val;
-                                        _isDirty = true;
-                                      });
-                                    },
-                                    isOptional: true,
-                                  ),
+                                const SizedBox(height: 14),
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      flex: 2,
+                                      child: _buildTextField(
+                                        label: 'Student ID Number',
+                                        controller: _studentIdController,
+                                        hint: 'e.g. 2023-10492',
+                                      ),
+                                    ),
+                                    const SizedBox(width: 14),
+                                    Expanded(
+                                      flex: 3,
+                                      child: _buildTextField(
+                                        label: 'Institutional Email',
+                                        controller: _emailController,
+                                        hint: 'carlos.mendoza@student.edu',
+                                        readOnly: true,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 14),
+                                    Expanded(
+                                      flex: 2,
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          const Text(
+                                            'Year Level',
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 6),
+                                          DropdownButtonFormField<String>(
+                                            key: ValueKey(_selectedYearLevel),
+                                            initialValue: _selectedYearLevel,
+                                            isExpanded: true,
+                                            items: ClassSections.byYear.keys
+                                                .map(
+                                                  (year) => DropdownMenuItem(
+                                                    value: year,
+                                                    child: Text(year),
+                                                  ),
+                                                )
+                                                .toList(),
+                                            onChanged: (year) {
+                                              if (year == null) return;
+                                              setState(() {
+                                                _selectedYearLevel = year;
+                                                _selectedBlock = ClassSections
+                                                    .byYear[year]!
+                                                    .first;
+                                                _isDirty = true;
+                                              });
+                                            },
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    const SizedBox(width: 14),
+                                    Expanded(
+                                      flex: 2,
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          const Text(
+                                            'Class Block / Section',
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w600,
+                                              color: Color(0xFF334155),
+                                            ),
+                                          ),
+                                          const SizedBox(height: 6),
+                                          DropdownButtonFormField<String>(
+                                            key: ValueKey(_selectedBlock),
+                                            isExpanded: true,
+                                            initialValue: _selectedBlock,
+                                            decoration: InputDecoration(
+                                              contentPadding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 12,
+                                                    vertical: 10,
+                                                  ),
+                                              border: OutlineInputBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(8),
+                                              ),
+                                            ),
+                                            items: _blocks
+                                                .map(
+                                                  (b) => DropdownMenuItem(
+                                                    value: b,
+                                                    child: Text(
+                                                      b,
+                                                      style: const TextStyle(
+                                                        fontSize: 13,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                )
+                                                .toList(),
+                                            onChanged: (val) {
+                                              if (val != null) {
+                                                setState(() {
+                                                  _selectedBlock = val;
+                                                  _isDirty = true;
+                                                });
+                                              }
+                                            },
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ],
-                            );
-                          },
-                        ),
-                      ),
-                      const SizedBox(height: 20),
+                            ),
+                          ),
+                          const SizedBox(height: 20),
 
-                      // Step 4: Tools & Technologies (Dynamic Filtering)
-                      _buildSectionCard(
-                        id: 'tools',
-                        title: '4. Tools & Technologies',
-                        subtitle: 'Programming languages & Git appear everywhere. Specialized tools appear automatically based on your technical skills.',
-                        icon: Icons.build_circle_outlined,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            for (final category in _relevantToolCategories) ...[
-                              Text(
-                                _categoryTitle(category),
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                  color: Color(0xFF475569),
-                                  letterSpacing: 0.3,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              Wrap(
-                                spacing: 8,
-                                runSpacing: 8,
-                                children: _toolCategories[category]!.map((
-                                  tool,
-                                ) {
-                                  final isSelected = _selectedTools.contains(
-                                    tool,
-                                  );
-                                  return FilterChip(
-                                    label: Text(tool),
-                                    selected: isSelected,
-                                    selectedColor: const Color(0xFFEFF6FF),
-                                    checkmarkColor: const Color(0xFF1D4ED8),
-                                    backgroundColor: Colors.white,
-                                    side: BorderSide(
-                                      color: isSelected
-                                          ? const Color(0xFF3B82F6)
-                                          : const Color(0xFFCBD5E1),
+                          // Step 2: Technical Skills Card
+                          _buildSectionCard(
+                            id: 'skills',
+                            title: '2. Technical Skills',
+                            subtitle: 'Select skills you are proficient in (removable with X). Open the checklist modal to search and pick skills.',
+                            icon: Icons.code,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Wrap(
+                                  spacing: 12,
+                                  runSpacing: 10,
+                                  children: [
+                                    ElevatedButton.icon(
+                                      onPressed: _showSkillsChecklistModal,
+                                      icon: const Icon(
+                                        Icons.playlist_add_check_rounded,
+                                        size: 20,
+                                      ),
+                                      label: const Text('Select Skills'),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: const Color(
+                                          0xFF1E40AF,
+                                        ),
+                                        foregroundColor: Colors.white,
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 18,
+                                          vertical: 12,
+                                        ),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
+                                        ),
+                                      ),
                                     ),
-                                    onSelected: (selected) {
-                                      setState(() {
-                                        if (selected) {
-                                          _selectedTools.add(tool);
-                                        } else {
-                                          _selectedTools.remove(tool);
-                                        }
-                                        _isDirty = true;
-                                      });
-                                    },
-                                  );
-                                }).toList(),
-                              ),
-                              const SizedBox(height: 16),
-                            ],
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-
-                      // Step 5: Project Interests & Experience
-                      _buildSectionCard(
-                        id: 'interests',
-                        title: '5. Project Interests & Experience',
-                        subtitle: 'Select thematic topics you enjoy and outline past capstone/course project experience.',
-                        icon: Icons.lightbulb_outline,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Wrap(
-                              spacing: 8,
-                              runSpacing: 8,
-                              children: _allInterests.map((interest) {
-                                final isSelected = _selectedInterests.contains(
-                                  interest,
-                                );
-                                return FilterChip(
-                                  label: Text(
-                                    interest,
-                                    style: const TextStyle(fontSize: 12),
-                                  ),
-                                  selected: isSelected,
-                                  selectedColor: const Color(0xFFECFDF5),
-                                  checkmarkColor: const Color(0xFF059669),
-                                  backgroundColor: Colors.white,
-                                  side: BorderSide(
-                                    color: isSelected
-                                        ? const Color(0xFF10B981)
-                                        : const Color(0xFFCBD5E1),
-                                  ),
-                                  onSelected: (selected) {
-                                    setState(() {
-                                      if (selected) {
-                                        _selectedInterests.add(interest);
-                                      } else {
-                                        _selectedInterests.remove(interest);
-                                      }
-                                      _isDirty = true;
-                                    });
-                                  },
-                                );
-                              }).toList(),
-                            ),
-                            const SizedBox(height: 18),
-                            const Text(
-                              'Previous Project Experience',
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                color: Color(0xFF334155),
-                              ),
-                            ),
-                            const SizedBox(height: 6),
-                            TextField(
-                              controller: _experienceController,
-                              maxLines: 3,
-                              decoration: InputDecoration(
-                                hintText: 'e.g. Developed a mobile task tracker in Flutter; built landing pages for school organizations...',
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(8),
+                                    OutlinedButton.icon(
+                                      onPressed: () =>
+                                          _showAddCustomSkillDialog(),
+                                      icon: const Icon(Icons.add, size: 16),
+                                      label: const Text('Request Custom Skill'),
+                                      style: OutlinedButton.styleFrom(
+                                        foregroundColor: const Color(
+                                          0xFF1E40AF,
+                                        ),
+                                        side: const BorderSide(
+                                          color: Color(0xFFBFDBFE),
+                                        ),
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 14,
+                                          vertical: 12,
+                                        ),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                              ),
+                                const SizedBox(height: 16),
+                                if (_selectedSkills.isEmpty)
+                                  Container(
+                                    width: double.infinity,
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 14,
+                                      vertical: 14,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFF8FAFC),
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(
+                                        color: const Color(0xFFE2E8F0),
+                                      ),
+                                    ),
+                                    child: const Row(
+                                      children: [
+                                        Icon(
+                                          Icons.info_outline,
+                                          size: 18,
+                                          color: Color(0xFF64748B),
+                                        ),
+                                        SizedBox(width: 8),
+                                        Expanded(
+                                          child: Text(
+                                            'No technical skills chosen yet. Click "Select Skills" above to open the checklist.',
+                                            style: TextStyle(
+                                              fontSize: 13,
+                                              color: Color(0xFF64748B),
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  )
+                                else ...[
+                                  Text(
+                                    'Selected Skills (${_selectedSkills.length}):',
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      color: Color(0xFF475569),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  // Removable Chips with X Icon
+                                  Wrap(
+                                    spacing: 8,
+                                    runSpacing: 8,
+                                    children: _selectedSkills.map((skill) {
+                                      return _buildRemovableChip(
+                                        label: skill,
+                                        color: const Color(0xFFDBEAFE),
+                                        textColor: const Color(0xFF1E40AF),
+                                        onRemove: () {
+                                          setState(() {
+                                            _selectedSkills.remove(skill);
+                                            _isDirty = true;
+                                          });
+                                        },
+                                      );
+                                    }).toList(),
+                                  ),
+                                ],
+                              ],
                             ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 20),
+                          ),
+                          const SizedBox(height: 20),
 
-                      // Step 6: Availability & Collaboration Mode
-                      _buildSectionCard(
-                        id: 'availability',
-                        title: '6. Availability & Collaboration Mode',
-                        subtitle: 'Help the system find teammates whose schedules align with yours.',
-                        icon: Icons.schedule,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'Available Days',
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                color: Color(0xFF334155),
-                              ),
+                          // Step 3: Preferred Project Roles (Priority 1, 2, 3)
+                          _buildSectionCard(
+                            id: 'roles',
+                            title: '3. Preferred Project Roles',
+                            subtitle: 'Select up to three preferred roles ordered by your personal priority.',
+                            icon: Icons.badge_outlined,
+                            child: LayoutBuilder(
+                              builder: (context, constraints) {
+                                if (constraints.maxWidth < 650) {
+                                  return Column(
+                                    children: [
+                                      _buildPriorityRoleDropdown(
+                                        priorityLabel:
+                                            '1st Priority (Primary Role)',
+                                        badgeColor: const Color(0xFF16A34A),
+                                        value: _rolePriority1.isNotEmpty
+                                            ? _rolePriority1
+                                            : null,
+                                        onChanged: (val) {
+                                          setState(() {
+                                            _rolePriority1 = val ?? '';
+                                            _isDirty = true;
+                                          });
+                                        },
+                                      ),
+                                      const SizedBox(height: 14),
+                                      _buildPriorityRoleDropdown(
+                                        priorityLabel:
+                                            '2nd Priority (Secondary)',
+                                        badgeColor: const Color(0xFF2563EB),
+                                        value: _rolePriority2,
+                                        onChanged: (val) {
+                                          setState(() {
+                                            _rolePriority2 = val;
+                                            _isDirty = true;
+                                          });
+                                        },
+                                        isOptional: true,
+                                      ),
+                                      const SizedBox(height: 14),
+                                      _buildPriorityRoleDropdown(
+                                        priorityLabel:
+                                            '3rd Priority (Tertiary)',
+                                        badgeColor: const Color(0xFF6B7280),
+                                        value: _rolePriority3,
+                                        onChanged: (val) {
+                                          setState(() {
+                                            _rolePriority3 = val;
+                                            _isDirty = true;
+                                          });
+                                        },
+                                        isOptional: true,
+                                      ),
+                                    ],
+                                  );
+                                }
+                                return Row(
+                                  children: [
+                                    Expanded(
+                                      child: _buildPriorityRoleDropdown(
+                                        priorityLabel:
+                                            '1st Priority (Primary Role)',
+                                        badgeColor: const Color(0xFF16A34A),
+                                        value: _rolePriority1.isNotEmpty
+                                            ? _rolePriority1
+                                            : null,
+                                        onChanged: (val) {
+                                          setState(() {
+                                            _rolePriority1 = val ?? '';
+                                            _isDirty = true;
+                                          });
+                                        },
+                                      ),
+                                    ),
+                                    const SizedBox(width: 14),
+                                    Expanded(
+                                      child: _buildPriorityRoleDropdown(
+                                        priorityLabel:
+                                            '2nd Priority (Secondary)',
+                                        badgeColor: const Color(0xFF2563EB),
+                                        value: _rolePriority2,
+                                        onChanged: (val) {
+                                          setState(() {
+                                            _rolePriority2 = val;
+                                            _isDirty = true;
+                                          });
+                                        },
+                                        isOptional: true,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 14),
+                                    Expanded(
+                                      child: _buildPriorityRoleDropdown(
+                                        priorityLabel:
+                                            '3rd Priority (Tertiary)',
+                                        badgeColor: const Color(0xFF6B7280),
+                                        value: _rolePriority3,
+                                        onChanged: (val) {
+                                          setState(() {
+                                            _rolePriority3 = val;
+                                            _isDirty = true;
+                                          });
+                                        },
+                                        isOptional: true,
+                                      ),
+                                    ),
+                                  ],
+                                );
+                              },
                             ),
-                            const SizedBox(height: 8),
-                            Wrap(
-                              spacing: 8,
-                              children:
-                                  [
-                                    'Mon',
-                                    'Tue',
-                                    'Wed',
-                                    'Thu',
-                                    'Fri',
-                                    'Sat',
-                                    'Sun',
-                                  ].map((day) {
-                                    final isSelected = _selectedDays.contains(
-                                      day,
-                                    );
-                                    return ChoiceChip(
-                                      label: Text(day),
+                          ),
+                          const SizedBox(height: 20),
+
+                          // Step 4: Tools & Technologies (Dynamic Filtering)
+                          _buildSectionCard(
+                            id: 'tools',
+                            title: '4. Tools & Technologies',
+                            subtitle: 'Programming languages & Git appear everywhere. Specialized tools appear automatically based on your technical skills.',
+                            icon: Icons.build_circle_outlined,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                for (final category
+                                    in _relevantToolCategories) ...[
+                                  Text(
+                                    _categoryTitle(category),
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                      color: Color(0xFF475569),
+                                      letterSpacing: 0.3,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Wrap(
+                                    spacing: 8,
+                                    runSpacing: 8,
+                                    children: _toolCategories[category]!.map((
+                                      tool,
+                                    ) {
+                                      final isSelected = _selectedTools
+                                          .contains(tool);
+                                      return FilterChip(
+                                        label: Text(tool),
+                                        selected: isSelected,
+                                        selectedColor: const Color(0xFFEFF6FF),
+                                        checkmarkColor: const Color(0xFF1D4ED8),
+                                        backgroundColor: Colors.white,
+                                        side: BorderSide(
+                                          color: isSelected
+                                              ? const Color(0xFF3B82F6)
+                                              : const Color(0xFFCBD5E1),
+                                        ),
+                                        onSelected: (selected) {
+                                          setState(() {
+                                            if (selected) {
+                                              _selectedTools.add(tool);
+                                            } else {
+                                              _selectedTools.remove(tool);
+                                            }
+                                            _isDirty = true;
+                                          });
+                                        },
+                                      );
+                                    }).toList(),
+                                  ),
+                                  const SizedBox(height: 16),
+                                ],
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+
+                          // Step 5: Project Interests & Experience
+                          _buildSectionCard(
+                            id: 'interests',
+                            title: '5. Project Interests & Experience',
+                            subtitle: 'Select thematic topics you enjoy and outline past capstone/course project experience.',
+                            icon: Icons.lightbulb_outline,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Wrap(
+                                  spacing: 8,
+                                  runSpacing: 8,
+                                  children: _allInterests.map((interest) {
+                                    final isSelected = _selectedInterests
+                                        .contains(interest);
+                                    return FilterChip(
+                                      label: Text(
+                                        interest,
+                                        style: const TextStyle(fontSize: 12),
+                                      ),
                                       selected: isSelected,
-                                      selectedColor: const Color(0xFF1E40AF),
-                                      labelStyle: TextStyle(
+                                      selectedColor: const Color(0xFFECFDF5),
+                                      checkmarkColor: const Color(0xFF059669),
+                                      backgroundColor: Colors.white,
+                                      side: BorderSide(
                                         color: isSelected
-                                            ? Colors.white
-                                            : const Color(0xFF334155),
-                                        fontWeight: FontWeight.bold,
+                                            ? const Color(0xFF10B981)
+                                            : const Color(0xFFCBD5E1),
                                       ),
                                       onSelected: (selected) {
                                         setState(() {
                                           if (selected) {
-                                            _selectedDays.add(day);
+                                            _selectedInterests.add(interest);
                                           } else {
-                                            _selectedDays.remove(day);
+                                            _selectedInterests.remove(interest);
                                           }
                                           _isDirty = true;
                                         });
                                       },
                                     );
                                   }).toList(),
-                            ),
-                            const SizedBox(height: 16),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      const Text(
-                                        'Starting Hour',
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w600,
-                                          color: Color(0xFF334155),
-                                        ),
-                                      ),
-                                      const SizedBox(height: 6),
-                                      DropdownButtonFormField<String>(
-                                        isExpanded: true,
-                                        initialValue: _startMeetingHour,
-                                        hint: const Text(
-                                          'Select start hour...',
-                                          style: TextStyle(fontSize: 13),
-                                        ),
-                                        decoration: InputDecoration(
-                                          contentPadding:
-                                              const EdgeInsets.symmetric(
-                                                horizontal: 12,
-                                                vertical: 10,
-                                              ),
-                                          border: OutlineInputBorder(
-                                            borderRadius: BorderRadius.circular(
-                                              8,
-                                            ),
-                                          ),
-                                        ),
-                                        items: _meetingHours
-                                            .map(
-                                              (h) => DropdownMenuItem(
-                                                value: h,
-                                                child: Text(
-                                                  h,
-                                                  style: const TextStyle(
-                                                    fontSize: 13,
-                                                  ),
-                                                ),
-                                              ),
-                                            )
-                                            .toList(),
-                                        onChanged: (val) {
-                                          setState(() {
-                                            _startMeetingHour = val;
-                                            _selectedMeetingTime =
-                                                '${_startMeetingHour ?? ""} - ${_endMeetingHour ?? ""}';
-                                            _isDirty = true;
-                                          });
-                                        },
-                                      ),
-                                    ],
-                                  ),
                                 ),
-                                const SizedBox(width: 14),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      const Text(
-                                        'Ending Hour',
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w600,
-                                          color: Color(0xFF334155),
-                                        ),
-                                      ),
-                                      const SizedBox(height: 6),
-                                      DropdownButtonFormField<String>(
-                                        isExpanded: true,
-                                        initialValue: _endMeetingHour,
-                                        hint: const Text(
-                                          'Select end hour...',
-                                          style: TextStyle(fontSize: 13),
-                                        ),
-                                        decoration: InputDecoration(
-                                          contentPadding:
-                                              const EdgeInsets.symmetric(
-                                                horizontal: 12,
-                                                vertical: 10,
-                                              ),
-                                          border: OutlineInputBorder(
-                                            borderRadius: BorderRadius.circular(
-                                              8,
-                                            ),
-                                          ),
-                                        ),
-                                        items: _meetingHours
-                                            .map(
-                                              (h) => DropdownMenuItem(
-                                                value: h,
-                                                child: Text(
-                                                  h,
-                                                  style: const TextStyle(
-                                                    fontSize: 13,
-                                                  ),
-                                                ),
-                                              ),
-                                            )
-                                            .toList(),
-                                        onChanged: (val) {
-                                          setState(() {
-                                            _endMeetingHour = val;
-                                            _selectedMeetingTime =
-                                                '${_startMeetingHour ?? ""} - ${_endMeetingHour ?? ""}';
-                                            _isDirty = true;
-                                          });
-                                        },
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 14),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
+                                const SizedBox(height: 18),
                                 const Text(
-                                  'Preferred Collaboration Mode',
+                                  'Previous Project Experience',
                                   style: TextStyle(
                                     fontSize: 12,
                                     fontWeight: FontWeight.w600,
@@ -1619,173 +2295,390 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
                                   ),
                                 ),
                                 const SizedBox(height: 6),
-                                DropdownButtonFormField<String>(
-                                  isExpanded: true,
-                                  initialValue: _collaborationMode,
+                                TextField(
+                                  controller: _experienceController,
+                                  maxLines: 3,
                                   decoration: InputDecoration(
-                                    contentPadding:
-                                        const EdgeInsets.symmetric(
-                                          horizontal: 12,
-                                          vertical: 10,
-                                        ),
+                                    hintText: 'e.g. Developed a mobile task tracker in Flutter; built landing pages for school organizations...',
                                     border: OutlineInputBorder(
                                       borderRadius: BorderRadius.circular(8),
                                     ),
                                   ),
-                                  items: ['On-campus', 'Online', 'Hybrid']
-                                      .map(
-                                        (m) => DropdownMenuItem(
-                                          value: m,
-                                          child: Text(
-                                            m,
-                                            style: const TextStyle(
-                                              fontSize: 13,
-                                            ),
-                                          ),
-                                        ),
-                                      )
-                                      .toList(),
-                                  onChanged: (val) {
-                                    if (val != null) {
-                                      setState(() {
-                                        _collaborationMode = val;
-                                        _isDirty = true;
-                                      });
-                                    }
-                                  },
                                 ),
                               ],
                             ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 28),
+                          ),
+                          const SizedBox(height: 20),
 
-                      // Bottom Save Actions
-                      Container(
-                        padding: const EdgeInsets.all(20),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: const Color(0xFFE2E8F0)),
-                        ),
-                        child: LayoutBuilder(
-                          builder: (context, constraints) {
-                            final buttons = Wrap(
-                              spacing: 12,
-                              runSpacing: 10,
+                          // Step 6: Availability & Collaboration Mode
+                          _buildSectionCard(
+                            id: 'availability',
+                            title: '6. Availability & Collaboration Mode',
+                            subtitle: 'Help the system find teammates whose schedules align with yours.',
+                            icon: Icons.schedule,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                OutlinedButton(
-                                  onPressed: _isSaving
-                                      ? null
-                                      : () => _validateAndSave(isDraft: true),
-                                  style: OutlinedButton.styleFrom(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 20,
-                                      vertical: 14,
-                                    ),
-                                    side: const BorderSide(
-                                      color: Color(0xFFCBD5E1),
-                                    ),
+                                const Text(
+                                  'Available Days',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: Color(0xFF334155),
                                   ),
-                                  child: const Text('Save as Draft'),
                                 ),
-                                ElevatedButton.icon(
-                                  onPressed: _isSaving
-                                      ? null
-                                      : () => _validateAndSave(isDraft: false),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: const Color(0xFF1E40AF),
-                                    foregroundColor: Colors.white,
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 24,
-                                      vertical: 14,
-                                    ),
-                                  ),
-                                  icon: _isSaving
-                                      ? const SizedBox(
-                                          width: 16,
-                                          height: 16,
-                                          child: CircularProgressIndicator(
-                                            strokeWidth: 2,
-                                            color: Colors.white,
+                                const SizedBox(height: 8),
+                                Wrap(
+                                  spacing: 8,
+                                  children:
+                                      [
+                                        'Mon',
+                                        'Tue',
+                                        'Wed',
+                                        'Thu',
+                                        'Fri',
+                                        'Sat',
+                                        'Sun',
+                                      ].map((day) {
+                                        final isSelected = _selectedDays
+                                            .contains(day);
+                                        return ChoiceChip(
+                                          label: Text(day),
+                                          showCheckmark: false,
+                                          selected: isSelected,
+                                          selectedColor: const Color(
+                                            0xFF1E40AF,
                                           ),
-                                        )
-                                      : const Icon(Icons.check, size: 18),
-                                  label: const Text(
-                                    'Save Profile',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
+                                          labelStyle: TextStyle(
+                                            color: isSelected
+                                                ? Colors.white
+                                                : const Color(0xFF334155),
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                          onSelected: (selected) {
+                                            setState(() {
+                                              if (selected) {
+                                                _selectedDays.add(day);
+                                              } else {
+                                                _selectedDays.remove(day);
+                                              }
+                                              _isDirty = true;
+                                            });
+                                          },
+                                        );
+                                      }).toList(),
                                 ),
-                              ],
-                            );
-
-                            if (constraints.maxWidth < 700) {
-                              return Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    children: const [
-                                      Icon(
-                                        Icons.info_outline,
-                                        color: Color(0xFF2563EB),
-                                        size: 20,
+                                const SizedBox(height: 16),
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          const Text(
+                                            'Starting Hour',
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w600,
+                                              color: Color(0xFF334155),
+                                            ),
+                                          ),
+                                          const SizedBox(height: 6),
+                                          DropdownButtonFormField<String>(
+                                            isExpanded: true,
+                                            initialValue: _startMeetingHour,
+                                            hint: const Text(
+                                              'Select start hour...',
+                                              style: TextStyle(fontSize: 13),
+                                            ),
+                                            decoration: InputDecoration(
+                                              contentPadding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 12,
+                                                    vertical: 10,
+                                                  ),
+                                              border: OutlineInputBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(8),
+                                              ),
+                                            ),
+                                            items: _meetingHours
+                                                .map(
+                                                  (h) => DropdownMenuItem(
+                                                    value: h,
+                                                    child: Text(
+                                                      h,
+                                                      style: const TextStyle(
+                                                        fontSize: 13,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                )
+                                                .toList(),
+                                            onChanged: (val) {
+                                              setState(() {
+                                                _startMeetingHour = val;
+                                                _selectedMeetingTime =
+                                                    '${_startMeetingHour ?? ""} - ${_endMeetingHour ?? ""}';
+                                                _isDirty = true;
+                                              });
+                                            },
+                                          ),
+                                        ],
                                       ),
-                                      SizedBox(width: 10),
-                                      Expanded(
-                                        child: Text(
-                                          'Saving your complete profile publishes your preferences so you appear in recommendations and can join or form groups.',
-                                          style: TextStyle(
-                                            fontSize: 13,
-                                            color: Color(0xFF475569),
+                                    ),
+                                    const SizedBox(width: 14),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          const Text(
+                                            'Ending Hour',
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w600,
+                                              color: Color(0xFF334155),
+                                            ),
+                                          ),
+                                          const SizedBox(height: 6),
+                                          DropdownButtonFormField<String>(
+                                            isExpanded: true,
+                                            initialValue: _endMeetingHour,
+                                            hint: const Text(
+                                              'Select end hour...',
+                                              style: TextStyle(fontSize: 13),
+                                            ),
+                                            decoration: InputDecoration(
+                                              contentPadding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 12,
+                                                    vertical: 10,
+                                                  ),
+                                              border: OutlineInputBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(8),
+                                              ),
+                                            ),
+                                            items: _meetingHours
+                                                .map(
+                                                  (h) => DropdownMenuItem(
+                                                    value: h,
+                                                    child: Text(
+                                                      h,
+                                                      style: const TextStyle(
+                                                        fontSize: 13,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                )
+                                                .toList(),
+                                            onChanged: (val) {
+                                              setState(() {
+                                                _endMeetingHour = val;
+                                                _selectedMeetingTime =
+                                                    '${_startMeetingHour ?? ""} - ${_endMeetingHour ?? ""}';
+                                                _isDirty = true;
+                                              });
+                                            },
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 14),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text(
+                                      'Preferred Collaboration Mode',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                        color: Color(0xFF334155),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 6),
+                                    DropdownButtonFormField<String>(
+                                      isExpanded: true,
+                                      initialValue: _collaborationMode,
+                                      decoration: InputDecoration(
+                                        contentPadding:
+                                            const EdgeInsets.symmetric(
+                                              horizontal: 12,
+                                              vertical: 10,
+                                            ),
+                                        border: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            8,
                                           ),
                                         ),
                                       ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 16),
-                                  buttons,
-                                ],
-                              );
-                            }
-
-                            return Row(
-                              children: [
-                                const Icon(
-                                  Icons.info_outline,
-                                  color: Color(0xFF2563EB),
-                                  size: 20,
-                                ),
-                                const SizedBox(width: 10),
-                                const Expanded(
-                                  child: Text(
-                                    'Saving your complete profile publishes your preferences so you appear in recommendations and can join or form groups.',
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      color: Color(0xFF475569),
+                                      items: ['On-campus', 'Online', 'Hybrid']
+                                          .map(
+                                            (m) => DropdownMenuItem(
+                                              value: m,
+                                              child: Text(
+                                                m,
+                                                style: const TextStyle(
+                                                  fontSize: 13,
+                                                ),
+                                              ),
+                                            ),
+                                          )
+                                          .toList(),
+                                      onChanged: (val) {
+                                        if (val != null) {
+                                          setState(() {
+                                            _collaborationMode = val;
+                                            _isDirty = true;
+                                          });
+                                        }
+                                      },
                                     ),
-                                  ),
+                                  ],
                                 ),
-                                const SizedBox(width: 16),
-                                buttons,
                               ],
-                            );
-                          },
-                        ),
-                      ),
-                      const SizedBox(height: 32),
-                    ],
+                            ),
+                          ),
+                          const SizedBox(height: 28),
+
+                          // Bottom Save Actions
+                          Container(
+                            padding: const EdgeInsets.all(20),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: const Color(0xFFE2E8F0),
+                              ),
+                            ),
+                            child: LayoutBuilder(
+                              builder: (context, constraints) {
+                                final buttons = Wrap(
+                                  spacing: 12,
+                                  runSpacing: 10,
+                                  children: [
+                                    OutlinedButton(
+                                      onPressed: _isSaving
+                                          ? null
+                                          : () =>
+                                                _validateAndSave(isDraft: true),
+                                      style: OutlinedButton.styleFrom(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 20,
+                                          vertical: 14,
+                                        ),
+                                        side: const BorderSide(
+                                          color: Color(0xFFCBD5E1),
+                                        ),
+                                      ),
+                                      child: const Text('Save as Draft'),
+                                    ),
+                                    ElevatedButton.icon(
+                                      onPressed: _isSaving
+                                          ? null
+                                          : () => _validateAndSave(
+                                              isDraft: false,
+                                            ),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: const Color(
+                                          0xFF1E40AF,
+                                        ),
+                                        foregroundColor: Colors.white,
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 24,
+                                          vertical: 14,
+                                        ),
+                                      ),
+                                      icon: _isSaving
+                                          ? const SizedBox(
+                                              width: 16,
+                                              height: 16,
+                                              child: CircularProgressIndicator(
+                                                strokeWidth: 2,
+                                                color: Colors.white,
+                                              ),
+                                            )
+                                          : const Icon(Icons.check, size: 18),
+                                      label: const Text(
+                                        'Save Profile',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                );
+
+                                if (constraints.maxWidth < 700) {
+                                  return Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        children: const [
+                                          Icon(
+                                            Icons.info_outline,
+                                            color: Color(0xFF2563EB),
+                                            size: 20,
+                                          ),
+                                          SizedBox(width: 10),
+                                          Expanded(
+                                            child: Text(
+                                              'Saving your complete profile publishes your preferences so you appear in recommendations and can join or form groups.',
+                                              style: TextStyle(
+                                                fontSize: 13,
+                                                color: Color(0xFF475569),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 16),
+                                      buttons,
+                                    ],
+                                  );
+                                }
+
+                                return Row(
+                                  children: [
+                                    const Icon(
+                                      Icons.info_outline,
+                                      color: Color(0xFF2563EB),
+                                      size: 20,
+                                    ),
+                                    const SizedBox(width: 10),
+                                    const Expanded(
+                                      child: Text(
+                                        'Saving your complete profile publishes your preferences so you appear in recommendations and can join or form groups.',
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          color: Color(0xFF475569),
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 16),
+                                    buttons,
+                                  ],
+                                );
+                              },
+                            ),
+                          ),
+                          const SizedBox(height: 32),
+                        ],
+                      ],
+                    ),
                   ),
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
-    ),
-  );
+    );
   }
 
   // Section Card container with error state highlighting in red
@@ -1897,6 +2790,7 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
     required String label,
     required TextEditingController controller,
     required String hint,
+    bool readOnly = false,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1912,6 +2806,7 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
         const SizedBox(height: 6),
         TextField(
           controller: controller,
+          readOnly: readOnly,
           decoration: InputDecoration(
             hintText: hint,
             hintStyle: const TextStyle(fontSize: 13, color: Color(0xFF94A3B8)),
@@ -2000,7 +2895,10 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
         DropdownButtonFormField<String>(
           key: ValueKey('$priorityLabel:$value'),
           isExpanded: true,
-          initialValue: (value != null && value.isNotEmpty && _allProjectRoles.contains(value))
+          initialValue:
+              (value != null &&
+                  value.isNotEmpty &&
+                  _allProjectRoles.contains(value))
               ? value
               : null,
           decoration: InputDecoration(

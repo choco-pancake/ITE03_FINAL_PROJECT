@@ -147,15 +147,6 @@ class AuthController extends Controller
             }
         }
 
-        if (! is_array($payload) && filter_var($validated['id_token'], FILTER_VALIDATE_EMAIL)) {
-            $payload = [
-                'sub' => 'google_sub_' . md5($validated['id_token']),
-                'email' => $validated['id_token'],
-                'name' => explode('@', $validated['id_token'])[0],
-                'email_verified' => true,
-            ];
-        }
-
         if (! is_array($payload)) {
             return response()->json(['message' => 'Google verification failed. Please choose your Google account again.'], 401);
         }

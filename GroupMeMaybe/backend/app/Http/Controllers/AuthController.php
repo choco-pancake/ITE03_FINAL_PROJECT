@@ -26,8 +26,9 @@ class AuthController extends Controller
             'last_name' => 'nullable|string|max:255',
             'email' => 'required|string|email|max:255|unique:users,email',
             'password' => 'required|string|min:6',
-            'role' => 'nullable|string|in:student,professor',
+            'role' => 'nullable|string|in:student,professor,admin',
             'faculty_code' => 'nullable|string|max:255',
+            'admin_code' => 'nullable|string|max:255',
             'department_or_section' => 'nullable|string|max:255',
             'preferred_role' => 'nullable|string|max:255',
             'skills' => 'nullable|array',
@@ -37,11 +38,23 @@ class AuthController extends Controller
 
         // Check Faculty Authorization Code if registering as an instructor
         if ($role === 'professor') {
-            $expectedCode = env('FACULTY_ACCESS_CODE', 'BSIT-FACULTY-2026');
+            $settings = AdminController::getSettings();
+            $expectedCode = $settings['faculty_code'] ?? env('FACULTY_ACCESS_CODE', 'BSIT-FACULTY-2026');
             $providedCode = trim($validated['faculty_code'] ?? '');
             if ($providedCode !== $expectedCode) {
                 return response()->json([
                     'message' => 'Invalid Faculty Authorization Code. Please contact the BSIT Department Chair for the instructor access key.',
+                ], 403);
+            }
+        }
+
+        // Check Admin Authorization Code if registering as an administrator
+        if ($role === 'admin') {
+            $expectedAdminCode = env('ADMIN_ACCESS_CODE', 'ADMIN-CHAIR-2026');
+            $providedAdminCode = trim($request->input('admin_code', ''));
+            if ($providedAdminCode !== $expectedAdminCode) {
+                return response()->json([
+                    'message' => 'Invalid Administrator Authorization Code. Access restricted to the Department Chair / Dean.',
                 ], 403);
             }
         }
@@ -324,7 +337,7 @@ class AuthController extends Controller
         ]);
 
         if (! $this->hasRecentAccountProof($request->user(), $validated, $verifier)) {
-            return response()->json(['message' => 'Verify your current password or Google account first.'], 403);
+            return response()->json(['message' => 'Current password does not match. Please verify your current password.'], 403);
         }
 
         $request->user()->update(['password' => Hash::make($validated['password'])]);

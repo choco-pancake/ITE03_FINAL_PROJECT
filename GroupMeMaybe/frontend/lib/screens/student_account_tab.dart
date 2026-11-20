@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import '../services/skill_approval_service.dart';
 import 'landing_screen.dart';
+import 'widgets/bottom_right_notification.dart';
 
 class StudentAccountTab extends StatefulWidget {
   const StudentAccountTab({super.key, required this.studentId});
@@ -107,12 +108,22 @@ class _StudentAccountTabState extends State<StudentAccountTab> {
         idToken: proof['id_token'],
       );
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text('Password updated.')));
+        setState(() => _error = null);
+        AppNotification.showSuccess(
+          context,
+          'Password Updated',
+          'Your account password has been changed successfully.',
+        );
       }
     } catch (error) {
       if (mounted) {
-        setState(() => _error = error.toString().replaceAll('Exception: ', ''));
+        final msg = error.toString().replaceAll('Exception: ', '');
+        setState(() => _error = msg);
+        AppNotification.showError(
+          context,
+          'Password Change Failed',
+          msg,
+        );
       }
     }
   }

@@ -196,6 +196,9 @@ class _PortalTopActionsState extends State<PortalTopActions> {
       widget.onProfile!();
       return;
     }
+    if (AuthService.currentUser?.isAdmin == true) {
+      return;
+    }
     final destination = AuthService.currentUser?.isProfessor == true
         ? const ProfessorSettingsScreen()
         : const StudentSettingsScreen(initialTab: 0);
@@ -264,19 +267,27 @@ class _PortalTopActionsState extends State<PortalTopActions> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
               decoration: BoxDecoration(
-                color: user?.isProfessor == true
-                    ? const Color(0xFFFEF3C7)
-                    : const Color(0xFFEFF6FF),
+                color: user?.isAdmin == true
+                    ? const Color(0xFFF3E8FF)
+                    : user?.isProfessor == true
+                        ? const Color(0xFFFEF3C7)
+                        : const Color(0xFFEFF6FF),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Text(
-                user?.isProfessor == true ? 'Professor' : 'Student',
+                user?.isAdmin == true
+                    ? 'Department Chair'
+                    : user?.isProfessor == true
+                        ? 'Professor'
+                        : 'Student',
                 style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w600,
-                  color: user?.isProfessor == true
-                      ? const Color(0xFF92400E)
-                      : const Color(0xFF1E40AF),
+                  color: user?.isAdmin == true
+                      ? const Color(0xFF581C87)
+                      : user?.isProfessor == true
+                          ? const Color(0xFF92400E)
+                          : const Color(0xFF1E40AF),
                 ),
               ),
             ),

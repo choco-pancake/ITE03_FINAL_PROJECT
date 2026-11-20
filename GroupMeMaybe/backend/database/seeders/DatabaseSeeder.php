@@ -26,6 +26,16 @@ class DatabaseSeeder extends Seeder
 
         // 0. Seed Demo Accounts
         User::create([
+            'name' => 'Dean Eleanor Vance',
+            'first_name' => 'Eleanor',
+            'last_name' => 'Vance',
+            'email' => 'admin@university.edu',
+            'password' => \Illuminate\Support\Facades\Hash::make('admin123456'),
+            'role' => 'admin',
+            'department_or_section' => 'Dean - College of Computer Studies',
+        ]);
+
+        User::create([
             'name' => 'Prof. Aivhan',
             'email' => 'prof.aivhan@university.edu',
             'password' => \Illuminate\Support\Facades\Hash::make('password123'),

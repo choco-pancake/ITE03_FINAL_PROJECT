@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AcademicClassController;
+use App\Http\Controllers\AdminController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CustomSkillRequestController;
 use App\Http\Controllers\GroupingActivityController;
@@ -26,7 +27,16 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::patch('/notifications/{notification}/read', [NotificationController::class, 'markRead']);
     Route::get('/notification-preferences', [NotificationController::class, 'preferences']);
     Route::put('/notification-preferences', [NotificationController::class, 'updatePreferences']);
+
+    // Admin & Department Chair routes
+    Route::get('/admin/overview', [AdminController::class, 'overview']);
+    Route::get('/admin/faculty', [AdminController::class, 'faculty']);
+    Route::get('/admin/students', [AdminController::class, 'students']);
+    Route::post('/admin/faculty-code', [AdminController::class, 'updateFacultyCode']);
+    Route::post('/admin/semester', [AdminController::class, 'updateSemester']);
 });
+
+Route::get('/settings/semester', [AdminController::class, 'publicSettings']);
 
 Route::get('/test', function () {
     return response()->json([

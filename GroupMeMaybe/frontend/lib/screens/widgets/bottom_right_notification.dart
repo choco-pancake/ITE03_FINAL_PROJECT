@@ -3,6 +3,103 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 class AppNotification {
+  static void showSuccess(BuildContext context, String title, String message) {
+    _showFloating(
+      context: context,
+      title: title,
+      message: message,
+      icon: Icons.check_circle_outline,
+      iconColor: const Color(0xFF22C55E),
+      borderColor: const Color(0xFF16A34A).withValues(alpha: 0.4),
+    );
+  }
+
+  static void showError(BuildContext context, String title, String message) {
+    _showFloating(
+      context: context,
+      title: title,
+      message: message,
+      icon: Icons.error_outline,
+      iconColor: const Color(0xFFEF4444),
+      borderColor: const Color(0xFFDC2626).withValues(alpha: 0.4),
+    );
+  }
+
+  static void _showFloating({
+    required BuildContext context,
+    required String title,
+    required String message,
+    required IconData icon,
+    required Color iconColor,
+    required Color borderColor,
+  }) {
+    final overlay = Overlay.maybeOf(context);
+    if (overlay == null) return;
+    late OverlayEntry entry;
+    entry = OverlayEntry(
+      builder: (_) => Positioned(
+        bottom: 24,
+        right: 24,
+        child: Material(
+          elevation: 10,
+          borderRadius: BorderRadius.circular(12),
+          color: const Color(0xFF0F172A),
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 380),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: borderColor),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x33000000),
+                  blurRadius: 18,
+                  offset: Offset(0, 6),
+                ),
+              ],
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(icon, color: iconColor, size: 22),
+                const SizedBox(width: 12),
+                Flexible(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        message,
+                        style: const TextStyle(
+                          color: Color(0xFFCBD5E1),
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    overlay.insert(entry);
+    Timer(const Duration(seconds: 4), () {
+      if (entry.mounted) entry.remove();
+    });
+  }
+
   static void showMessage(BuildContext context, String title, String message) {
     final overlay = Overlay.maybeOf(context);
     if (overlay == null) return;

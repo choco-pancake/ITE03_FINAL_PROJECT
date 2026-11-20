@@ -35,9 +35,11 @@ class AuthUser {
     return 'Student';
   }
 
+  bool get isAdmin =>
+      role.toLowerCase() == 'admin' || role.toLowerCase() == 'administrator';
   bool get isProfessor =>
       role.toLowerCase() == 'professor' || role.toLowerCase() == 'instructor';
-  bool get isStudent => !isProfessor;
+  bool get isStudent => !isProfessor && !isAdmin;
 
   factory AuthUser.fromJson(Map<String, dynamic> json) {
     final fName = json['first_name'] as String?;

@@ -1,11 +1,13 @@
 <?php
 
 use App\Http\Controllers\AcademicClassController;
+use App\Http\Controllers\AdminController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CustomSkillRequestController;
 use App\Http\Controllers\GroupingActivityController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\StudentRecordController;
 use Illuminate\Support\Facades\Route;
 
 // Authentication routes
@@ -19,6 +21,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/account', [AuthController::class, 'deleteAccount']);
     Route::get('/profile', [ProfileController::class, 'mine']);
     Route::put('/profile', [ProfileController::class, 'saveMine']);
+    Route::post('/classes/enroll', [AcademicClassController::class, 'enroll']);
+    Route::apiResource('classes', AcademicClassController::class);
+    Route::get('/professor/students', [StudentRecordController::class, 'index']);
+    Route::patch('/professor/students/{student}/record', [StudentRecordController::class, 'update']);
     Route::get('/custom-skill-requests', [CustomSkillRequestController::class, 'index']);
     Route::post('/custom-skill-requests', [CustomSkillRequestController::class, 'store']);
     Route::patch('/custom-skill-requests/{skillRequest}', [CustomSkillRequestController::class, 'update']);
@@ -26,7 +32,16 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::patch('/notifications/{notification}/read', [NotificationController::class, 'markRead']);
     Route::get('/notification-preferences', [NotificationController::class, 'preferences']);
     Route::put('/notification-preferences', [NotificationController::class, 'updatePreferences']);
+
+    // Admin & Department Chair routes
+    Route::get('/admin/overview', [AdminController::class, 'overview']);
+    Route::get('/admin/faculty', [AdminController::class, 'faculty']);
+    Route::get('/admin/students', [AdminController::class, 'students']);
+    Route::post('/admin/faculty-code', [AdminController::class, 'updateFacultyCode']);
+    Route::post('/admin/semester', [AdminController::class, 'updateSemester']);
 });
+
+Route::get('/settings/semester', [AdminController::class, 'publicSettings']);
 
 Route::get('/test', function () {
     return response()->json([
@@ -40,7 +55,7 @@ Route::get('/test', function () {
     ]);
 });
 
-Route::apiResource('profiles', ProfileController::class);
+Route::apiResource('profiles', ProfileController::class)->only(['index', 'show']);
 
 // Professor Activities / Projects Module (Aivhan) & Scarcity (Yvonne)
 Route::get('activities/summary', [GroupingActivityController::class, 'summary']);
@@ -53,4 +68,3 @@ Route::post('activities/{id}/add-skill', [GroupingActivityController::class, 'ad
 Route::post('activities/{id}/accept-group', [GroupingActivityController::class, 'acceptGroup']);
 Route::post('activities/{id}/request-change', [GroupingActivityController::class, 'requestChange']);
 Route::apiResource('activities', GroupingActivityController::class);
-Route::apiResource('classes', AcademicClassController::class);

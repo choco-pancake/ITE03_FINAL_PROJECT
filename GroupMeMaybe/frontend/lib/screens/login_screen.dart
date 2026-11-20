@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 
 import '../services/auth_service.dart';
 import '../services/profile_service.dart';
+import 'admin_dashboard_screen.dart';
 import 'professor_dashboard_screen.dart';
 import 'signup_screen.dart';
 import 'student_dashboard_screen.dart';
@@ -85,7 +86,13 @@ class _LoginScreenState extends State<LoginScreen> {
       AppNotification.showWelcome(context, user.name);
 
       // Navigate based on role
-      if (user.isProfessor) {
+      if (user.isAdmin) {
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (_) => const AdminDashboardScreen()),
+          (route) => false,
+        );
+      } else if (user.isProfessor) {
         Navigator.pushAndRemoveUntil(
           context,
           MaterialPageRoute(builder: (_) => const ProfessorDashboardScreen()),
@@ -136,7 +143,13 @@ class _LoginScreenState extends State<LoginScreen> {
       );
       if (!mounted) return;
       AppNotification.showWelcome(context, user.name);
-      if (user.isProfessor) {
+      if (user.isAdmin) {
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (_) => const AdminDashboardScreen()),
+          (route) => false,
+        );
+      } else if (user.isProfessor) {
         Navigator.pushAndRemoveUntil(
           context,
           MaterialPageRoute(builder: (_) => const ProfessorDashboardScreen()),

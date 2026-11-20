@@ -7,6 +7,7 @@ import 'widgets/portal_top_actions.dart';
 import 'package:flutter/services.dart';
 
 import '../models/academic_class.dart';
+import '../models/class_sections.dart';
 import '../services/activity_service.dart';
 import 'profile_list_screen.dart';
 import 'widgets/professor_sidebar.dart';
@@ -48,12 +49,18 @@ class _ProfessorClassesScreenState extends State<ProfessorClassesScreen> {
           _isLoading = false;
         });
       }
-    } catch (_) {
+    } catch (e) {
       if (mounted) {
         setState(() {
           _classes = [];
           _isLoading = false;
         });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Could not load classes: $e'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
       }
     }
   }
@@ -91,10 +98,12 @@ class _ProfessorClassesScreenState extends State<ProfessorClassesScreen> {
         await _activityService.deleteClass(c.id!);
       }
       _loadClasses();
-    } catch (_) {
-      setState(() {
-        _classes.removeWhere((item) => item.id == c.id);
-      });
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not delete class: $error')),
+        );
+      }
     }
   }
 
@@ -115,15 +124,20 @@ class _ProfessorClassesScreenState extends State<ProfessorClassesScreen> {
 
   void _showCreateClassDialog() {
     final messenger = ScaffoldMessenger.of(context);
-    final nameController = TextEditingController();
-    final sectionController = TextEditingController();
+    final courseCodeController = TextEditingController();
+    final courseNameController = TextEditingController();
     final descriptionController = TextEditingController();
+    String selectedYearLevel = '2nd Year';
+    String selectedBlock = ClassSections.byYear['2nd Year']!.first;
     String generatedCode = _generateUniqueCode('CS');
 
     showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (context, setDialogState) {
+          final availableBlocks =
+              ClassSections.byYear[selectedYearLevel] ?? [];
+
           return AlertDialog(
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16),
@@ -139,109 +153,205 @@ class _ProfessorClassesScreenState extends State<ProfessorClassesScreen> {
               ],
             ),
             content: SizedBox(
-              width: 480,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Set course details and generate a unique 6-character enrollment code for student registration.',
-                    style: TextStyle(fontSize: 13, color: Color(0xFF64748B)),
-                  ),
-                  const SizedBox(height: 16),
-                  TextField(
-                    controller: nameController,
-                    decoration: InputDecoration(
-                      labelText: 'Course Name',
-                      hintText: 'e.g. ITE 04 - Software Engineering',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
+              width: 520,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Set course details and generate a unique 6-character enrollment code for student registration.',
+                      style: TextStyle(fontSize: 13, color: Color(0xFF64748B)),
                     ),
-                    onChanged: (val) {
-                      setDialogState(() {
-                        generatedCode = _generateUniqueCode(val);
-                      });
-                    },
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: sectionController,
-                    decoration: InputDecoration(
-                      labelText: 'Section Block',
-                      hintText: 'e.g. BSIT-3A',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: descriptionController,
-                    maxLines: 2,
-                    decoration: InputDecoration(
-                      labelText: 'Course Description (Optional)',
-                      hintText:
-                          'Syllabus, team match activity specifications...',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
+                    const SizedBox(height: 16),
 
-                  // Generated Code Card
-                  Container(
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFEFF6FF),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: const Color(0xFFBFDBFE)),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    // Course Code & Course Name (Separated)
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'Generated Enrollment Code',
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w600,
-                                color: Color(0xFF1D4ED8),
+                        Expanded(
+                          flex: 2,
+                          child: TextField(
+                            controller: courseCodeController,
+                            decoration: InputDecoration(
+                              labelText: 'Course Code',
+                              hintText: 'e.g. ITE 04',
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
                               ),
                             ),
-                            const SizedBox(height: 2),
-                            Text(
-                              generatedCode,
-                              style: const TextStyle(
-                                fontSize: 22,
-                                fontWeight: FontWeight.w900,
-                                letterSpacing: 2,
-                                color: Color(0xFF0F172A),
-                              ),
-                            ),
-                          ],
-                        ),
-                        IconButton(
-                          icon: const Icon(
-                            Icons.refresh,
-                            color: Color(0xFF1E40AF),
+                            onChanged: (val) {
+                              setDialogState(() {
+                                generatedCode = _generateUniqueCode(
+                                  val.trim().isNotEmpty ? val : 'CS',
+                                );
+                              });
+                            },
                           ),
-                          tooltip: 'Regenerate Code',
-                          onPressed: () {
-                            setDialogState(() {
-                              generatedCode = _generateUniqueCode(
-                                nameController.text,
-                              );
-                            });
-                          },
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          flex: 3,
+                          child: TextField(
+                            controller: courseNameController,
+                            decoration: InputDecoration(
+                              labelText: 'Course Name / Title',
+                              hintText: 'e.g. Software Engineering 1',
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
+                            onChanged: (val) {
+                              if (courseCodeController.text.trim().isEmpty) {
+                                setDialogState(() {
+                                  generatedCode = _generateUniqueCode(val);
+                                });
+                              }
+                            },
+                          ),
                         ),
                       ],
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 14),
+
+                    // Year Level & Block Dropdowns (Synced with Student Sign-up)
+                    Row(
+                      children: [
+                        Expanded(
+                          child: DropdownButtonFormField<String>(
+                            key: ValueKey('class_dialog_year_$selectedYearLevel'),
+                            initialValue: selectedYearLevel,
+                            decoration: InputDecoration(
+                              labelText: 'Year Level',
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
+                            items: ClassSections.byYear.keys
+                                .map((year) => DropdownMenuItem(
+                                      value: year,
+                                      child: Text(year),
+                                    ))
+                                .toList(),
+                            onChanged: (val) {
+                              if (val != null) {
+                                setDialogState(() {
+                                  selectedYearLevel = val;
+                                  final blocks =
+                                      ClassSections.byYear[val] ?? [];
+                                  if (!blocks.contains(selectedBlock)) {
+                                    selectedBlock = blocks.isNotEmpty
+                                        ? blocks.first
+                                        : 'BSIT 2A';
+                                  }
+                                });
+                              }
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: DropdownButtonFormField<String>(
+                            key: ValueKey('class_dialog_block_${selectedYearLevel}_$selectedBlock'),
+                            initialValue: availableBlocks.contains(selectedBlock)
+                                ? selectedBlock
+                                : (availableBlocks.isNotEmpty
+                                    ? availableBlocks.first
+                                    : null),
+                            decoration: InputDecoration(
+                              labelText: 'Section / Block',
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
+                            items: availableBlocks
+                                .map((block) => DropdownMenuItem(
+                                      value: block,
+                                      child: Text(block),
+                                    ))
+                                .toList(),
+                            onChanged: (val) {
+                              if (val != null) {
+                                setDialogState(() => selectedBlock = val);
+                              }
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+
+                    TextField(
+                      controller: descriptionController,
+                      maxLines: 2,
+                      decoration: InputDecoration(
+                        labelText: 'Course Description (Optional)',
+                        hintText:
+                            'Syllabus, team match activity specifications...',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Generated Code Card
+                    Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFEFF6FF),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: const Color(0xFFBFDBFE)),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Generated Enrollment Code',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: Color(0xFF1D4ED8),
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                generatedCode,
+                                style: const TextStyle(
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: 2,
+                                  color: Color(0xFF0F172A),
+                                ),
+                              ),
+                            ],
+                          ),
+                          IconButton(
+                            icon: const Icon(
+                              Icons.refresh,
+                              color: Color(0xFF1E40AF),
+                            ),
+                            tooltip: 'Regenerate Code',
+                            onPressed: () {
+                              setDialogState(() {
+                                final prefix =
+                                    courseCodeController.text.trim().isNotEmpty
+                                        ? courseCodeController.text.trim()
+                                        : courseNameController.text.trim();
+                                generatedCode = _generateUniqueCode(
+                                  prefix.isNotEmpty ? prefix : 'CS',
+                                );
+                              });
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
             actions: [
@@ -255,15 +365,18 @@ class _ProfessorClassesScreenState extends State<ProfessorClassesScreen> {
                   foregroundColor: Colors.white,
                 ),
                 onPressed: () async {
-                  final name = nameController.text.trim();
-                  if (name.isEmpty) return;
+                  final code = courseCodeController.text.trim();
+                  final courseName = courseNameController.text.trim();
+                  if (code.isEmpty && courseName.isEmpty) return;
+
+                  final fullName = (code.isNotEmpty && courseName.isNotEmpty)
+                      ? '$code - $courseName'
+                      : (code.isNotEmpty ? code : courseName);
 
                   final newClass = AcademicClass(
-                    name: name,
+                    name: fullName,
                     classCode: generatedCode,
-                    section: sectionController.text.trim().isNotEmpty
-                        ? sectionController.text.trim()
-                        : 'General',
+                    section: selectedBlock,
                     description: descriptionController.text.trim().isNotEmpty
                         ? descriptionController.text.trim()
                         : 'Course syllabus and project team requirements.',
@@ -280,24 +393,18 @@ class _ProfessorClassesScreenState extends State<ProfessorClassesScreen> {
                       messenger.showSnackBar(
                         SnackBar(
                           content: Text(
-                            'Class "$name" created with enrollment code: $generatedCode',
+                            'Class "$fullName" created for $selectedBlock with code: $generatedCode',
                           ),
                           backgroundColor: const Color(0xFF16A34A),
                           behavior: SnackBarBehavior.floating,
                         ),
                       );
                     }
-                  } catch (e) {
+                  } catch (error) {
                     if (mounted) {
-                      setState(() {
-                        _classes.insert(0, newClass);
-                      });
                       messenger.showSnackBar(
                         SnackBar(
-                          content: Text(
-                            'Class "$name" saved with enrollment code: $generatedCode',
-                          ),
-                          backgroundColor: const Color(0xFF16A34A),
+                          content: Text('Could not create class: $error'),
                           behavior: SnackBarBehavior.floating,
                         ),
                       );
@@ -313,12 +420,11 @@ class _ProfessorClassesScreenState extends State<ProfessorClassesScreen> {
     );
   }
 
-  void _rotateClassCode(AcademicClass c) {
+  Future<void> _rotateClassCode(AcademicClass c) async {
     final newCode = _generateUniqueCode(c.name);
-    final index = _classes.indexWhere((item) => item.id == c.id);
-    if (index != -1) {
-      setState(() {
-        _classes[index] = AcademicClass(
+    if (c.id != null) {
+      try {
+        await _activityService.updateClass(c.id!, AcademicClass(
           id: c.id,
           name: c.name,
           classCode: newCode,
@@ -326,18 +432,21 @@ class _ProfessorClassesScreenState extends State<ProfessorClassesScreen> {
           section: c.section,
           studentCount: c.studentCount,
           activitiesCount: c.activitiesCount,
-        );
-      });
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Rotated enrollment code for "${c.name}" to "$newCode"!',
-          ),
-          backgroundColor: const Color(0xFF16A34A),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+        ));
+        await _loadClasses();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text('Rotated enrollment code for "${c.name}" to "$newCode"!'),
+            backgroundColor: const Color(0xFF16A34A),
+          ));
+        }
+      } catch (error) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Could not rotate class code: $error')),
+          );
+        }
+      }
     }
   }
 

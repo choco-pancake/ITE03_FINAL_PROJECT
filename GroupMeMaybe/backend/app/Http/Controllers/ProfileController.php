@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Profile;
+use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -67,15 +68,43 @@ class ProfileController extends Controller
         }
 
         $profile = DB::transaction(function () use ($user, $data): Profile {
-            $user->update([
+            $lockedUser = User::whereKey($user->id)->lockForUpdate()->firstOrFail();
+            $existingProfile = Profile::where('email', $lockedUser->email)->lockForUpdate()->first();
+            $existingDetails = $existingProfile?->details ?? [];
+            if (($existingDetails['is_complete'] ?? false) === true) {
+                $protected = [
+                    'name' => [$data['name'], $existingProfile->name],
+                    'first_name' => [$data['first_name'] ?? $existingProfile->first_name, $existingProfile->first_name],
+                    'middle_name' => [$data['middle_name'] ?? $existingProfile->middle_name, $existingProfile->middle_name],
+                    'last_name' => [$data['last_name'] ?? $existingProfile->last_name, $existingProfile->last_name],
+                ];
+                foreach (['student_id', 'year_level', 'block'] as $key) {
+                    $protected[$key] = [
+                        array_key_exists($key, $data['details']) ? $data['details'][$key] : ($existingDetails[$key] ?? null),
+                        $existingDetails[$key] ?? null,
+                    ];
+                }
+                foreach ($protected as [$requested, $saved]) {
+                    if (trim((string) $requested) !== trim((string) $saved)) {
+                        abort(403, 'An instructor must change completed name and academic records.');
+                    }
+                }
+                if (($data['details']['is_complete'] ?? true) !== true) {
+                    abort(403, 'A completed profile cannot be reopened.');
+                }
+                $data['details'] = array_replace($existingDetails, $data['details']);
+                $data['details']['is_complete'] = true;
+            }
+
+            $lockedUser->update([
                 'name' => $data['name'],
-                'first_name' => $data['first_name'] ?? $user->first_name,
-                'middle_name' => $data['middle_name'] ?? $user->middle_name,
-                'last_name' => $data['last_name'] ?? $user->last_name,
-                'department_or_section' => $data['details']['block'] ?? $user->department_or_section,
+                'first_name' => $data['first_name'] ?? $lockedUser->first_name,
+                'middle_name' => $data['middle_name'] ?? $lockedUser->middle_name,
+                'last_name' => $data['last_name'] ?? $lockedUser->last_name,
+                'department_or_section' => $data['details']['block'] ?? $lockedUser->department_or_section,
             ]);
 
-            return Profile::updateOrCreate(['email' => $user->email], $data);
+            return Profile::updateOrCreate(['email' => $lockedUser->email], $data);
         });
 
         return response()->json($profile);

@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../../services/auth_service.dart';
-import '../landing_screen.dart';
 import '../professor_activities_screen.dart';
 import '../professor_classes_screen.dart';
 import '../professor_dashboard_screen.dart';
@@ -20,63 +18,6 @@ class ProfessorSidebar extends StatelessWidget {
   final ProfessorNavDestination currentDestination;
 
   const ProfessorSidebar({super.key, required this.currentDestination});
-
-  Future<void> _confirmSignOut(BuildContext context) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Row(
-          children: const [
-            Icon(Icons.logout, color: Color(0xFFDC2626), size: 22),
-            SizedBox(width: 10),
-            Text(
-              'Confirm Sign Out',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-          ],
-        ),
-        content: const Text(
-          'Are you sure you want to log out of GroupMeMaybe?',
-          style: TextStyle(fontSize: 14, color: Color(0xFF475569)),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text(
-              'Cancel',
-              style: TextStyle(
-                color: Color(0xFF64748B),
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFDC2626),
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Log Out'),
-          ),
-        ],
-      ),
-    );
-
-    if (confirmed == true && context.mounted) {
-      await AuthService().logout();
-      if (context.mounted) {
-        Navigator.pushAndRemoveUntil(
-          context,
-          MaterialPageRoute(builder: (_) => const LandingScreen()),
-          (route) => false,
-        );
-      }
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -196,7 +137,7 @@ class ProfessorSidebar extends StatelessWidget {
           _buildItem(
             context: context,
             icon: Icons.fact_check_outlined,
-            title: 'Evaluation',
+            title: 'Student Records',
             isSelected:
                 currentDestination == ProfessorNavDestination.evaluation,
             onTap: () {
@@ -228,78 +169,7 @@ class ProfessorSidebar extends StatelessWidget {
           ),
 
           const Spacer(),
-          const Divider(color: Colors.white12, height: 1),
-
-          // Professor Profile Card & Exit
-          Builder(
-            builder: (context) {
-              final user = AuthService.currentUser;
-              final userName = (user != null && user.name.isNotEmpty)
-                  ? user.name
-                  : 'Prof. Aivhan';
-              final userInitial =
-                  userName.isNotEmpty ? userName[0].toUpperCase() : 'P';
-              final userRole = (user != null &&
-                      user.departmentOrSection != null &&
-                      user.departmentOrSection!.isNotEmpty)
-                  ? user.departmentOrSection!
-                  : 'Faculty Lead';
-
-              return Container(
-                padding: const EdgeInsets.all(12),
-                child: Row(
-                  children: [
-                    CircleAvatar(
-                      radius: 16,
-                      backgroundColor: const Color(0xFF1E40AF),
-                      child: Text(
-                        userInitial,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 13,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            userName,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          Text(
-                            userRole,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              color: Color(0xFF94A3B8),
-                              fontSize: 10,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(
-                        Icons.logout,
-                        size: 16,
-                        color: Color(0xFF94A3B8),
-                      ),
-                      tooltip: 'Sign Out',
-                      onPressed: () => _confirmSignOut(context),
-                    ),
-                  ],
-                ),
-              );
-            },
-          ),
+          const SizedBox(height: 16),
         ],
       ),
     );

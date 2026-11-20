@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AcademicClass;
 use App\Models\Profile;
 use App\Models\User;
 use App\Services\GoogleTokenVerifier;
@@ -28,6 +29,7 @@ class AuthController extends Controller
             'password' => 'required|string|min:6',
             'role' => 'nullable|string|in:student,professor',
             'faculty_code' => 'nullable|string|max:255',
+            'admin_code' => 'nullable|string|max:255',
             'department_or_section' => 'nullable|string|max:255',
             'preferred_role' => 'nullable|string|max:255',
             'skills' => 'nullable|array',
@@ -37,11 +39,23 @@ class AuthController extends Controller
 
         // Check Faculty Authorization Code if registering as an instructor
         if ($role === 'professor') {
-            $expectedCode = env('FACULTY_ACCESS_CODE', 'BSIT-FACULTY-2026');
+            $settings = AdminController::getSettings();
+            $expectedCode = $settings['faculty_code'] ?? env('FACULTY_ACCESS_CODE', 'BSIT-FACULTY-2026');
             $providedCode = trim($validated['faculty_code'] ?? '');
             if ($providedCode !== $expectedCode) {
                 return response()->json([
                     'message' => 'Invalid Faculty Authorization Code. Please contact the BSIT Department Chair for the instructor access key.',
+                ], 403);
+            }
+        }
+
+        // Check Admin Authorization Code if registering as an administrator
+        if ($role === 'admin') {
+            $expectedAdminCode = env('ADMIN_ACCESS_CODE', 'ADMIN-CHAIR-2026');
+            $providedAdminCode = trim($request->input('admin_code', ''));
+            if ($providedAdminCode !== $expectedAdminCode) {
+                return response()->json([
+                    'message' => 'Invalid Administrator Authorization Code. Access restricted to the Department Chair / Dean.',
                 ], 403);
             }
         }
@@ -120,6 +134,7 @@ class AuthController extends Controller
             'id_token' => 'required|string',
             'intent' => 'required|string|in:login,signup',
             'role' => 'nullable|string|in:student,professor',
+            'faculty_code' => 'nullable|string|max:255',
             'department_or_section' => 'nullable|string|max:255',
             'preferred_role' => 'nullable|string|max:255',
         ]);
@@ -175,10 +190,41 @@ class AuthController extends Controller
             }
         }
 
+        if ($user !== null && ($validated['intent'] ?? '') === 'signup' && ($validated['role'] ?? '') === 'professor') {
+            $settings = AdminController::getSettings();
+            $expectedCode = $settings['faculty_code'] ?? env('FACULTY_ACCESS_CODE', 'BSIT-FACULTY-2026');
+            $providedCode = trim($validated['faculty_code'] ?? '');
+            if ($providedCode !== $expectedCode) {
+                return response()->json([
+                    'message' => 'Invalid Faculty Authorization Code. Please enter the valid code to create an Instructor account.',
+                ], 403);
+            }
+            $user->role = 'professor';
+            $user->department_or_section = $validated['department_or_section'] ?? 'College of Computer Studies';
+            $user->save();
+        }
+
         $created = false;
         if ($user === null) {
-            $role = 'student';
-            $departmentOrSection = $validated['department_or_section'] ?? '';
+            if ($validated['intent'] === 'login') {
+                return response()->json([
+                    'message' => 'No account found for this Google account. Choose Student or Instructor on the Sign Up page first.',
+                ], 404);
+            }
+
+            $role = $validated['role'] ?? 'student';
+            if ($role === 'professor') {
+                $settings = AdminController::getSettings();
+                $expectedCode = $settings['faculty_code'] ?? env('FACULTY_ACCESS_CODE', 'BSIT-FACULTY-2026');
+                $providedCode = trim($validated['faculty_code'] ?? '');
+                if ($providedCode !== $expectedCode) {
+                    return response()->json([
+                        'message' => 'Invalid Faculty Authorization Code. Please enter the valid code to create an Instructor account.',
+                    ], 403);
+                }
+            }
+
+            $departmentOrSection = $validated['department_or_section'] ?? ($role === 'professor' ? 'College of Computer Studies' : '');
             $googleName = trim((string) ($payload['name'] ?? ''));
             $fullName = $googleName !== '' ? $googleName : explode('@', $email)[0];
             $parts = preg_split('/\s+/', $fullName);
@@ -324,7 +370,7 @@ class AuthController extends Controller
         ]);
 
         if (! $this->hasRecentAccountProof($request->user(), $validated, $verifier)) {
-            return response()->json(['message' => 'Verify your current password or Google account first.'], 403);
+            return response()->json(['message' => 'Current password does not match. Please verify your current password.'], 403);
         }
 
         $request->user()->update(['password' => Hash::make($validated['password'])]);
@@ -341,6 +387,9 @@ class AuthController extends Controller
         $user = $request->user();
         if (strtolower(trim($validated['email'])) !== strtolower(trim($user->email))) {
             return response()->json(['message' => 'The email does not match this account.'], 403);
+        }
+        if ($user->role === 'professor' && AcademicClass::where('professor_id', $user->id)->exists()) {
+            return response()->json(['message' => 'Delete your classes before deleting your instructor account.'], 409);
         }
 
         DB::transaction(function () use ($user): void {

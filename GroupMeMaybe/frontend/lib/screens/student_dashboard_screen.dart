@@ -319,6 +319,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       body: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           // Unified Sidebar
           const StudentSidebar(
@@ -332,11 +333,9 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                 : RefreshIndicator(
                     onRefresh: _loadDashboardData,
                     child: SingleChildScrollView(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 32,
-                        vertical: 28,
-                      ),
-                      child: Center(
+                      padding: const EdgeInsets.fromLTRB(32, 28, 32, 28),
+                      child: Align(
+                        alignment: Alignment.topCenter,
                         child: ConstrainedBox(
                           constraints: const BoxConstraints(maxWidth: 1100),
                           child: Column(
@@ -406,7 +405,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
   Widget _buildWelcomeHeader() {
     final firstName = _studentName.trim().split(RegExp(r'\s+')).first;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),

@@ -1,25 +1,11 @@
 import 'package:flutter/material.dart';
 
+import '../models/student_record.dart';
+import '../services/student_record_service.dart';
 import 'widgets/portal_top_actions.dart';
-
 import 'widgets/professor_sidebar.dart';
 
-// Professor Evaluation: "Modification Requests"
-// File: lib/screens/professor_evaluation_screen.dart
-
-// ───────────────────────── Colors ─────────────────────────
-
-class _C {
-  static const primary = Color(0xFF1E40AF);
-  static const primarySoft = Color(0xFFEFF6FF);
-  static const pageBg = Color(0xFFF8FAFC);
-  static const border = Color(0xFFE2E8F0);
-  static const text = Color(0xFF0F172A);
-  static const body = Color(0xFF1E293B);
-  static const muted = Color(0xFF64748B);
-}
-
-// ───────────────────────── Models ─────────────────────────
+// ───────────────────────── Models for Step 9 ─────────────────────────
 
 enum _Status { pending, underReview, approved, rejected }
 
@@ -32,18 +18,17 @@ extension _StatusX on _Status {
   };
 
   Color get color => switch (this) {
-    _Status.pending => const Color(0xFFE0A800), // yellow
-    _Status.underReview => const Color(0xFF2563EB), // blue
-    _Status.approved => const Color(0xFF16A34A), // green
-    _Status.rejected => const Color(0xFFDC2626), // red
+    _Status.pending => const Color(0xFFE0A800),
+    _Status.underReview => const Color(0xFF2563EB),
+    _Status.approved => const Color(0xFF16A34A),
+    _Status.rejected => const Color(0xFFDC2626),
   };
 }
 
 class _HistoryEntry {
   final DateTime date;
   final String action;
-  final String? remarks;
-  _HistoryEntry(this.date, this.action, [this.remarks]);
+  _HistoryEntry(this.date, this.action);
 }
 
 class _Request {
@@ -54,10 +39,8 @@ class _Request {
   final String field;
   final String currentValue;
   final String requestedValue;
-  final List<String> attachments;
   final DateTime submitted;
   _Status status;
-  String remarks;
   final List<_HistoryEntry> history;
 
   _Request({
@@ -69,9 +52,7 @@ class _Request {
     required this.currentValue,
     required this.requestedValue,
     required this.submitted,
-    this.attachments = const [],
     this.status = _Status.pending,
-    this.remarks = '',
   }) : history = [_HistoryEntry(submitted, 'Request submitted')];
 
   String get initials {
@@ -82,144 +63,10 @@ class _Request {
   }
 }
 
-String _fmtDate(DateTime d) {
-  const m = [
-    'Jan',
-    'Feb',
-    'Mar',
-    'Apr',
-    'May',
-    'Jun',
-    'Jul',
-    'Aug',
-    'Sep',
-    'Oct',
-    'Nov',
-    'Dec',
-  ];
-  return '${m[d.month - 1]} ${d.day}, ${d.year}';
-}
-
-// ───────────────────────── Shared widgets ─────────────────────────
-
-class _Centered extends StatelessWidget {
-  final Widget child;
-  const _Centered({required this.child});
-
-  @override
-  Widget build(BuildContext context) => Align(
-    alignment: Alignment.topCenter,
-    child: ConstrainedBox(
-      constraints: const BoxConstraints(maxWidth: 900),
-      child: child,
-    ),
-  );
-}
-
-class _Panel extends StatelessWidget {
-  final Widget child;
-  final EdgeInsets padding;
-  const _Panel({required this.child, this.padding = const EdgeInsets.all(18)});
-
-  @override
-  Widget build(BuildContext context) => Container(
-    width: double.infinity,
-    padding: padding,
-    decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(12),
-      border: Border.all(color: _C.border),
-    ),
-    child: child,
-  );
-}
-
-class _SectionTitle extends StatelessWidget {
-  final String text;
-  const _SectionTitle(this.text);
-
-  @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(bottom: 12),
-    child: Text(
-      text,
-      style: const TextStyle(
-        fontSize: 15,
-        fontWeight: FontWeight.bold,
-        color: _C.text,
-      ),
-    ),
-  );
-}
-
-class _Avatar extends StatelessWidget {
-  final String initials;
-  final double radius;
-  const _Avatar(this.initials, {this.radius = 22});
-
-  // Swap the child for a NetworkImage when you have real profile pictures.
-  @override
-  Widget build(BuildContext context) => CircleAvatar(
-    radius: radius,
-    backgroundColor: _C.primary,
-    child: Text(
-      initials,
-      style: TextStyle(
-        color: Colors.white,
-        fontWeight: FontWeight.bold,
-        fontSize: radius * 0.65,
-      ),
-    ),
-  );
-}
-
-class _StatusBadge extends StatelessWidget {
-  final _Status status;
-  const _StatusBadge(this.status);
-
-  @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-    decoration: BoxDecoration(
-      color: status.color.withValues(alpha: 0.14),
-      borderRadius: BorderRadius.circular(20),
-    ),
-    child: Text(
-      status.label,
-      style: TextStyle(
-        color: status.color,
-        fontWeight: FontWeight.bold,
-        fontSize: 12,
-      ),
-    ),
-  );
-}
-
-InputDecoration _fieldDecoration(String hint, {Widget? prefix}) {
-  OutlineInputBorder border(Color c) => OutlineInputBorder(
-    borderRadius: BorderRadius.circular(10),
-    borderSide: BorderSide(color: c),
-  );
-  return InputDecoration(
-    hintText: hint,
-    hintStyle: const TextStyle(color: _C.muted, fontSize: 14),
-    prefixIcon: prefix,
-    filled: true,
-    fillColor: Colors.white,
-    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-    enabledBorder: border(_C.border),
-    disabledBorder: border(_C.border),
-    focusedBorder: border(_C.primary),
-    border: border(_C.border),
-  );
-}
-
-// ───────────────────────── Requests list ─────────────────────────
-
-enum _Sort { newest, oldest, nameAZ, nameZA }
-
 class ProfessorEvaluationScreen extends StatefulWidget {
-  const ProfessorEvaluationScreen({super.key});
+  const ProfessorEvaluationScreen({super.key, this.service});
+
+  final StudentRecordService? service;
 
   @override
   State<ProfessorEvaluationScreen> createState() =>
@@ -227,6 +74,13 @@ class ProfessorEvaluationScreen extends StatefulWidget {
 }
 
 class _ProfessorEvaluationScreenState extends State<ProfessorEvaluationScreen> {
+  late final StudentRecordService _service;
+  final TextEditingController _searchController = TextEditingController();
+  List<StudentRecord> _students = [];
+  bool _loading = true;
+  String? _error;
+
+  // Step 9 Modification Requests state
   final List<_Request> _requests = [
     _Request(
       studentName: 'Alex Santos',
@@ -262,957 +116,275 @@ class _ProfessorEvaluationScreenState extends State<ProfessorEvaluationScreen> {
       status: _Status.pending,
     ),
   ];
-  final _searchCtrl = TextEditingController();
-  final Set<_Status> _filters = {};
-  _Sort _sort = _Sort.newest;
-
-  void _showCreateRequestDialog() {
-    final studentNameCtrl = TextEditingController();
-    final studentIdCtrl = TextEditingController();
-    final programCtrl = TextEditingController(text: 'BSIT 3A');
-    final titleCtrl = TextEditingController();
-    final fieldCtrl = TextEditingController();
-    final currentValCtrl = TextEditingController();
-    final requestedValCtrl = TextEditingController();
-
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Row(
-          children: [
-            Icon(Icons.edit_note, color: _C.primary),
-            SizedBox(width: 8),
-            Text(
-              'Create Modification Request',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-          ],
-        ),
-        content: SizedBox(
-          width: 420,
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                TextField(
-                  controller: studentNameCtrl,
-                  decoration: _fieldDecoration(
-                    'Student Name (e.g. Maria Santos)',
-                  ),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: studentIdCtrl,
-                  decoration: _fieldDecoration('Student ID (e.g. 2023-0142)'),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: programCtrl,
-                  decoration: _fieldDecoration(
-                    'Program / Section (e.g. BSIT 3A)',
-                  ),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: titleCtrl,
-                  decoration: _fieldDecoration(
-                    'Request Title (e.g. Change of surname)',
-                  ),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: fieldCtrl,
-                  decoration: _fieldDecoration(
-                    'Field to Modify (e.g. Last name)',
-                  ),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: currentValCtrl,
-                  decoration: _fieldDecoration('Current Value (e.g. Santos)'),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: requestedValCtrl,
-                  decoration: _fieldDecoration(
-                    'Requested Value (e.g. Santos-Reyes)',
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: _C.primary,
-              foregroundColor: Colors.white,
-            ),
-            onPressed: () {
-              final sName = studentNameCtrl.text.trim();
-              final sTitle = titleCtrl.text.trim();
-              if (sName.isEmpty || sTitle.isEmpty) return;
-
-              setState(() {
-                _requests.insert(
-                  0,
-                  _Request(
-                    studentName: sName,
-                    studentId: studentIdCtrl.text.trim().isNotEmpty
-                        ? studentIdCtrl.text.trim()
-                        : '2026-${DateTime.now().millisecond}',
-                    program: programCtrl.text.trim().isNotEmpty
-                        ? programCtrl.text.trim()
-                        : 'General',
-                    title: sTitle,
-                    field: fieldCtrl.text.trim().isNotEmpty
-                        ? fieldCtrl.text.trim()
-                        : 'Record Detail',
-                    currentValue: currentValCtrl.text.trim().isNotEmpty
-                        ? currentValCtrl.text.trim()
-                        : 'Original',
-                    requestedValue: requestedValCtrl.text.trim().isNotEmpty
-                        ? requestedValCtrl.text.trim()
-                        : 'Updated',
-                    submitted: DateTime.now(),
-                    attachments: const [],
-                    status: _Status.pending,
-                    remarks: '',
-                  ),
-                );
-              });
-              Navigator.pop(ctx);
-            },
-            child: const Text('Submit Request'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  bool get _hasActiveFilter =>
-      _filters.isNotEmpty || _searchCtrl.text.isNotEmpty;
-
-  List<_Request> get _visible {
-    final q = _searchCtrl.text.trim().toLowerCase();
-    final list = _requests.where((r) {
-      final matchesFilter = _filters.isEmpty || _filters.contains(r.status);
-      final matchesSearch =
-          q.isEmpty ||
-          r.studentName.toLowerCase().contains(q) ||
-          r.title.toLowerCase().contains(q);
-      return matchesFilter && matchesSearch;
-    }).toList();
-
-    list.sort(
-      (a, b) => switch (_sort) {
-        _Sort.newest => b.submitted.compareTo(a.submitted),
-        _Sort.oldest => a.submitted.compareTo(b.submitted),
-        _Sort.nameAZ => a.studentName.compareTo(b.studentName),
-        _Sort.nameZA => b.studentName.compareTo(a.studentName),
-      },
-    );
-    return list;
-  }
-
-  int _count(_Status s) => _requests.where((r) => r.status == s).length;
-
-  void _clearFilters() => setState(() {
-    _filters.clear();
-    _searchCtrl.clear();
-    _sort = _Sort.newest;
-  });
-
-  @override
-  void dispose() {
-    _searchCtrl.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final items = _visible;
-
-    return Scaffold(
-      backgroundColor: _C.pageBg,
-      body: Row(
-        children: [
-          const ProfessorSidebar(
-            currentDestination: ProfessorNavDestination.evaluation,
-          ),
-          Expanded(
-            child: _Centered(
-              child: Column(
-                children: [
-                  // Title & Action
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 24, 20, 16),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text(
-                          'Modification Requests',
-                          style: TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
-                            color: _C.text,
-                          ),
-                        ),
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            ElevatedButton.icon(
-                              onPressed: _showCreateRequestDialog,
-                              icon: const Icon(Icons.add, size: 16),
-                              label: const Text('New Request'),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: _C.primary,
-                                foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 14,
-                                  vertical: 10,
-                                ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            const PortalTopActions(),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  // Search + sort
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller: _searchCtrl,
-                            onChanged: (_) => setState(() {}),
-                            decoration: _fieldDecoration(
-                              'Search by student or request',
-                              prefix: const Icon(Icons.search, color: _C.muted),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        PopupMenuButton<_Sort>(
-                          tooltip: 'Sort',
-                          initialValue: _sort,
-                          offset: const Offset(0, 52),
-                          onSelected: (v) => setState(() => _sort = v),
-                          itemBuilder: (_) => const [
-                            PopupMenuItem(
-                              value: _Sort.newest,
-                              child: Text('Date submitted: newest'),
-                            ),
-                            PopupMenuItem(
-                              value: _Sort.oldest,
-                              child: Text('Date submitted: oldest'),
-                            ),
-                            PopupMenuItem(
-                              value: _Sort.nameAZ,
-                              child: Text('Student name: A to Z'),
-                            ),
-                            PopupMenuItem(
-                              value: _Sort.nameZA,
-                              child: Text('Student name: Z to A'),
-                            ),
-                          ],
-                          child: Container(
-                            width: 50,
-                            height: 50,
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(10),
-                              border: Border.all(color: _C.border),
-                            ),
-                            child: const Icon(
-                              Icons.swap_vert,
-                              color: _C.primary,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  // Status filters with totals
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
-                    child: Align(
-                      alignment: Alignment.centerLeft,
-                      child: Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: [
-                          for (final s in _Status.values)
-                            _FilterPill(
-                              status: s,
-                              count: _count(s),
-                              selected: _filters.contains(s),
-                              onTap: () => setState(
-                                () => _filters.contains(s)
-                                    ? _filters.remove(s)
-                                    : _filters.add(s),
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                  ),
-
-                  // Result count + clear filter
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(24, 8, 14, 0),
-                    child: Row(
-                      children: [
-                        Text(
-                          '${items.length} ${items.length == 1 ? 'request' : 'requests'}',
-                          style: const TextStyle(color: _C.muted, fontSize: 13),
-                        ),
-                        const Spacer(),
-                        TextButton.icon(
-                          onPressed: _hasActiveFilter ? _clearFilters : null,
-                          icon: const Icon(Icons.close, size: 16),
-                          label: const Text('Clear filter'),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  // List or empty state
-                  Expanded(
-                    child: items.isEmpty
-                        ? const _EmptyState()
-                        : ListView.separated(
-                            padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
-                            itemCount: items.length,
-                            separatorBuilder: (_, _) =>
-                                const SizedBox(height: 12),
-                            itemBuilder: (_, i) => _RequestCard(
-                              request: items[i],
-                              onView: () => Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => _RequestDetailsScreen(
-                                    request: items[i],
-                                    onChanged: () => setState(() {}),
-                                  ),
-                                ),
-                              ),
-                              onApprove: () {
-                                setState(() {
-                                  items[i].status = _Status.approved;
-                                  items[i].history.add(_HistoryEntry(DateTime.now(), 'Approved directly by professor'));
-                                });
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text('Approved ${items[i].studentName}\'s request.'),
-                                    backgroundColor: const Color(0xFF059669),
-                                  ),
-                                );
-                              },
-                              onReject: () {
-                                setState(() {
-                                  items[i].status = _Status.rejected;
-                                  items[i].history.add(_HistoryEntry(DateTime.now(), 'Rejected directly by professor'));
-                                });
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text('Rejected ${items[i].studentName}\'s request.'),
-                                    backgroundColor: const Color(0xFFDC2626),
-                                  ),
-                                );
-                              },
-                            ),
-                          ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _FilterPill extends StatelessWidget {
-  final _Status status;
-  final int count;
-  final bool selected;
-  final VoidCallback onTap;
-  const _FilterPill({
-    required this.status,
-    required this.count,
-    required this.selected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(24),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        padding: const EdgeInsets.fromLTRB(12, 8, 8, 8),
-        decoration: BoxDecoration(
-          color: selected ? status.color.withValues(alpha: 0.12) : Colors.white,
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(
-            color: selected ? status.color : _C.border,
-            width: selected ? 1.5 : 1,
-          ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 8,
-              height: 8,
-              decoration: BoxDecoration(
-                color: status.color,
-                shape: BoxShape.circle,
-              ),
-            ),
-            const SizedBox(width: 8),
-            Text(
-              status.label,
-              style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: _C.body,
-              ),
-            ),
-            const SizedBox(width: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-              decoration: BoxDecoration(
-                color: status.color.withValues(alpha: 0.18),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Text(
-                '$count',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                  color: status.color,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _EmptyState extends StatelessWidget {
-  const _EmptyState();
-
-  @override
-  Widget build(BuildContext context) => const Center(
-    child: Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(Icons.inbox_outlined, size: 56, color: _C.border),
-        SizedBox(height: 10),
-        Text(
-          'No requests found',
-          style: TextStyle(fontSize: 16, color: _C.muted),
-        ),
-      ],
-    ),
-  );
-}
-
-class _RequestCard extends StatelessWidget {
-  final _Request request;
-  final VoidCallback onView;
-  final VoidCallback? onApprove;
-  final VoidCallback? onReject;
-
-  const _RequestCard({
-    required this.request,
-    required this.onView,
-    this.onApprove,
-    this.onReject,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final canDecide = request.status == _Status.pending || request.status == _Status.underReview;
-
-    return _Panel(
-      padding: const EdgeInsets.fromLTRB(16, 16, 12, 12),
-      child: Column(
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _Avatar(request.initials),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      request.studentName,
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
-                        color: _C.body,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      request.title,
-                      style: const TextStyle(fontSize: 13, color: _C.muted),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              Padding(
-                padding: const EdgeInsets.only(right: 4),
-                child: _StatusBadge(request.status),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          const Divider(height: 1, color: _C.border),
-          const SizedBox(height: 6),
-          Row(
-            children: [
-              const Icon(
-                Icons.calendar_today_outlined,
-                size: 14,
-                color: _C.muted,
-              ),
-              const SizedBox(width: 6),
-              Text(
-                'Submitted ${_fmtDate(request.submitted)}',
-                style: const TextStyle(fontSize: 12, color: _C.muted),
-              ),
-              const Spacer(),
-              TextButton(
-                onPressed: onView,
-                child: const Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text('View details'),
-                    SizedBox(width: 4),
-                    Icon(Icons.arrow_forward, size: 16),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          if (canDecide && onApprove != null && onReject != null) ...[
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF059669),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 10),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      elevation: 0,
-                    ),
-                    onPressed: onApprove,
-                    child: const Text(
-                      'Approve',
-                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFDC2626),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 10),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      elevation: 0,
-                    ),
-                    onPressed: onReject,
-                    child: const Text(
-                      'Reject',
-                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-// ───────────────────────── Request details ─────────────────────────
-
-class _RequestDetailsScreen extends StatefulWidget {
-  final _Request request;
-  final VoidCallback onChanged;
-  const _RequestDetailsScreen({required this.request, required this.onChanged});
-
-  @override
-  State<_RequestDetailsScreen> createState() => _RequestDetailsScreenState();
-}
-
-class _RequestDetailsScreenState extends State<_RequestDetailsScreen> {
-  late final TextEditingController _remarksCtrl;
-
-  _Request get r => widget.request;
-  bool get _decided =>
-      r.status == _Status.approved || r.status == _Status.rejected;
+  final Set<_Status> _reqFilters = {};
 
   @override
   void initState() {
     super.initState();
-    _remarksCtrl = TextEditingController(text: r.remarks);
+    _service = widget.service ?? StudentRecordService();
+    _loadStudents();
   }
 
   @override
   void dispose() {
-    _remarksCtrl.dispose();
+    _searchController.dispose();
     super.dispose();
   }
 
-  void _toast(String msg) => ScaffoldMessenger.of(context)
-    ..hideCurrentSnackBar()
-    ..showSnackBar(
-      SnackBar(content: Text(msg), behavior: SnackBarBehavior.floating),
-    );
-
-  void _markUnderReview() {
-    setState(() {
-      r.status = _Status.underReview;
-      r.history.add(_HistoryEntry(DateTime.now(), 'Marked as under review'));
-    });
-    widget.onChanged();
+  Future<void> _loadStudents() async {
+    try {
+      final students = await _service.getStudents();
+      if (!mounted) return;
+      setState(() {
+        _students = students;
+        _error = null;
+        _loading = false;
+      });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _error = error.toString().replaceFirst('Exception: ', '');
+        _loading = false;
+      });
+    }
   }
 
-  void _submitRemarks() {
-    final text = _remarksCtrl.text.trim();
-    setState(() {
-      r.remarks = text;
-      r.history.add(_HistoryEntry(DateTime.now(), 'Remarks added', text));
-    });
-    widget.onChanged();
-    _toast('Remarks saved');
-  }
-
-  Future<void> _decide(_Status decision) async {
-    final approving = decision == _Status.approved;
-    final hasRemarks = _remarksCtrl.text.trim().isNotEmpty;
-    final confirmed = await showDialog<bool>(
+  Future<void> _editStudent(StudentRecord student) async {
+    final formKey = GlobalKey<FormState>();
+    final values = <String, String>{
+      'first_name': student.firstName,
+      'middle_name': student.middleName,
+      'last_name': student.lastName,
+      'student_id': student.studentId,
+      'year_level': student.yearLevel,
+      'block': student.block,
+    };
+    bool saving = false;
+    String? errorMessage;
+    final saved = await showDialog<bool>(
       context: context,
       barrierDismissible: false,
-      builder: (_) => _ConfirmDialog(
-        title: approving ? 'Approve this request?' : 'Decline this request?',
-        message:
-            'The student will be notified of your decision${hasRemarks ? ' along with your remarks.' : '.'}',
-        confirmColor: decision.color,
-      ),
-    );
-    if (confirmed != true || !mounted) return;
-
-    final remarks = _remarksCtrl.text.trim();
-    setState(() {
-      r.status = decision;
-      r.remarks = remarks;
-      r.history
-        ..add(
-          _HistoryEntry(
-            DateTime.now(),
-            approving ? 'Approved' : 'Declined',
-            remarks.isEmpty ? null : remarks,
-          ),
-        )
-        ..add(_HistoryEntry(DateTime.now(), 'Notification sent to student'));
-    });
-    widget.onChanged();
-    _toast(
-      '${approving ? 'Approved' : 'Declined'}. ${r.studentName} has been notified.',
-    );
-  }
-
-  ButtonStyle _decisionStyle(Color color) => FilledButton.styleFrom(
-    backgroundColor: color,
-    padding: const EdgeInsets.symmetric(vertical: 16),
-    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-  );
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: _C.pageBg,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        surfaceTintColor: Colors.transparent,
-        elevation: 1,
-        leading: const BackButton(color: _C.muted),
-        title: const Text(
-          'Request Details',
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: _C.text,
-          ),
-        ),
-      ),
-      body: _Centered(
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
-          children: [
-            // Student information
-            _Panel(
-              child: Row(
-                children: [
-                  _Avatar(r.initials, radius: 30),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          r.studentName,
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: _C.text,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          '${r.studentId}  ·  ${r.program}',
-                          style: const TextStyle(color: _C.muted),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          'Submitted ${_fmtDate(r.submitted)}',
-                          style: const TextStyle(fontSize: 12, color: _C.muted),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  _StatusBadge(r.status),
-                ],
-              ),
-            ),
-            const SizedBox(height: 12),
-
-            // Current value vs requested change
-            _Panel(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _SectionTitle(r.title),
-                  Text(
-                    'Field: ${r.field}',
-                    style: const TextStyle(color: _C.muted),
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _ValueBox(
-                          label: 'Current value',
-                          value: r.currentValue,
-                          background: const Color(0xFFF1F5F9),
-                          accent: _C.muted,
-                        ),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 8),
-                        child: Container(
-                          width: 32,
-                          height: 32,
-                          decoration: const BoxDecoration(
-                            color: _C.primarySoft,
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            Icons.arrow_forward,
-                            size: 16,
-                            color: _C.primary,
-                          ),
-                        ),
-                      ),
-                      Expanded(
-                        child: _ValueBox(
-                          label: 'Requested change',
-                          value: r.requestedValue,
-                          background: _C.primarySoft,
-                          accent: _C.primary,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 12),
-
-            // Attached files (optional)
-            if (r.attachments.isNotEmpty) ...[
-              _Panel(
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, refresh) => AlertDialog(
+          title: Text('Edit ${student.name}'),
+          content: SizedBox(
+            width: 470,
+            child: SingleChildScrollView(
+              child: Form(
+                key: formKey,
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    const _SectionTitle('Attached files'),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: [
-                        for (final f in r.attachments)
-                          ActionChip(
-                            avatar: const Icon(Icons.attach_file, size: 16),
-                            label: Text(f),
-                            backgroundColor: _C.pageBg,
-                            side: const BorderSide(color: _C.border),
-                            onPressed: () => _toast('Opening $f'),
-                          ),
-                      ],
+                    const Text(
+                      'Changes are saved immediately and recorded with your account.',
+                      style: TextStyle(color: Color(0xFF64748B)),
                     ),
+                    const SizedBox(height: 14),
+                    for (final field in const [
+                      ('first_name', 'First name'),
+                      ('middle_name', 'Middle name'),
+                      ('last_name', 'Last name'),
+                      ('student_id', 'Student ID'),
+                      ('year_level', 'Year level'),
+                      ('block', 'Section / block'),
+                    ]) ...[
+                      TextFormField(
+                        initialValue: values[field.$1],
+                        onChanged: (value) => values[field.$1] = value,
+                        decoration: InputDecoration(labelText: field.$2),
+                        validator: (value) {
+                          if (field.$1 != 'middle_name' &&
+                              (value == null || value.trim().isEmpty)) {
+                            return '${field.$2} is required';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 10),
+                    ],
+                    if (errorMessage != null)
+                      Text(
+                        errorMessage!,
+                        style: const TextStyle(color: Color(0xFFDC2626)),
+                      ),
                   ],
                 ),
               ),
-              const SizedBox(height: 12),
-            ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: saving
+                  ? null
+                  : () => Navigator.pop(dialogContext, false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: saving
+                  ? null
+                  : () async {
+                      if (formKey.currentState?.validate() != true) return;
+                      refresh(() {
+                        saving = true;
+                        errorMessage = null;
+                      });
+                      try {
+                        await _service.updateStudent(student.id, {
+                          for (final entry in values.entries)
+                            entry.key: entry.value.trim(),
+                        });
+                        if (dialogContext.mounted) {
+                          Navigator.pop(dialogContext, true);
+                        }
+                      } catch (error) {
+                        if (dialogContext.mounted) {
+                          refresh(() {
+                            saving = false;
+                            errorMessage = error.toString().replaceFirst(
+                              'Exception: ',
+                              '',
+                            );
+                          });
+                        }
+                      }
+                    },
+              child: const Text('Save record'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (saved == true && mounted) {
+      await _loadStudents();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Student record updated.')),
+        );
+      }
+    }
+  }
 
-            // Review actions
-            _Panel(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const _SectionTitle('Review'),
-                  if (r.status == _Status.pending) ...[
-                    SizedBox(
-                      width: double.infinity,
-                      child: OutlinedButton.icon(
-                        onPressed: _markUnderReview,
-                        icon: const Icon(Icons.rate_review_outlined, size: 18),
-                        label: const Text('Mark as under review'),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: _C.primary,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
+  @override
+  Widget build(BuildContext context) {
+    final query = _searchController.text.trim().toLowerCase();
+    final visible = _students.where((student) {
+      return query.isEmpty ||
+          student.name.toLowerCase().contains(query) ||
+          student.studentId.toLowerCase().contains(query) ||
+          student.classes.any((name) => name.toLowerCase().contains(query));
+    }).toList();
+
+    return DefaultTabController(
+      length: 2,
+      child: Scaffold(
+        backgroundColor: const Color(0xFFF8FAFC),
+        body: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const ProfessorSidebar(
+              currentDestination: ProfessorNavDestination.evaluation,
+            ),
+            Expanded(
+              child: Align(
+                alignment: Alignment.topCenter,
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 1000),
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const Expanded(
+                              child: Text(
+                                'Student Records & Evaluations',
+                                style: TextStyle(
+                                  fontSize: 26,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                            const PortalTopActions(),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        const Text(
+                          'Manage enrolled student records and review Step 9 team modification requests.',
+                          style: TextStyle(color: Color(0xFF64748B)),
+                        ),
+                        const SizedBox(height: 16),
+                        const TabBar(
+                          labelColor: Color(0xFF1E40AF),
+                          unselectedLabelColor: Color(0xFF64748B),
+                          indicatorColor: Color(0xFF1E40AF),
+                          tabs: [
+                            Tab(icon: Icon(Icons.people_outline), text: 'Student Records'),
+                            Tab(icon: Icon(Icons.rate_review_outlined), text: 'Step 9: Modification Requests'),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        Expanded(
+                          child: TabBarView(
+                            children: [
+                              // Tab 1: Student Records
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  TextField(
+                                    controller: _searchController,
+                                    onChanged: (_) => setState(() {}),
+                                    decoration: const InputDecoration(
+                                      labelText: 'Search students or classes',
+                                      prefixIcon: Icon(Icons.search),
+                                      border: OutlineInputBorder(),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  Expanded(
+                                    child: _loading
+                                        ? const Center(child: CircularProgressIndicator())
+                                        : _error != null
+                                        ? Center(
+                                            child: TextButton(
+                                              onPressed: _loadStudents,
+                                              child: Text('$_error Tap to retry.'),
+                                            ),
+                                          )
+                                        : visible.isEmpty
+                                        ? const Center(
+                                            child: Text('No enrolled students found.'),
+                                          )
+                                        : ListView.separated(
+                                            itemCount: visible.length,
+                                            separatorBuilder: (_, _) =>
+                                                const SizedBox(height: 10),
+                                            itemBuilder: (context, index) {
+                                              final student = visible[index];
+                                              return Card(
+                                                child: ListTile(
+                                                  title: Text(student.name),
+                                                  subtitle: Text(
+                                                    '${student.studentId} | ${student.classes.join(', ')}',
+                                                  ),
+                                                  trailing: const Icon(Icons.edit_outlined),
+                                                  onTap: () => _editStudent(student),
+                                                ),
+                                              );
+                                            },
+                                          ),
+                                  ),
+                                ],
+                              ),
+                              // Tab 2: Step 9 Modification Requests
+                              _buildModificationRequestsTab(),
+                            ],
                           ),
                         ),
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-                  ],
-                  TextField(
-                    controller: _remarksCtrl,
-                    enabled: !_decided,
-                    maxLines: 3,
-                    onChanged: (_) => setState(() {}),
-                    decoration: _fieldDecoration(
-                      'Add comments or remarks (optional)',
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: FilledButton(
-                      style: FilledButton.styleFrom(
-                        backgroundColor: _C.primary,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                      ),
-                      onPressed: _decided || _remarksCtrl.text.trim().isEmpty
-                          ? null
-                          : _submitRemarks,
-                      child: const Text('Submit remarks'),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: FilledButton(
-                          style: _decisionStyle(_Status.approved.color),
-                          onPressed: _decided
-                              ? null
-                              : () => _decide(_Status.approved),
-                          child: const Text('Approve'),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: FilledButton(
-                          style: _decisionStyle(_Status.rejected.color),
-                          onPressed: _decided
-                              ? null
-                              : () => _decide(_Status.rejected),
-                          child: const Text('Decline'),
-                        ),
-                      ),
-                    ],
-                  ),
-                  if (_decided) ...[
-                    const SizedBox(height: 14),
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: r.status.color.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Text(
-                        'This request was ${r.status.label.toLowerCase()}. The student has been notified.',
-                        style: TextStyle(
-                          color: r.status.color,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-            const SizedBox(height: 12),
-
-            // History timeline
-            _Panel(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const _SectionTitle('History'),
-                  for (var i = 0; i < r.history.length; i++)
-                    _TimelineRow(
-                      entry: r.history[r.history.length - 1 - i],
-                      isLast: i == r.history.length - 1,
-                    ),
-                ],
+                ),
               ),
             ),
           ],
@@ -1220,165 +392,173 @@ class _RequestDetailsScreenState extends State<_RequestDetailsScreen> {
       ),
     );
   }
-}
 
-class _ValueBox extends StatelessWidget {
-  final String label;
-  final String value;
-  final Color background;
-  final Color accent;
-  const _ValueBox({
-    required this.label,
-    required this.value,
-    required this.background,
-    required this.accent,
-  });
+  Widget _buildModificationRequestsTab() {
+    final filtered = _requests.where((r) {
+      if (_reqFilters.isNotEmpty && !_reqFilters.contains(r.status)) return false;
+      return true;
+    }).toList();
 
-  @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.all(14),
-    decoration: BoxDecoration(
-      color: background,
-      borderRadius: BorderRadius.circular(10),
-    ),
-    child: Column(
+    return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-            color: accent,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          value,
-          style: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            color: _C.text,
-          ),
-        ),
-      ],
-    ),
-  );
-}
-
-class _TimelineRow extends StatelessWidget {
-  final _HistoryEntry entry;
-  final bool isLast;
-  const _TimelineRow({required this.entry, required this.isLast});
-
-  @override
-  Widget build(BuildContext context) {
-    return IntrinsicHeight(
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          SizedBox(
-            width: 20,
-            child: Column(
-              children: [
-                const SizedBox(height: 5),
-                Container(
-                  width: 10,
-                  height: 10,
-                  decoration: const BoxDecoration(
-                    color: _C.primary,
-                    shape: BoxShape.circle,
+        // Status filter pills
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: [
+              for (final st in _Status.values)
+                Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: FilterChip(
+                    label: Text('${st.label} (${_requests.where((r) => r.status == st).length})'),
+                    selected: _reqFilters.contains(st),
+                    onSelected: (selected) {
+                      setState(() {
+                        if (selected) {
+                          _reqFilters.add(st);
+                        } else {
+                          _reqFilters.remove(st);
+                        }
+                      });
+                    },
+                    selectedColor: st.color.withValues(alpha: 0.2),
                   ),
                 ),
-                if (!isLast)
-                  Expanded(child: Container(width: 2, color: _C.border)),
-              ],
-            ),
+            ],
           ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.only(bottom: 14),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    entry.action,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w600,
-                      color: _C.body,
-                    ),
-                  ),
-                  Text(
-                    _fmtDate(entry.date),
-                    style: const TextStyle(fontSize: 12, color: _C.muted),
-                  ),
-                  if (entry.remarks != null && entry.remarks!.isNotEmpty)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 4),
-                      child: Text(
-                        'Remarks: ${entry.remarks}',
-                        style: const TextStyle(color: _C.muted),
+        ),
+        const SizedBox(height: 16),
+        Expanded(
+          child: filtered.isEmpty
+              ? const Center(child: Text('No modification requests found.'))
+              : ListView.separated(
+                  itemCount: filtered.length,
+                  separatorBuilder: (_, _) => const SizedBox(height: 12),
+                  itemBuilder: (context, index) {
+                    final req = filtered[index];
+                    final canDecide = req.status == _Status.pending || req.status == _Status.underReview;
+                    return Card(
+                      elevation: 1,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        side: BorderSide(color: Colors.grey.shade200),
                       ),
-                    ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ───────────────────────── Confirmation dialog ─────────────────────────
-
-class _ConfirmDialog extends StatefulWidget {
-  final String title;
-  final String message;
-  final Color confirmColor;
-  const _ConfirmDialog({
-    required this.title,
-    required this.message,
-    required this.confirmColor,
-  });
-
-  @override
-  State<_ConfirmDialog> createState() => _ConfirmDialogState();
-}
-
-class _ConfirmDialogState extends State<_ConfirmDialog> {
-  bool _choiceMade = false; // disables both buttons once a choice is made
-
-  void _choose(bool value) {
-    setState(() => _choiceMade = true);
-    Navigator.pop(context, value);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      backgroundColor: Colors.white,
-      surfaceTintColor: Colors.transparent,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      title: Text(
-        widget.title,
-        style: const TextStyle(
-          fontSize: 18,
-          fontWeight: FontWeight.bold,
-          color: _C.text,
-        ),
-      ),
-      content: Text(widget.message, style: const TextStyle(color: _C.muted)),
-      actions: [
-        TextButton(
-          onPressed: _choiceMade ? null : () => _choose(false),
-          child: const Text('Cancel'),
-        ),
-        FilledButton(
-          style: FilledButton.styleFrom(backgroundColor: widget.confirmColor),
-          onPressed: _choiceMade ? null : () => _choose(true),
-          child: const Text('Confirm'),
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                CircleAvatar(
+                                  radius: 18,
+                                  backgroundColor: const Color(0xFF1E40AF).withValues(alpha: 0.1),
+                                  child: Text(
+                                    req.initials,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: Color(0xFF1E40AF),
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        req.studentName,
+                                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                                      ),
+                                      Text(
+                                        '${req.studentId} • ${req.program}',
+                                        style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: req.status.color.withValues(alpha: 0.12),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Text(
+                                    req.status.label,
+                                    style: TextStyle(
+                                      color: req.status.color,
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              req.title,
+                              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              '${req.field}: ${req.currentValue} → ${req.requestedValue}',
+                              style: TextStyle(color: Colors.grey.shade700, fontSize: 13),
+                            ),
+                            if (canDecide) ...[
+                              const Divider(height: 24),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.end,
+                                children: [
+                                  OutlinedButton(
+                                    style: OutlinedButton.styleFrom(
+                                      foregroundColor: const Color(0xFFDC2626),
+                                      side: const BorderSide(color: Color(0xFFDC2626)),
+                                    ),
+                                    onPressed: () {
+                                      setState(() {
+                                        req.status = _Status.rejected;
+                                        req.history.add(_HistoryEntry(DateTime.now(), 'Rejected by professor'));
+                                      });
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                          content: Text('Rejected ${req.studentName}\'s request.'),
+                                          backgroundColor: const Color(0xFFDC2626),
+                                        ),
+                                      );
+                                    },
+                                    child: const Text('Reject'),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  ElevatedButton(
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: const Color(0xFF16A34A),
+                                      foregroundColor: Colors.white,
+                                    ),
+                                    onPressed: () {
+                                      setState(() {
+                                        req.status = _Status.approved;
+                                        req.history.add(_HistoryEntry(DateTime.now(), 'Approved by professor'));
+                                      });
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                          content: Text('Approved ${req.studentName}\'s request.'),
+                                          backgroundColor: const Color(0xFF16A34A),
+                                        ),
+                                      );
+                                    },
+                                    child: const Text('Approve'),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
         ),
       ],
     );

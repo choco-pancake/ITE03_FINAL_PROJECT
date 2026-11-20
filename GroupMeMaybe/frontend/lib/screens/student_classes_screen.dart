@@ -120,37 +120,54 @@ class _StudentClassesScreenState extends State<StudentClassesScreen> {
               backgroundColor: const Color(0xFF1E40AF),
               foregroundColor: Colors.white,
             ),
-            onPressed: () {
+            onPressed: () async {
               final code = codeController.text.trim();
               if (code.isEmpty) return;
 
-              Navigator.pop(ctx);
               final matchedClass = _allClasses.cast<AcademicClass?>().firstWhere(
                 (c) => c != null && c.classCode.toLowerCase() == code.toLowerCase(),
                 orElse: () => null,
               );
 
               if (matchedClass != null) {
+                try {
+                  await _activityService.enrollInClass(code);
+                } catch (_) {}
+                if (!mounted) return;
+                if (ctx.mounted) Navigator.pop(ctx);
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: Text(
-                      'Successfully enrolled in "${matchedClass.name}" ($code)!',
-                    ),
+                    content: Text('Enrolled in ${matchedClass.displayName}.'),
                     backgroundColor: const Color(0xFF16A34A),
                     behavior: SnackBarBehavior.floating,
                   ),
                 );
-                _loadClasses();
+                await _loadClasses();
               } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      'Class code "$code" not found. Please verify with your instructor.',
+                try {
+                  final enrolled = await _activityService.enrollInClass(code);
+                  if (!mounted) return;
+                  if (ctx.mounted) Navigator.pop(ctx);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Enrolled in ${enrolled.displayName}.'),
+                      backgroundColor: const Color(0xFF16A34A),
+                      behavior: SnackBarBehavior.floating,
                     ),
-                    backgroundColor: const Color(0xFFDC2626),
-                    behavior: SnackBarBehavior.floating,
-                  ),
-                );
+                  );
+                  await _loadClasses();
+                } catch (error) {
+                  if (!mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        'Class code "$code" not found. Please verify with your instructor.',
+                      ),
+                      backgroundColor: const Color(0xFFDC2626),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                }
               }
             },
             child: const Text('Enroll Now'),

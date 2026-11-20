@@ -144,8 +144,8 @@ class StudentSidebar extends StatelessWidget {
           ),
           _buildItem(
             context: context,
-            icon: Icons.groups_outlined,
-            title: 'Groups (Teams)',
+            icon: Icons.assignment_outlined,
+            title: 'Projects',
             isSelected: currentDestination == StudentNavDestination.groups,
             isLocked: !ProfileService.isProfileComplete,
             onTap: () async {
@@ -155,7 +155,7 @@ class StudentSidebar extends StatelessWidget {
                   if (context.mounted) {
                     AppNotification.showWarning(
                       context,
-                      'Please complete your profile in Settings before accessing team groups.',
+                      'Please complete your profile in Settings before accessing projects.',
                     );
                   }
                   return;

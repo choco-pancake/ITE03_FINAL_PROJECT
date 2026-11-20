@@ -372,6 +372,119 @@ class ActivityService {
     }
   }
 
+  /// Join an existing team in an activity
+  Future<Map<String, dynamic>> joinTeam(
+    int activityId, {
+    required String teamName,
+    required String studentName,
+    required String studentEmail,
+    String? role,
+  }) async {
+    final uri = Uri.parse(
+      '${ApiService.baseUrl}/activities/$activityId/teams/join',
+    );
+    final response = await http.post(
+      uri,
+      headers: _headers,
+      body: jsonEncode({
+        'team_name': teamName,
+        'student_name': studentName,
+        'student_email': studentEmail,
+        'role': ?role,
+      }),
+    );
+
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    }
+
+    throw Exception(
+      'Failed to join team (${response.statusCode}): ${response.body}',
+    );
+  }
+
+  /// Respond to a join request (Leader accepts or declines)
+  Future<Map<String, dynamic>> respondJoinRequest(
+    int activityId, {
+    required String teamName,
+    required String studentEmail,
+    required String action, // 'accept' or 'decline'
+  }) async {
+    final uri = Uri.parse(
+      '${ApiService.baseUrl}/activities/$activityId/teams/respond-join',
+    );
+    final response = await http.post(
+      uri,
+      headers: _headers,
+      body: jsonEncode({
+        'team_name': teamName,
+        'student_email': studentEmail,
+        'action': action,
+      }),
+    );
+
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    }
+
+    throw Exception(
+      'Failed to respond to join request (${response.statusCode}): ${response.body}',
+    );
+  }
+
+  /// Respond to all join requests for a team (Leader accepts or declines all)
+  Future<Map<String, dynamic>> respondAllJoinRequests(
+    int activityId, {
+    required String teamName,
+    required String action, // 'accept_all' or 'decline_all'
+  }) async {
+    final uri = Uri.parse(
+      '${ApiService.baseUrl}/activities/$activityId/teams/respond-join',
+    );
+    final response = await http.post(
+      uri,
+      headers: _headers,
+      body: jsonEncode({
+        'team_name': teamName,
+        'student_email': 'all',
+        'action': action,
+      }),
+    );
+
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    }
+
+    throw Exception(
+      'Failed to respond to all join requests (${response.statusCode}): ${response.body}',
+    );
+  }
+
+  /// Submit group for professor evaluation (checks scarce skills)
+  Future<Map<String, dynamic>> submitGroupEvaluation(
+    int activityId, {
+    required String teamName,
+  }) async {
+    final uri = Uri.parse(
+      '${ApiService.baseUrl}/activities/$activityId/teams/submit-evaluation',
+    );
+    final response = await http.post(
+      uri,
+      headers: _headers,
+      body: jsonEncode({
+        'team_name': teamName,
+      }),
+    );
+
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    }
+
+    throw Exception(
+      'Failed to submit group for evaluation (${response.statusCode}): ${response.body}',
+    );
+  }
+
   /// Accept suggested group (Step 8)
   Future<void> acceptGroup(int activityId, {String? email}) async {
     final uri = Uri.parse('${ApiService.baseUrl}/activities/$activityId/accept-group');

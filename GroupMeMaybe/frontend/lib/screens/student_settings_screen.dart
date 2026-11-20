@@ -1263,6 +1263,14 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
     return false;
   }
 
+  String _normalizeStudentId(String id) {
+    final clean = id.trim();
+    if (RegExp(r'^\d{8,10}$').hasMatch(clean)) {
+      return '${clean.substring(0, 4)}-${clean.substring(4)}';
+    }
+    return clean;
+  }
+
   Future<bool> _validateAndSave({
     bool isDraft = false,
     bool showModal = true,
@@ -1272,11 +1280,25 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
       _isSaving = true;
     });
 
+    final rawId = _studentIdController.text.trim();
+    final normalizedId = _normalizeStudentId(rawId);
+    final isIdFormatValid = RegExp(r'^\d{4}-\d{4,6}$').hasMatch(normalizedId);
+
     if (!isDraft) {
+      if (rawId.isNotEmpty && !isIdFormatValid) {
+        setState(() => _isSaving = false);
+        AppNotification.showError(
+          context,
+          'Invalid Student ID',
+          'Student ID must follow university format: YYYY-XXXXX (e.g. 2024-00123).',
+        );
+        return false;
+      }
+
       // Validate Card 1: Info
       if (_firstNameController.text.trim().isEmpty ||
           _lastNameController.text.trim().isEmpty ||
-          _studentIdController.text.trim().isEmpty ||
+          rawId.isEmpty ||
           _emailController.text.trim().isEmpty) {
         _invalidCards['info'] = true;
       }
@@ -1333,7 +1355,7 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
           ? '$_selectedBlock | $_selectedMeetingTime'
           : _selectedBlock,
       details: {
-        'student_id': _studentIdController.text.trim(),
+        'student_id': normalizedId,
         'year_level': _selectedYearLevel,
         'block': _selectedBlock,
         'roles': [
@@ -2104,6 +2126,7 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
                                               label: 'Student ID Number',
                                               controller: _studentIdController,
                                               hint: 'e.g. 2023-10492',
+                                              helperText: 'Format: YYYY-XXXXX (e.g. 2024-00123)',
                                               readOnly: _isSavedAsComplete,
                                             ),
                                           ),
@@ -3238,6 +3261,7 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
     required TextEditingController controller,
     required String hint,
     bool readOnly = false,
+    String? helperText,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -3257,6 +3281,8 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
           decoration: InputDecoration(
             hintText: hint,
             hintStyle: const TextStyle(fontSize: 13, color: Color(0xFF94A3B8)),
+            helperText: helperText,
+            helperStyle: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 12,
               vertical: 10,

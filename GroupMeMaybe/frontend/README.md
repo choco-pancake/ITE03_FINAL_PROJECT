@@ -39,6 +39,13 @@ The Google button reports a configuration message until the client ID is set.
 Either Google button opens Google's account picker. A new Google account is
 created as a student; an existing account keeps its current role.
 
+## Local shader rendering
+
+The web bootstrap uses CPU-only CanvasKit on `localhost` and `127.0.0.1` to
+avoid Chrome WebGL shader compilation failures during local testing. The run
+commands above still work, including the Google sign-in origin on port 63834.
+Other hosts use Flutter's normal renderer configuration.
+
 ## Browser crash recovery
 
 If Chrome displays "Something went wrong while displaying this webpage":

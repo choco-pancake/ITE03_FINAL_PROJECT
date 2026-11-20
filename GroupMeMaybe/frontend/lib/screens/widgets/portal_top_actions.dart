@@ -212,6 +212,7 @@ class _PortalTopActionsState extends State<PortalTopActions> {
               a.user.email.trim().toLowerCase() !=
               (user?.email.trim().toLowerCase() ?? ''),
         )
+        .take(3)
         .toList();
 
     if (!mounted) return;
@@ -429,13 +430,59 @@ class _PortalTopActionsState extends State<PortalTopActions> {
   }
 
   Future<void> _logOut() async {
-    await AuthService().logout();
-    if (mounted) {
-      Navigator.pushAndRemoveUntil(
-        context,
-        MaterialPageRoute(builder: (_) => const LandingScreen()),
-        (_) => false,
-      );
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Row(
+          children: [
+            Icon(Icons.logout, color: Color(0xFFDC2626), size: 22),
+            SizedBox(width: 10),
+            Text(
+              'Log Out',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
+        content: const Text(
+          'Are you sure you want to log out of GroupMeMaybe?',
+          style: TextStyle(fontSize: 14, color: Color(0xFF475569)),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(
+                color: Color(0xFF64748B),
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFDC2626),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Log Out'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      await AuthService().logout();
+      if (mounted) {
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (_) => const LandingScreen()),
+          (_) => false,
+        );
+      }
     }
   }
 

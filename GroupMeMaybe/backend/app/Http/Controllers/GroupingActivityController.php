@@ -43,7 +43,8 @@ class GroupingActivityController extends Controller
         $activities = $query->get();
 
         foreach ($activities as $activity) {
-            if (empty($activity->formed_teams) || count($activity->formed_teams) < 3) {
+            // Never auto-generate teams for student-made activities; only initialize legacy auto activities if completed/in progress
+            if ($activity->grouping_method !== 'student_formed' && empty($activity->formed_teams) && in_array($activity->status, ['completed', 'grouping in progress'])) {
                 $this->generateBalancedTeams($activity);
             }
         }
@@ -129,7 +130,7 @@ class GroupingActivityController extends Controller
         $activity = GroupingActivity::create($validated);
         $activity->load('academicClass');
 
-        if (empty($activity->formed_teams)) {
+        if ($activity->grouping_method !== 'student_formed' && $activity->status === 'completed' && empty($activity->formed_teams)) {
             $this->generateBalancedTeams($activity);
         }
 
@@ -142,7 +143,7 @@ class GroupingActivityController extends Controller
     public function show(int $id): JsonResponse
     {
         $activity = GroupingActivity::with('academicClass')->findOrFail($id);
-        if (empty($activity->formed_teams) || count($activity->formed_teams) < 3) {
+        if ($activity->grouping_method !== 'student_formed' && empty($activity->formed_teams) && in_array($activity->status, ['completed', 'grouping in progress'])) {
             $this->generateBalancedTeams($activity);
         }
         return response()->json($activity);
@@ -457,25 +458,30 @@ class GroupingActivityController extends Controller
         $leaderName = $validated['leader_name'] ?? ($authUser ? $authUser->name : 'Alex Santos');
         $leaderEmail = $validated['leader_email'] ?? ($authUser ? $authUser->email : 'alex.santos@student.edu');
 
+        $rawRole = $validated['role'] ?? 'Team Leader & Developer';
+        $role = (stripos($rawRole, 'leader') !== false) ? $rawRole : trim($rawRole) . ' (Leader)';
+
         $newTeam = [
             'name' => $validated['name'],
             'is_auto_assigned' => false,
             'leader_email' => $leaderEmail,
             'status' => 'Formed (1/' . ($activity->group_capacity ?? 5) . ')',
-            'balance_score' => 95,
+            'balance_score' => 50,
             'members' => [
                 [
                     'name' => $leaderName,
                     'email' => $leaderEmail,
-                    'role' => $validated['role'] ?? 'Team Leader & Developer',
+                    'role' => $role,
                     'block' => $section,
                     'avatar' => strtoupper(substr($leaderName, 0, 1)),
                     'is_leader' => true,
                     'status' => 'accepted',
+                    'is_pending' => false,
                 ],
             ],
         ];
 
+        $newTeam['balance_score'] = $this->calculateTeamBalanceScore($activity, $newTeam);
         $teams[] = $newTeam;
         $activity->formed_teams = $teams;
         $activity->save();
@@ -532,6 +538,350 @@ class GroupingActivityController extends Controller
         $activity->save();
 
         return response()->json(['success' => true, 'teams' => $teams]);
+    }
+
+    /**
+     * Join an existing team in an activity (Student self-service).
+     */
+    public function joinTeam(Request $request, int $id): JsonResponse
+    {
+        $activity = GroupingActivity::findOrFail($id);
+        $validated = $request->validate([
+            'team_name' => 'required|string',
+            'student_name' => 'nullable|string',
+            'student_email' => 'nullable|string',
+            'role' => 'nullable|string',
+        ]);
+
+        $teams = $activity->formed_teams ?? [];
+        $found = false;
+        $section = explode(' - ', $activity->class_name)[1] ?? 'Class';
+
+        $authUser = $request->user();
+        $studentName = $validated['student_name'] ?? ($authUser ? $authUser->name : 'Student User');
+        $studentEmail = $validated['student_email'] ?? ($authUser ? $authUser->email : 'student@university.edu');
+        $role = $validated['role'] ?? 'Developer';
+
+        // Check if student is already in any team in this activity; remove from other teams to avoid duplicate
+        foreach ($teams as &$t) {
+            $tMembers = $t['members'] ?? [];
+            $filtered = [];
+            foreach ($tMembers as $m) {
+                $mEmail = strtolower($m['email'] ?? '');
+                $mName = strtolower($m['name'] ?? '');
+                if ($mEmail !== strtolower($studentEmail) && $mName !== strtolower($studentName)) {
+                    $filtered[] = $m;
+                }
+            }
+            $t['members'] = $filtered;
+        }
+        unset($t);
+
+        // Add to selected team
+        foreach ($teams as &$team) {
+            if ($team['name'] === $validated['team_name']) {
+                $members = $team['members'] ?? [];
+                if (count($members) >= $activity->group_capacity) {
+                    return response()->json(['message' => 'Team is already at maximum capacity'], 422);
+                }
+
+                $members[] = [
+                    'name' => $studentName,
+                    'email' => $studentEmail,
+                    'role' => $role,
+                    'block' => $section,
+                    'avatar' => strtoupper(substr($studentName, 0, 1)),
+                    'is_leader' => false,
+                    'status' => 'pending',
+                    'is_pending' => true,
+                ];
+
+                $team['members'] = $members;
+                $found = true;
+
+                // Notify squad leader of join request
+                $leaderEmail = $team['leader_email'] ?? '';
+                if ($leaderEmail) {
+                    $leaderUser = \App\Models\User::where('email', $leaderEmail)->first();
+                    if ($leaderUser) {
+                        \App\Models\AppNotification::create([
+                            'user_id' => $leaderUser->id,
+                            'kind' => 'team_join_request',
+                            'title' => 'New Join Request for ' . $team['name'],
+                            'message' => "{$studentName} requested to join {$team['name']} as {$role}.",
+                            'target' => 'groups',
+                            'event_key' => 'join_req:' . $activity->id . ':' . $team['name'] . ':' . strtolower($studentEmail) . ':' . time(),
+                        ]);
+                    }
+                }
+                break;
+            }
+        }
+        unset($team);
+
+        if (!$found) {
+            return response()->json(['message' => 'Team not found'], 404);
+        }
+
+        $activity->formed_teams = $teams;
+        $activity->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => "Join request submitted to {$validated['team_name']}! Awaiting leader approval.",
+            'teams' => $teams,
+            'activity' => $activity,
+        ]);
+    }
+
+    /**
+     * Respond to a join request (Leader accepts or declines a student's request, or bulk accepts/declines).
+     */
+    public function respondJoinRequest(Request $request, int $id): JsonResponse
+    {
+        $activity = GroupingActivity::findOrFail($id);
+        $validated = $request->validate([
+            'team_name' => 'required|string',
+            'student_email' => 'required|string',
+            'action' => 'required|in:accept,decline,accept_all,decline_all',
+        ]);
+
+        $teams = $activity->formed_teams ?? [];
+        $found = false;
+        $studentEmail = strtolower($validated['student_email']);
+        $action = $validated['action'];
+        $isBulkAccept = ($action === 'accept_all' || ($studentEmail === 'all' && $action === 'accept'));
+        $isBulkDecline = ($action === 'decline_all' || ($studentEmail === 'all' && $action === 'decline'));
+
+        foreach ($teams as &$team) {
+            if ($team['name'] === $validated['team_name']) {
+                $members = $team['members'] ?? [];
+                $updatedMembers = [];
+
+                foreach ($members as $m) {
+                    $mEmail = strtolower($m['email'] ?? '');
+                    $mIsPending = ($m['status'] ?? '') === 'pending' || !empty($m['is_pending']);
+
+                    if ($isBulkAccept && $mIsPending) {
+                        $found = true;
+                        $m['status'] = 'accepted';
+                        $m['is_pending'] = false;
+                        $updatedMembers[] = $m;
+                        $this->notifyApplicantDecision($mEmail, $team['name'], 'accept', $activity->id);
+                    } elseif ($isBulkDecline && $mIsPending) {
+                        $found = true;
+                        $this->notifyApplicantDecision($mEmail, $team['name'], 'decline', $activity->id);
+                    } elseif (!$isBulkAccept && !$isBulkDecline && $mEmail === $studentEmail) {
+                        $found = true;
+                        if ($action === 'accept') {
+                            $m['status'] = 'accepted';
+                            $m['is_pending'] = false;
+                            $updatedMembers[] = $m;
+                            $this->notifyApplicantDecision($mEmail, $team['name'], 'accept', $activity->id);
+                        } else {
+                            $this->notifyApplicantDecision($mEmail, $team['name'], 'decline', $activity->id);
+                        }
+                    } else {
+                        $updatedMembers[] = $m;
+                    }
+                }
+
+                $team['members'] = $updatedMembers;
+                $team['balance_score'] = $this->calculateTeamBalanceScore($activity, $team);
+                break;
+            }
+        }
+        unset($team);
+
+        if (!$found) {
+            return response()->json(['message' => 'Join request not found'], 404);
+        }
+
+        $activity->formed_teams = $teams;
+        $activity->save();
+
+        $message = match ($action) {
+            'accept_all' => 'All pending join requests accepted!',
+            'decline_all' => 'All pending join requests declined.',
+            'accept' => 'Join request accepted! Student is now an official team member.',
+            'decline' => 'Join request declined.',
+        };
+
+        return response()->json([
+            'success' => true,
+            'message' => $message,
+            'teams' => $teams,
+            'activity' => $activity,
+        ]);
+    }
+
+    private function notifyApplicantDecision(string $email, string $teamName, string $action, int $activityId): void
+    {
+        $applicantUser = \App\Models\User::where('email', $email)->first();
+        if ($applicantUser) {
+            \App\Models\AppNotification::create([
+                'user_id' => $applicantUser->id,
+                'kind' => $action === 'accept' ? 'team_join_accepted' : 'team_join_declined',
+                'title' => $action === 'accept' ? 'Join Request Accepted! 🎉' : 'Join Request Declined',
+                'message' => $action === 'accept'
+                    ? "Your request to join {$teamName} was accepted! You are now an official team member."
+                    : "Your request to join {$teamName} was declined by the squad leader.",
+                'target' => 'groups',
+                'event_key' => 'join_res:' . $activityId . ':' . $teamName . ':' . strtolower($email) . ':' . time(),
+            ]);
+        }
+    }
+
+    /**
+     * Calculate an accurate, dynamic balance score for a team based on skill coverage, capacity, and role diversity.
+     */
+    public function calculateTeamBalanceScore(GroupingActivity $activity, array $team): int
+    {
+        $members = $team['members'] ?? [];
+        $officialMembers = array_filter($members, fn($m) => ($m['status'] ?? '') !== 'pending' && empty($m['is_pending']));
+        $officialCount = count($officialMembers);
+        $capacity = max(1, $activity->group_capacity ?? 5);
+
+        if ($officialCount === 0) {
+            return 0;
+        }
+
+        $requiredSkills = array_map('strtolower', $activity->required_skills ?? []);
+        $totalRequired = max(1, count($requiredSkills));
+
+        $teamEmails = array_map(fn($m) => strtolower($m['email'] ?? ''), $officialMembers);
+        $profiles = \App\Models\Profile::whereIn(\DB::raw('LOWER(email)'), $teamEmails)->get();
+
+        $coveredSkills = [];
+        foreach ($profiles as $p) {
+            foreach ($p->skills ?? [] as $sk) {
+                $coveredSkills[strtolower($sk)] = true;
+            }
+        }
+        foreach ($officialMembers as $m) {
+            $mRole = strtolower($m['role'] ?? '');
+            foreach ($requiredSkills as $req) {
+                if (str_contains($mRole, $req) || str_contains($req, $mRole)) {
+                    $coveredSkills[$req] = true;
+                }
+            }
+        }
+
+        $matchedCount = 0;
+        foreach ($requiredSkills as $req) {
+            if (!empty($coveredSkills[$req])) {
+                $matchedCount++;
+            }
+        }
+
+        // 60% skill coverage weight
+        $skillScore = ($matchedCount / $totalRequired) * 60;
+
+        // 20% team capacity fill weight
+        $capacityRatio = min(1.0, $officialCount / $capacity);
+        $capacityScore = $capacityRatio * 20;
+
+        // 20% role diversity weight
+        $roles = array_unique(array_map(fn($m) => strtolower(trim(preg_replace('/\(leader\)/i', '', $m['role'] ?? ''))), $officialMembers));
+        $roleDiversity = min(1.0, count($roles) / max(1, $officialCount));
+        $diversityScore = $roleDiversity * 20;
+
+        return (int) round($skillScore + $capacityScore + $diversityScore);
+    }
+
+    /**
+     * Submit team for professor evaluation with skill scarcity analysis.
+     */
+    public function submitGroupEvaluation(Request $request, int $id): JsonResponse
+    {
+        $activity = GroupingActivity::with('academicClass')->findOrFail($id);
+        $validated = $request->validate([
+            'team_name' => 'required|string',
+        ]);
+
+        $teams = $activity->formed_teams ?? [];
+        $targetIndex = -1;
+
+        foreach ($teams as $idx => $t) {
+            if ($t['name'] === $validated['team_name']) {
+                $targetIndex = $idx;
+                break;
+            }
+        }
+
+        if ($targetIndex === -1) {
+            return response()->json(['message' => 'Team not found'], 404);
+        }
+
+        $targetTeam = $teams[$targetIndex];
+        $targetTeam['status'] = 'Submitted for Evaluation';
+        $targetTeam['submitted_at'] = now()->toIso8601String();
+
+        // Calculate covered and scarce/missing skills
+        $members = $targetTeam['members'] ?? [];
+        $officialMembers = array_filter($members, fn($m) => ($m['status'] ?? '') !== 'pending' && empty($m['is_pending']));
+        $teamEmails = array_map(fn($m) => strtolower($m['email'] ?? ''), $officialMembers);
+        $profiles = \App\Models\Profile::whereIn(\DB::raw('LOWER(email)'), $teamEmails)->get();
+
+        $coveredSkills = [];
+        foreach ($profiles as $p) {
+            foreach ($p->skills ?? [] as $sk) {
+                $coveredSkills[strtolower($sk)] = true;
+            }
+        }
+        foreach ($officialMembers as $m) {
+            $mRole = strtolower($m['role'] ?? '');
+            foreach ($activity->required_skills ?? [] as $req) {
+                if (str_contains($mRole, strtolower($req)) || str_contains(strtolower($req), $mRole)) {
+                    $coveredSkills[strtolower($req)] = true;
+                }
+            }
+        }
+
+        $covered = [];
+        $scarce = [];
+        foreach ($activity->required_skills ?? [] as $req) {
+            if (!empty($coveredSkills[strtolower($req)])) {
+                $covered[] = $req;
+            } else {
+                $scarce[] = $req;
+            }
+        }
+
+        $targetTeam['balance_score'] = $this->calculateTeamBalanceScore($activity, $targetTeam);
+        $targetTeam['scarcity_report'] = [
+            'covered_skills' => $covered,
+            'scarce_skills' => $scarce,
+            'is_scarce' => count($scarce) > 0,
+            'recommendation' => count($scarce) > 0
+                ? 'Your squad is missing ' . implode(', ', $scarce) . '. Consider recruiting members with these skills before final evaluation.'
+                : 'Well-balanced squad! All required skills are covered.',
+        ];
+
+        $teams[$targetIndex] = $targetTeam;
+        $activity->formed_teams = $teams;
+        $activity->save();
+
+        // Notify class professor if assigned
+        $professorId = $activity->academicClass?->professor_id;
+        if ($professorId) {
+            \App\Models\AppNotification::create([
+                'user_id' => $professorId,
+                'kind' => 'team_submission',
+                'title' => 'Squad Submitted for Evaluation: ' . $targetTeam['name'],
+                'message' => "{$targetTeam['name']} in {$activity->title} has been submitted for evaluation.",
+                'target' => 'evaluation',
+                'event_key' => 'team_sub:' . $activity->id . ':' . $targetTeam['name'] . ':' . time(),
+            ]);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => "Group '{$targetTeam['name']}' successfully submitted for professor evaluation!",
+            'team' => $targetTeam,
+            'scarcity_report' => $targetTeam['scarcity_report'],
+            'activity' => $activity,
+        ]);
     }
 
     /**
@@ -617,45 +967,13 @@ class GroupingActivityController extends Controller
         $rotation = $activitySeed % count($profileList);
         $rotatedProfiles = array_merge(array_slice($profileList, $rotation), array_slice($profileList, 0, $rotation));
 
-        // Locate Carlos Mendoza so he is placed into a designated group for this project
-        $carlosIndex = -1;
-        foreach ($rotatedProfiles as $idx => $p) {
-            if ($p->email === 'carlos.mendoza@student.edu') {
-                $carlosIndex = $idx;
-                break;
-            }
-        }
-
-        $carlos = null;
-        if ($carlosIndex !== -1) {
-            $carlos = $rotatedProfiles[$carlosIndex];
-            array_splice($rotatedProfiles, $carlosIndex, 1);
-        }
-
         $unassigned = collect($rotatedProfiles);
         $teams = [];
-
-        // Assign Carlos to a different group for each project (Activity 1 -> Group 1, Activity 2 -> Group 2, etc.)
-        $targetCarlosGroup = ($activity->id - 1) % $numGroups;
 
         for ($g = 0; $g < $numGroups; $g++) {
             $groupMembers = [];
             $score = $balanceScores[$g % count($balanceScores)];
             $name = $teamNames[$g % count($teamNames)];
-
-            // Place Carlos in his designated group
-            if ($carlos && $g === $targetCarlosGroup) {
-                $role = $activity->required_skills[0] ?? $carlos->preferred_role ?? 'Frontend Developer';
-                $groupMembers[] = [
-                    'name' => $carlos->name,
-                    'email' => $carlos->email,
-                    'role' => $role,
-                    'block' => $section,
-                    'avatar' => strtoupper(substr($carlos->name, 0, 1)),
-                    'is_leader' => true,
-                    'status' => 'suggested',
-                ];
-            }
 
             while (count($groupMembers) < $capacity && $unassigned->isNotEmpty()) {
                 $candidate = $unassigned->shift();

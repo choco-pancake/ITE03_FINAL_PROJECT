@@ -30,7 +30,7 @@ class _ActivityFormDialogState extends State<ActivityFormDialog> {
   late TextEditingController _titleController;
   late TextEditingController _descriptionController;
   late TextEditingController _groupCapacityController;
-  late TextEditingController _numberOfGroupsController;
+  String _groupingMethod = 'auto'; // 'auto' or 'student_formed'
   final _customSkillController = TextEditingController();
 
   String? _selectedClassDisplay;
@@ -76,9 +76,7 @@ class _ActivityFormDialogState extends State<ActivityFormDialog> {
     _groupCapacityController = TextEditingController(
       text: (a?.groupCapacity ?? 5).toString(),
     );
-    _numberOfGroupsController = TextEditingController(
-      text: (a?.numberOfGroups ?? 6).toString(),
-    );
+    _groupingMethod = a?.groupingMethod ?? 'auto';
 
     _selectedClassDisplay = widget.initialClass?.displayName ?? a?.className;
     _selectedClassId = widget.initialClass?.id ?? a?.academicClassId;
@@ -107,7 +105,6 @@ class _ActivityFormDialogState extends State<ActivityFormDialog> {
     _titleController.dispose();
     _descriptionController.dispose();
     _groupCapacityController.dispose();
-    _numberOfGroupsController.dispose();
     _customSkillController.dispose();
     super.dispose();
   }
@@ -161,7 +158,14 @@ class _ActivityFormDialogState extends State<ActivityFormDialog> {
     setState(() => _isSaving = true);
 
     final capacity = int.tryParse(_groupCapacityController.text) ?? 5;
-    final groups = int.tryParse(_numberOfGroupsController.text) ?? 6;
+    final currentClass = widget.initialClass ??
+        _availableClasses
+            .where((c) =>
+                c.id == _selectedClassId ||
+                c.displayName == _selectedClassDisplay)
+            .firstOrNull;
+    final studentCount = currentClass?.studentCount ?? 30;
+    final groups = studentCount > 0 ? (studentCount / capacity).ceil() : 6;
 
     final activity = GroupingActivity(
       id: widget.activity?.id,
@@ -171,7 +175,7 @@ class _ActivityFormDialogState extends State<ActivityFormDialog> {
       description: _descriptionController.text.trim().isNotEmpty
           ? _descriptionController.text.trim()
           : 'Final project activity specifications, guidelines, and team requirements.',
-      groupingMethod: 'auto',
+      groupingMethod: _groupingMethod,
       groupCapacity: capacity,
       numberOfGroups: groups,
       requiredSkills: _requiredSkills,
@@ -180,7 +184,7 @@ class _ActivityFormDialogState extends State<ActivityFormDialog> {
       minCommonHours: 5,
       groupingDeadline: _groupingDeadline,
       status: 'open',
-      studentsCount: capacity * groups,
+      studentsCount: studentCount > 0 ? studentCount : capacity * groups,
     );
 
     try {
@@ -242,7 +246,11 @@ class _ActivityFormDialogState extends State<ActivityFormDialog> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            isEditing ? 'Edit Grouping Activity' : 'Create Grouping Activity',
+                            isEditing
+                                ? 'Edit Grouping Activity'
+                                : (widget.initialClass != null
+                                    ? 'Create Project for ${widget.initialClass!.name}'
+                                    : 'Create Grouping Activity'),
                             style: const TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
@@ -250,9 +258,11 @@ class _ActivityFormDialogState extends State<ActivityFormDialog> {
                             ),
                           ),
                           const SizedBox(height: 2),
-                          const Text(
-                            'Step 4: Set project requirements to automatically balance teams',
-                            style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                          Text(
+                            widget.initialClass != null
+                                ? 'Configure team sizing, deadline, and skills for this class'
+                                : 'Step 4: Set project requirements to automatically balance teams',
+                            style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
                           ),
                         ],
                       ),
@@ -279,29 +289,83 @@ class _ActivityFormDialogState extends State<ActivityFormDialog> {
                           style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF334155)),
                         ),
                         const SizedBox(height: 6),
-                        _loadingClasses
-                            ? const LinearProgressIndicator()
-                            : DropdownButtonFormField<String>(
-                                isExpanded: true,
-                                initialValue: _availableClasses.any((c) => c.displayName == _selectedClassDisplay)
-                                    ? _selectedClassDisplay
-                                    : (_availableClasses.isNotEmpty ? _availableClasses.first.displayName : null),
-                                decoration: InputDecoration(
-                                  prefixIcon: const Icon(Icons.school, size: 18, color: Color(0xFF1E40AF)),
-                                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                        if (widget.initialClass != null)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFEFF6FF),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: const Color(0xFFBFDBFE)),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.school, size: 20, color: Color(0xFF1E40AF)),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        widget.initialClass!.name,
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 14,
+                                          color: Color(0xFF1E3A8A),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        'Section: ${widget.initialClass!.section ?? "General"} • Code: ${widget.initialClass!.classCode}',
+                                        style: const TextStyle(fontSize: 12, color: Color(0xFF3B82F6)),
+                                      ),
+                                    ],
+                                  ),
                                 ),
-                                items: _availableClasses
-                                    .map((c) => DropdownMenuItem(value: c.displayName, child: Text(c.displayName, style: const TextStyle(fontSize: 13))))
-                                    .toList(),
-                                onChanged: (val) {
-                                  setState(() {
-                                    _selectedClassDisplay = val;
-                                    final match = _availableClasses.cast<AcademicClass?>().firstWhere((c) => c?.displayName == val, orElse: () => null);
-                                    _selectedClassId = match?.id;
-                                  });
-                                },
-                              ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(6),
+                                    border: Border.all(color: const Color(0xFF93C5FD)),
+                                  ),
+                                  child: const Text(
+                                    'LOCKED TO CLASS',
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w700,
+                                      color: Color(0xFF1E40AF),
+                                      letterSpacing: 0.5,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )
+                        else ...[
+                          _loadingClasses
+                              ? const LinearProgressIndicator()
+                              : DropdownButtonFormField<String>(
+                                  isExpanded: true,
+                                  initialValue: _availableClasses.any((c) => c.displayName == _selectedClassDisplay)
+                                      ? _selectedClassDisplay
+                                      : (_availableClasses.isNotEmpty ? _availableClasses.first.displayName : null),
+                                  decoration: InputDecoration(
+                                    prefixIcon: const Icon(Icons.school, size: 18, color: Color(0xFF1E40AF)),
+                                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                                  ),
+                                  items: _availableClasses
+                                      .map((c) => DropdownMenuItem(value: c.displayName, child: Text(c.displayName, style: const TextStyle(fontSize: 13))))
+                                      .toList(),
+                                  onChanged: (val) {
+                                    setState(() {
+                                      _selectedClassDisplay = val;
+                                      final match = _availableClasses.cast<AcademicClass?>().firstWhere((c) => c?.displayName == val, orElse: () => null);
+                                      _selectedClassId = match?.id;
+                                    });
+                                  },
+                                ),
+                        ],
                         const SizedBox(height: 16),
 
                         // Activity Title
@@ -322,55 +386,199 @@ class _ActivityFormDialogState extends State<ActivityFormDialog> {
                         ),
                         const SizedBox(height: 16),
 
-                        // Group Size & Number of Groups (Side-by-side)
+                        // Grouping Method Selector
+                        const Text(
+                          'Grouping Method',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF334155),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
                         Row(
                           children: [
                             Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Text(
-                                    'Group Size',
-                                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF334155)),
-                                  ),
-                                  const SizedBox(height: 6),
-                                  TextFormField(
-                                    controller: _groupCapacityController,
-                                    keyboardType: TextInputType.number,
-                                    decoration: InputDecoration(
-                                      prefixIcon: const Icon(Icons.people_alt_outlined, size: 18),
-                                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                              child: InkWell(
+                                onTap: () => setState(() => _groupingMethod = 'auto'),
+                                borderRadius: BorderRadius.circular(10),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                  decoration: BoxDecoration(
+                                    color: _groupingMethod == 'auto'
+                                        ? const Color(0xFFEFF6FF)
+                                        : Colors.white,
+                                    borderRadius: BorderRadius.circular(10),
+                                    border: Border.all(
+                                      color: _groupingMethod == 'auto'
+                                          ? const Color(0xFF2563EB)
+                                          : const Color(0xFFCBD5E1),
+                                      width: _groupingMethod == 'auto' ? 1.8 : 1.0,
                                     ),
-                                    validator: (v) => (int.tryParse(v ?? '') ?? 0) < 2 ? 'Min 2' : null,
                                   ),
-                                ],
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          Icon(
+                                            Icons.auto_awesome,
+                                            size: 16,
+                                            color: _groupingMethod == 'auto'
+                                                ? const Color(0xFF2563EB)
+                                                : const Color(0xFF64748B),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Text(
+                                            'Auto-Formed',
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 13,
+                                              color: _groupingMethod == 'auto'
+                                                  ? const Color(0xFF1E3A8A)
+                                                  : const Color(0xFF334155),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        'System balances skills, schedules, and availability automatically.',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          color: _groupingMethod == 'auto'
+                                              ? const Color(0xFF1D4ED8)
+                                              : const Color(0xFF64748B),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
                               ),
                             ),
-                            const SizedBox(width: 14),
+                            const SizedBox(width: 12),
                             Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Text(
-                                    'Number of Groups',
-                                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF334155)),
-                                  ),
-                                  const SizedBox(height: 6),
-                                  TextFormField(
-                                    controller: _numberOfGroupsController,
-                                    keyboardType: TextInputType.number,
-                                    decoration: InputDecoration(
-                                      prefixIcon: const Icon(Icons.grid_view_outlined, size: 18),
-                                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                              child: InkWell(
+                                onTap: () => setState(() => _groupingMethod = 'student_formed'),
+                                borderRadius: BorderRadius.circular(10),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                  decoration: BoxDecoration(
+                                    color: _groupingMethod == 'student_formed'
+                                        ? const Color(0xFFEFF6FF)
+                                        : Colors.white,
+                                    borderRadius: BorderRadius.circular(10),
+                                    border: Border.all(
+                                      color: _groupingMethod == 'student_formed'
+                                          ? const Color(0xFF2563EB)
+                                          : const Color(0xFFCBD5E1),
+                                      width: _groupingMethod == 'student_formed' ? 1.8 : 1.0,
                                     ),
-                                    validator: (v) => (int.tryParse(v ?? '') ?? 0) < 1 ? 'Min 1' : null,
                                   ),
-                                ],
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          Icon(
+                                            Icons.group_add_outlined,
+                                            size: 16,
+                                            color: _groupingMethod == 'student_formed'
+                                                ? const Color(0xFF2563EB)
+                                                : const Color(0xFF64748B),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Text(
+                                            'Student-Made',
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 13,
+                                              color: _groupingMethod == 'student_formed'
+                                                  ? const Color(0xFF1E3A8A)
+                                                  : const Color(0xFF334155),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        'Students form their own teams and join open squads directly.',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          color: _groupingMethod == 'student_formed'
+                                              ? const Color(0xFF1D4ED8)
+                                              : const Color(0xFF64748B),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
                               ),
                             ),
                           ],
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Group Size (Capacity) with dynamic class-count calculation
+                        Builder(
+                          builder: (context) {
+                            final currentClass = widget.initialClass ??
+                                _availableClasses
+                                    .where((c) =>
+                                        c.id == _selectedClassId ||
+                                        c.displayName == _selectedClassDisplay)
+                                    .firstOrNull;
+                            final studentCount = currentClass?.studentCount ?? 30;
+                            final capacity = int.tryParse(_groupCapacityController.text) ?? 5;
+                            final estimatedGroups = capacity > 0 ? (studentCount / capacity).ceil() : 6;
+
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Group Size (Students per Group)',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFF334155),
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                TextFormField(
+                                  controller: _groupCapacityController,
+                                  keyboardType: TextInputType.number,
+                                  onChanged: (_) => setState(() {}),
+                                  decoration: InputDecoration(
+                                    prefixIcon: const Icon(Icons.people_alt_outlined, size: 18),
+                                    suffixText: 'members / group',
+                                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                                  ),
+                                  validator: (v) => (int.tryParse(v ?? '') ?? 0) < 2 ? 'Min 2 members' : null,
+                                ),
+                                const SizedBox(height: 6),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFF1F5F9),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      const Icon(Icons.info_outline, size: 14, color: Color(0xFF475569)),
+                                      const SizedBox(width: 6),
+                                      Expanded(
+                                        child: Text(
+                                          'Number of groups is auto-determined by class roster: ~$estimatedGroups groups for $studentCount students.',
+                                          style: const TextStyle(fontSize: 11, color: Color(0xFF475569)),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            );
+                          },
                         ),
                         const SizedBox(height: 18),
 

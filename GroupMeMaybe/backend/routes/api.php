@@ -62,6 +62,9 @@ Route::get('activities/summary', [GroupingActivityController::class, 'summary'])
 Route::get('activities/{id}/scarcity', [GroupingActivityController::class, 'scarcity']);
 Route::get('activities/{id}/teams', [GroupingActivityController::class, 'teams']);
 Route::post('activities/{id}/teams', [GroupingActivityController::class, 'createTeam']);
+Route::post('activities/{id}/teams/join', [GroupingActivityController::class, 'joinTeam']);
+Route::post('activities/{id}/teams/respond-join', [GroupingActivityController::class, 'respondJoinRequest']);
+Route::post('activities/{id}/teams/submit-evaluation', [GroupingActivityController::class, 'submitGroupEvaluation']);
 Route::post('activities/{id}/teams/invite', [GroupingActivityController::class, 'inviteStudent']);
 Route::post('activities/{id}/auto-form', [GroupingActivityController::class, 'autoFormUnassigned']);
 Route::post('activities/{id}/add-skill', [GroupingActivityController::class, 'addSkill']);

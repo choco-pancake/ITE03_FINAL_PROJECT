@@ -11,7 +11,7 @@ import 'package:flutter/services.dart';
 import '../models/academic_class.dart';
 import '../models/class_sections.dart';
 import '../services/activity_service.dart';
-import 'professor_activities_screen.dart';
+import 'widgets/activity_form_dialog.dart';
 import 'widgets/professor_sidebar.dart';
 
 class ProfessorClassesScreen extends StatefulWidget {
@@ -733,18 +733,26 @@ class _ProfessorClassesScreenState extends State<ProfessorClassesScreen> {
     );
   }
 
-  void _navigateToClassProjects(AcademicClass c) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => ProfessorActivitiesScreen(selectedClass: c),
+  void _openCreateProjectModal(AcademicClass c) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => ActivityFormDialog(
+        initialClass: c,
+        onSaved: () {
+          _loadClasses();
+          AppNotification.showSuccess(
+            context,
+            'Project created successfully for ${c.name}!',
+          );
+        },
       ),
     );
   }
 
   Widget _buildClassCard(AcademicClass c) {
     return InkWell(
-      onTap: () => _navigateToClassProjects(c),
+      onTap: () => _openCreateProjectModal(c),
       borderRadius: BorderRadius.circular(14),
       child: Container(
         padding: const EdgeInsets.all(20),
@@ -933,10 +941,10 @@ class _ProfessorClassesScreenState extends State<ProfessorClassesScreen> {
                 ),
               ),
               FilledButton.icon(
-                onPressed: () => _navigateToClassProjects(c),
-                icon: const Icon(Icons.arrow_forward, size: 14),
+                onPressed: () => _openCreateProjectModal(c),
+                icon: const Icon(Icons.add_task, size: 14),
                 label: const Text(
-                  'Manage Projects',
+                  '+ Create Project',
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.bold,

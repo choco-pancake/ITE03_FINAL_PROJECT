@@ -10,6 +10,7 @@ class StudentRecord {
     required this.yearLevel,
     required this.block,
     required this.classes,
+    this.classEnrollments = const [],
   });
 
   final int id;
@@ -22,6 +23,7 @@ class StudentRecord {
   final String yearLevel;
   final String block;
   final List<String> classes;
+  final List<Map<String, dynamic>> classEnrollments;
 
   factory StudentRecord.fromJson(Map<String, dynamic> json) => StudentRecord(
     id: json['id'] as int,
@@ -35,6 +37,9 @@ class StudentRecord {
     block: (json['block'] ?? '').toString(),
     classes: (json['classes'] as List<dynamic>? ?? [])
         .map((entry) => (entry as Map<String, dynamic>)['name'].toString())
+        .toList(),
+    classEnrollments: (json['classes'] as List<dynamic>? ?? [])
+        .map((entry) => Map<String, dynamic>.from(entry as Map))
         .toList(),
   );
 }

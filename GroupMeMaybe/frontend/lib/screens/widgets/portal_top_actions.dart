@@ -135,6 +135,30 @@ class _PortalTopActionsState extends State<PortalTopActions> {
       return;
     }
 
+    // 1b. Group Proposal / Squad Submission -> Professor Dashboard (scroll to formed teams)
+    if (item.kind == 'team_submission' ||
+        item.kind == 'group_proposal' ||
+        item.target == 'evaluation' ||
+        item.target == 'evaluations' ||
+        item.target == 'teams') {
+      if (isProf) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => const ProfessorDashboardScreen(scrollToTeams: true),
+          ),
+        );
+      } else {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => const StudentGroupsScreen(),
+          ),
+        );
+      }
+      return;
+    }
+
     // 2. Skill Approval Decision -> Student Profile & Settings (Skill section)
     if (item.kind == 'skill_decision' || item.target == 'skills') {
       Navigator.push(
@@ -149,6 +173,7 @@ class _PortalTopActionsState extends State<PortalTopActions> {
     // 3. Group Deadline or Activity -> Groups (Student) or Activities (Professor)
     if (item.kind == 'group_deadline' ||
         item.target == 'groups' ||
+        (item.target?.startsWith('groups:') ?? false) ||
         item.target == 'activities') {
       if (isProf) {
         Navigator.push(
@@ -161,7 +186,11 @@ class _PortalTopActionsState extends State<PortalTopActions> {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (_) => const StudentGroupsScreen(),
+            builder: (_) => StudentGroupsScreen(
+              initialActivityId: item.target?.startsWith('groups:') == true
+                  ? int.tryParse(item.target!.substring('groups:'.length))
+                  : null,
+            ),
           ),
         );
       }
@@ -369,9 +398,13 @@ class _PortalTopActionsState extends State<PortalTopActions> {
                     ),
                     onTap: () async {
                       Navigator.pop(dialogCtx);
-                      await AuthService.switchToAccount(account);
+                      final switched = await AuthService.switchToAccount(account);
                       if (!mounted) return;
-                      final dest = account.user.isProfessor
+                      if (!switched) {
+                        AppNotification.showWarning(context, 'Could not use this saved session. Please sign in again.');
+                        return;
+                      }
+                      final dest = AuthService.currentUser!.isProfessor
                           ? const ProfessorDashboardScreen()
                           : const StudentDashboardScreen();
                       Navigator.pushAndRemoveUntil(

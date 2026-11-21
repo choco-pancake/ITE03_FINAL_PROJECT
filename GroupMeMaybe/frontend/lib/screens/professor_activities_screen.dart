@@ -14,6 +14,7 @@ import 'widgets/professor_sidebar.dart';
 import 'widgets/scarcity_report_dialog.dart';
 import 'widgets/summary_cards_row.dart';
 import 'professor_classes_screen.dart';
+import 'professor_class_detail_screen.dart';
 
 class ProfessorActivitiesScreen extends StatefulWidget {
   final AcademicClass? selectedClass;
@@ -168,6 +169,17 @@ class _ProfessorActivitiesScreenState extends State<ProfessorActivitiesScreen> {
       builder: (ctx) => ActivityDetailsDialog(
         activity: activity,
         onEdit: () => _openEditDialog(activity),
+        onDelete: () => _confirmDelete(activity),
+      ),
+    );
+  }
+
+  void _openGradingDialog(GroupingActivity activity) {
+    showDialog(
+      context: context,
+      builder: (_) => ProjectSubmissionsDialog(
+        activity: activity,
+        onChanged: _loadData,
       ),
     );
   }
@@ -1244,7 +1256,7 @@ class _ProfessorActivitiesScreenState extends State<ProfessorActivitiesScreen> {
               crossAxisCount: 2,
               crossAxisSpacing: 16,
               mainAxisSpacing: 16,
-              mainAxisExtent: 310,
+              mainAxisExtent: 390,
             ),
             itemCount: acts.length,
             itemBuilder: (context, index) {
@@ -1252,6 +1264,7 @@ class _ProfessorActivitiesScreenState extends State<ProfessorActivitiesScreen> {
               return ActivityCard(
                 activity: activity,
                 onViewDetails: () => _openDetailsDialog(activity),
+                onGrade: () => _openGradingDialog(activity),
                 onScarcityReport: () => _openScarcityDialog(activity),
                 onFinalize: () => _finalizeActivity(activity),
                 onEdit: () => _openEditDialog(activity),
@@ -1271,6 +1284,7 @@ class _ProfessorActivitiesScreenState extends State<ProfessorActivitiesScreen> {
             return ActivityCard(
               activity: activity,
               onViewDetails: () => _openDetailsDialog(activity),
+              onGrade: () => _openGradingDialog(activity),
               onScarcityReport: () => _openScarcityDialog(activity),
               onFinalize: () => _finalizeActivity(activity),
               onEdit: () => _openEditDialog(activity),

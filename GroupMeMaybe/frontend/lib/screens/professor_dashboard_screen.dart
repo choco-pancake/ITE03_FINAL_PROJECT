@@ -1,3 +1,6 @@
+import '../models/student_record.dart';
+import '../services/student_record_service.dart';
+import 'widgets/student_profile_dialog.dart';
 import 'package:flutter/material.dart';
 
 import 'widgets/portal_top_actions.dart';
@@ -52,6 +55,10 @@ class TeamOverviewItem {
   final String status;
   final int maxMembers;
   final List<StudentRosterItem> members;
+  final int? activityId;
+  final String? proposalStatus;
+  final Map<String, dynamic>? scarcityReport;
+  final String? professorNotes;
 
   TeamOverviewItem({
     required this.id,
@@ -61,6 +68,10 @@ class TeamOverviewItem {
     required this.status,
     required this.maxMembers,
     required this.members,
+    this.activityId,
+    this.proposalStatus,
+    this.scarcityReport,
+    this.professorNotes,
   });
 }
 
@@ -103,8 +114,13 @@ class RecommendedGroupMatch {
 
 class ProfessorDashboardScreen extends StatefulWidget {
   final bool scrollToSkills;
+  final bool scrollToTeams;
 
-  const ProfessorDashboardScreen({super.key, this.scrollToSkills = false});
+  const ProfessorDashboardScreen({
+    super.key,
+    this.scrollToSkills = false,
+    this.scrollToTeams = false,
+  });
 
   @override
   State<ProfessorDashboardScreen> createState() =>
@@ -118,6 +134,7 @@ class _ProfessorDashboardScreenState extends State<ProfessorDashboardScreen> {
   final TextEditingController _studentSearchController =
       TextEditingController();
   final GlobalKey _skillsSectionKey = GlobalKey();
+  final GlobalKey _teamsSectionKey = GlobalKey();
 
   // Completion filter: 'all', 'complete', 'incomplete', 'uninitialized'
   String _selectedCompletionFilter = 'all';
@@ -149,6 +166,17 @@ class _ProfessorDashboardScreenState extends State<ProfessorDashboardScreen> {
         if (_skillsSectionKey.currentContext != null) {
           Scrollable.ensureVisible(
             _skillsSectionKey.currentContext!,
+            duration: const Duration(milliseconds: 600),
+            curve: Curves.easeInOut,
+          );
+        }
+      });
+    }
+    if (widget.scrollToTeams) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (_teamsSectionKey.currentContext != null) {
+          Scrollable.ensureVisible(
+            _teamsSectionKey.currentContext!,
             duration: const Duration(milliseconds: 600),
             curve: Curves.easeInOut,
           );
@@ -330,15 +358,18 @@ class _ProfessorDashboardScreenState extends State<ProfessorDashboardScreen> {
       final profilesFuture = _profileService.getProfiles();
       final activitiesFuture = _activityService.getActivities();
       final classesFuture = _activityService.getClasses();
+      final studentRecordsFuture = StudentRecordService().getStudents().catchError((_) => <StudentRecord>[]);
       final results = await Future.wait([
         profilesFuture,
         activitiesFuture,
         classesFuture,
+        studentRecordsFuture,
       ]);
 
       final profiles = results[0] as List<Profile>;
       final activities = results[1] as List<GroupingActivity>;
       final classes = results[2] as List<AcademicClass>;
+      final studentRecords = results[3] as List<StudentRecord>;
 
       if (!mounted) return;
 
@@ -376,6 +407,33 @@ class _ProfessorDashboardScreenState extends State<ProfessorDashboardScreen> {
           return false;
         }).toList();
 
+        // Build students from enrolled records (or filtered profiles fallback)
+        if (studentRecords.isNotEmpty) {
+          _allStudents = studentRecords.map((r) {
+            final p = profiles.where((prof) => prof.email.toLowerCase() == r.email.toLowerCase()).firstOrNull;
+            final hasRole = p?.preferredRole.isNotEmpty == true;
+            final hasSkills = p?.skills.isNotEmpty == true;
+            final status = (hasRole && hasSkills)
+                ? ProfileCompletionStatus.complete
+                : ((hasRole || hasSkills)
+                      ? ProfileCompletionStatus.incomplete
+                      : ProfileCompletionStatus.uninitialized);
+
+            return StudentRosterItem(
+              id: 's-${r.id}',
+              name: r.name,
+              studentId: r.studentId,
+              block: r.block,
+              status: status,
+              primaryRole: p?.preferredRole.isNotEmpty == true ? p!.preferredRole : null,
+              skillLevel: (p?.skills.length ?? 0) >= 4
+                  ? 'Advanced'
+                  : ((p?.skills.length ?? 0) >= 2 ? 'Intermediate' : 'Beginner'),
+              topSkills: p?.skills ?? [],
+              email: r.email,
+            );
+          }).toList();
+        } else {
         // Build students from filtered profiles
         _allStudents = classProfiles.map((p) {
           final hasRole = p.preferredRole.isNotEmpty;
@@ -410,6 +468,7 @@ class _ProfessorDashboardScreenState extends State<ProfessorDashboardScreen> {
             email: p.email,
           );
         }).toList();
+        }
 
         // Build teams from activities
         _teams = [];
@@ -553,154 +612,10 @@ class _ProfessorDashboardScreenState extends State<ProfessorDashboardScreen> {
   }
 
   void _showStudentProfileDialog(StudentRosterItem s) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Row(
-          children: [
-            CircleAvatar(
-              radius: 20,
-              backgroundColor: const Color(0xFF1E40AF),
-              child: Text(
-                s.name[0],
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    s.name,
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  Text(
-                    '${s.studentId} • ${s.block}',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: Color(0xFF64748B),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-        content: SizedBox(
-          width: 440,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildProfileRow('Profile Status', _buildStatusBadge(s.status)),
-              const Divider(height: 18),
-              _buildProfileRow(
-                'Primary Role',
-                Text(
-                  s.primaryRole ?? 'Not specified',
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
-              ),
-              const Divider(height: 18),
-              _buildProfileRow(
-                'Proficiency Rating',
-                Text(
-                  s.skillLevel ?? 'Unrated',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF7E22CE),
-                  ),
-                ),
-              ),
-              const Divider(height: 18),
-              _buildProfileRow(
-                'Institutional Email',
-                Text(
-                  s.email,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    color: Color(0xFF2563EB),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
-              const Text(
-                'Skills & Technologies:',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF475569),
-                ),
-              ),
-              const SizedBox(height: 6),
-              Wrap(
-                spacing: 6,
-                runSpacing: 6,
-                children: s.topSkills.isEmpty
-                    ? [
-                        const Text(
-                          'No skills provided yet.',
-                          style: TextStyle(fontSize: 12, color: Colors.grey),
-                        ),
-                      ]
-                    : s.topSkills.map((sk) {
-                        return Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFEFF6FF),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Text(
-                            sk,
-                            style: const TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF1D4ED8),
-                            ),
-                          ),
-                        );
-                      }).toList(),
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          ElevatedButton(
-            onPressed: () => Navigator.pop(ctx),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF1E40AF),
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Close'),
-          ),
-        ],
-      ),
-    );
+    StudentProfileDialog.show(context, rosterItem: s);
   }
 
-  Widget _buildProfileRow(String label, Widget value) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(fontSize: 13, color: Color(0xFF64748B)),
-        ),
-        value,
-      ],
-    );
-  }
+
 
   Widget _buildStatusBadge(ProfileCompletionStatus status) {
     switch (status) {
@@ -822,12 +737,6 @@ class _ProfessorDashboardScreenState extends State<ProfessorDashboardScreen> {
                       _buildWelcomeHeader(),
                       const SizedBox(height: 20),
 
-                      // Urgent Unassigned Past-Deadline Alert Banner
-                      if (_unassignedStudents.isNotEmpty) ...[
-                        _buildUnassignedDeadlineBanner(),
-                        const SizedBox(height: 24),
-                      ],
-
                       // Profile Completion Status Cards
                       _buildCompletionStatusMetrics(
                         completeCount,
@@ -843,7 +752,10 @@ class _ProfessorDashboardScreenState extends State<ProfessorDashboardScreen> {
                       ],
 
                       // Teams, Squad Members & Profiles Section
-                      _buildTeamsRosterSection(),
+                      KeyedSubtree(
+                        key: _teamsSectionKey,
+                        child: _buildTeamsRosterSection(),
+                      ),
                       const SizedBox(height: 28),
 
                       // Student Profile Completion Roster Table
@@ -1002,60 +914,6 @@ class _ProfessorDashboardScreenState extends State<ProfessorDashboardScreen> {
             ],
           );
         },
-      ),
-    );
-  }
-
-  // 24-Hour Past Deadline Alert Banner
-  Widget _buildUnassignedDeadlineBanner() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFFFFFBEB),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFFDE68A)),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: const Color(0xFFFEF3C7),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: const Icon(
-              Icons.warning_amber_rounded,
-              color: Color(0xFFD97706),
-              size: 24,
-            ),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '${_unassignedStudents.length} Students Unassigned Past Group Formation Deadline',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
-                    color: Color(0xFF92400E),
-                  ),
-                ),
-                const SizedBox(height: 4),
-                const Text(
-                  'The capstone grouping cutoff has passed. As professor, you can review system-recommended groups below and assign these students to ensure balanced team sizes and skill distribution.',
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: Color(0xFFB45309),
-                    height: 1.4,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -1729,6 +1587,128 @@ class _ProfessorDashboardScreenState extends State<ProfessorDashboardScreen> {
                               ),
                             );
                           }),
+
+                          // Scarcity Report Warning Banner
+                          if (team.scarcityReport != null && team.scarcityReport!['is_scarce'] == true) ...[
+                            const SizedBox(height: 10),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFFFBEB),
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(color: const Color(0xFFFDE68A)),
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.warning_amber_rounded, size: 14, color: Color(0xFFD97706)),
+                                  const SizedBox(width: 6),
+                                  Expanded(
+                                    child: Text(
+                                      'Missing: ${((team.scarcityReport!['scarce_skills'] as List?) ?? []).join(', ')}',
+                                      style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: Color(0xFF92400E)),
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+
+                          // Professor Notes display if exists
+                          if (team.professorNotes != null && team.professorNotes!.isNotEmpty) ...[
+                            const SizedBox(height: 8),
+                            Text(
+                              'Notes: ${team.professorNotes}',
+                              style: const TextStyle(fontSize: 11, fontStyle: FontStyle.italic, color: Color(0xFF64748B)),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+
+                          // Proposal Evaluation Actions (Approve / Decline)
+                          if (team.proposalStatus == 'Submitted for Evaluation' ||
+                              team.proposalStatus == 'under_review' ||
+                              team.proposalStatus == 'pending') ...[
+                            const SizedBox(height: 12),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: ElevatedButton.icon(
+                                    onPressed: () => _reviewTeamProposal(team, 'approved'),
+                                    icon: const Icon(Icons.check, size: 14),
+                                    label: const Text('Approve', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: const Color(0xFF059669),
+                                      foregroundColor: Colors.white,
+                                      padding: const EdgeInsets.symmetric(vertical: 8),
+                                      minimumSize: Size.zero,
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: OutlinedButton.icon(
+                                    onPressed: () => _reviewTeamProposal(team, 'declined'),
+                                    icon: const Icon(Icons.close, size: 14),
+                                    label: const Text('Decline', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                                    style: OutlinedButton.styleFrom(
+                                      foregroundColor: const Color(0xFFDC2626),
+                                      side: const BorderSide(color: Color(0xFFFCA5A5)),
+                                      padding: const EdgeInsets.symmetric(vertical: 8),
+                                      minimumSize: Size.zero,
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ] else if (team.proposalStatus == 'Approved') ...[
+                            const SizedBox(height: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFECFDF5),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: const Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.check_circle, size: 12, color: Color(0xFF059669)),
+                                  SizedBox(width: 4),
+                                  Text('Approved by Professor', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF059669))),
+                                ],
+                              ),
+                            ),
+                          ] else if (team.proposalStatus == 'Declined') ...[
+                            const SizedBox(height: 8),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFFEF2F2),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: const Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(Icons.cancel, size: 12, color: Color(0xFFDC2626)),
+                                      SizedBox(width: 4),
+                                      Text('Declined', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFFDC2626))),
+                                    ],
+                                  ),
+                                ),
+                                TextButton(
+                                  onPressed: () => _reviewTeamProposal(team, 'approved'),
+                                  style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: Size.zero),
+                                  child: const Text('Approve anyway', style: TextStyle(fontSize: 11)),
+                                ),
+                              ],
+                            ),
+                          ],
                         ],
                       ),
                     ),
@@ -1739,6 +1719,148 @@ class _ProfessorDashboardScreenState extends State<ProfessorDashboardScreen> {
           ),
       ],
     );
+  }
+
+  Future<void> _reviewTeamProposal(TeamOverviewItem team, String decision) async {
+    if (team.activityId == null) return;
+
+    if (decision == 'approved') {
+      final confirm = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: Text('Approve Squad Proposal: ${team.name}?'),
+          content: Text(
+            'This will approve the squad for "${team.activityName}" and notify all team members.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF059669),
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Approve Squad'),
+            ),
+          ],
+        ),
+      );
+      if (confirm != true || !mounted) return;
+
+      try {
+        await _activityService.reviewTeamProposal(
+          team.activityId!,
+          teamName: team.name,
+          decision: 'approved',
+        );
+        if (mounted) {
+          AppNotification.showSuccess(context, 'Squad proposal for "${team.name}" approved!');
+          _initData();
+        }
+      } catch (e) {
+        if (mounted) AppNotification.showError(context, e.toString());
+      }
+    } else {
+      final notesController = TextEditingController();
+      final scarceSkills = (team.scarcityReport?['scarce_skills'] as List?)?.map((s) => s.toString()).toList() ?? [];
+
+      final confirm = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: Text('Decline Squad Proposal: ${team.name}'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (scarceSkills.isNotEmpty) ...[
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFEF2F2),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: const Color(0xFFFECACA)),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Icon(Icons.warning_amber_rounded, size: 18, color: Color(0xFFDC2626)),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Identified Skill Scarcity:',
+                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Color(0xFF991B1B)),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                scarceSkills.join(', '),
+                                style: const TextStyle(fontSize: 12, color: Color(0xFF7F1D1D)),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                ],
+                const Text(
+                  'Professor Notes / Recommendations:',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF0F172A)),
+                ),
+                const SizedBox(height: 6),
+                TextField(
+                  controller: notesController,
+                  maxLines: 3,
+                  decoration: InputDecoration(
+                    hintText: 'Enter notes explaining skill scarcity or changes required before resubmission...',
+                    hintStyle: const TextStyle(fontSize: 12),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                    contentPadding: const EdgeInsets.all(10),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFDC2626),
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Decline & Send Notes'),
+            ),
+          ],
+        ),
+      );
+      if (confirm != true || !mounted) return;
+
+      try {
+        await _activityService.reviewTeamProposal(
+          team.activityId!,
+          teamName: team.name,
+          decision: 'declined',
+          notes: notesController.text.trim(),
+        );
+        if (mounted) {
+          AppNotification.showSuccess(context, 'Squad proposal declined. Notes sent to students.');
+          _initData();
+        }
+      } catch (e) {
+        if (mounted) AppNotification.showError(context, e.toString());
+      }
+    }
   }
 
   // Student Profile Completion Roster Section

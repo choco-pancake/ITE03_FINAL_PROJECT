@@ -1,20 +1,23 @@
 import 'package:flutter/material.dart';
 
 import '../../models/grouping_activity.dart';
+import '../../services/activity_service.dart';
+import 'bottom_right_notification.dart';
 
 class ActivityDetailsDialog extends StatelessWidget {
   final GroupingActivity activity;
   final VoidCallback onEdit;
+  final VoidCallback? onDelete;
 
   const ActivityDetailsDialog({
     super.key,
     required this.activity,
     required this.onEdit,
+    this.onDelete,
   });
 
   String _formatDateTime(DateTime dt) {
-    return '${dt.year}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')} '
-        '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+    return '${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')}-${dt.year}';
   }
 
   Color _getStatusColor(String status) {
@@ -211,16 +214,17 @@ class ActivityDetailsDialog extends StatelessWidget {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Row(
-                                    children: const [
-                                      Icon(
+                                    children: [
+                                      const Icon(
                                         Icons.event,
                                         size: 16,
                                         color: Colors.blue,
                                       ),
-                                      SizedBox(width: 6),
+                                      const SizedBox(width: 6),
                                       Text(
-                                        'Grouping Deadline',
-                                        style: TextStyle(
+                                        activity.groupingMethod == 'auto'
+                                            ? 'Project Deadline' : 'Group Deadline',
+                                        style: const TextStyle(
                                           fontWeight: FontWeight.bold,
                                           fontSize: 13,
                                         ),
@@ -229,12 +233,26 @@ class ActivityDetailsDialog extends StatelessWidget {
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
-                                    _formatDateTime(activity.groupingDeadline),
+                                    _formatDateTime(activity.groupingMethod == 'auto'
+                                        ? (activity.projectSubmissionDeadline ?? activity.groupingDeadline)
+                                        : activity.groupingDeadline),
                                     style: const TextStyle(fontSize: 13),
                                   ),
                                 ],
                               ),
                             ),
+                            if (activity.groupingMethod != 'auto')
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text('Project Deadline',
+                                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                                    const SizedBox(height: 4),
+                                    Text(_formatDateTime(activity.projectSubmissionDeadline ?? activity.groupingDeadline)),
+                                  ],
+                                ),
+                              ),
                             if (activity.studentModificationDeadline != null)
                               Expanded(
                                 child: Column(
@@ -270,6 +288,18 @@ class ActivityDetailsDialog extends StatelessWidget {
                           ],
                         ),
                       ),
+                      if (activity.instructionFileName != null)
+                        TextButton.icon(
+                          onPressed: () async {
+                            try {
+                              await ActivityService().downloadInstructions(activity);
+                            } catch (error) {
+                              if (context.mounted) AppNotification.showError(context, error.toString());
+                            }
+                          },
+                          icon: const Icon(Icons.download_outlined),
+                          label: Text('Download ${activity.instructionFileName}'),
+                        ),
                       const SizedBox(height: 18),
 
                       // Required Skills
@@ -387,6 +417,21 @@ class ActivityDetailsDialog extends StatelessWidget {
                     icon: const Icon(Icons.close),
                     label: const Text('Close'),
                   ),
+                  if (onDelete != null) ...[
+                    const SizedBox(width: 12),
+                    OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: const Color(0xFFDC2626),
+                        side: const BorderSide(color: Color(0xFFFECACA)),
+                      ),
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                        onDelete!();
+                      },
+                      icon: const Icon(Icons.delete_outline, size: 18),
+                      label: const Text('Delete Project'),
+                    ),
+                  ],
                   const SizedBox(width: 12),
                   ElevatedButton.icon(
                     style: ElevatedButton.styleFrom(

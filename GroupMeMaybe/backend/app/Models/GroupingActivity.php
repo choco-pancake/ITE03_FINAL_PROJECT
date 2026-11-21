@@ -5,12 +5,15 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class GroupingActivity extends Model
 {
     use HasFactory;
 
     protected $table = 'grouping_activities';
+
+    protected $hidden = ['instruction_file_path'];
 
     protected $fillable = [
         'academic_class_id',
@@ -25,6 +28,9 @@ class GroupingActivity extends Model
         'min_proficiency_level',
         'min_common_hours',
         'grouping_deadline',
+        'project_submission_deadline',
+        'instruction_file_path',
+        'instruction_file_name',
         'student_modification_deadline',
         'status',
         'students_count',
@@ -36,6 +42,7 @@ class GroupingActivity extends Model
         'preferred_skills' => 'array',
         'formed_teams' => 'array',
         'grouping_deadline' => 'datetime',
+        'project_submission_deadline' => 'datetime',
         'student_modification_deadline' => 'datetime',
         'group_capacity' => 'integer',
         'number_of_groups' => 'integer',
@@ -46,5 +53,10 @@ class GroupingActivity extends Model
     public function academicClass(): BelongsTo
     {
         return $this->belongsTo(AcademicClass::class, 'academic_class_id');
+    }
+
+    public function projectSubmissions(): HasMany
+    {
+        return $this->hasMany(ProjectSubmission::class, 'grouping_activity_id');
     }
 }

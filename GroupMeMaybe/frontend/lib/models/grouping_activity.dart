@@ -12,6 +12,8 @@ class GroupingActivity {
   final String minProficiencyLevel; // Beginner, Intermediate, Advanced
   final int minCommonHours;
   final DateTime groupingDeadline;
+  final DateTime? projectSubmissionDeadline;
+  final String? instructionFileName;
   final DateTime? studentModificationDeadline;
   final String status; // draft, open, grouping in progress, completed
   final int studentsCount;
@@ -31,6 +33,8 @@ class GroupingActivity {
     this.minProficiencyLevel = 'Intermediate',
     this.minCommonHours = 5,
     required this.groupingDeadline,
+    this.projectSubmissionDeadline,
+    this.instructionFileName,
     this.studentModificationDeadline,
     this.status = 'open',
     this.studentsCount = 30,
@@ -70,6 +74,10 @@ class GroupingActivity {
           ? DateTime.tryParse(json['grouping_deadline'].toString()) ??
                 DateTime.now()
           : DateTime.now(),
+      projectSubmissionDeadline: json['project_submission_deadline'] != null
+          ? DateTime.tryParse(json['project_submission_deadline'].toString())
+          : null,
+      instructionFileName: json['instruction_file_name'] as String?,
       studentModificationDeadline: json['student_modification_deadline'] != null
           ? DateTime.tryParse(json['student_modification_deadline'].toString())
           : null,
@@ -94,7 +102,9 @@ class GroupingActivity {
     'preferred_skills': preferredSkills,
     'min_proficiency_level': minProficiencyLevel,
     'min_common_hours': minCommonHours,
-    'grouping_deadline': groupingDeadline.toIso8601String(),
+    'grouping_deadline': groupingDeadline.toUtc().toIso8601String(),
+    'project_submission_deadline':
+        (projectSubmissionDeadline ?? groupingDeadline).toUtc().toIso8601String(),
     if (studentModificationDeadline != null)
       'student_modification_deadline': studentModificationDeadline!
           .toIso8601String(),
@@ -117,6 +127,8 @@ class GroupingActivity {
     String? minProficiencyLevel,
     int? minCommonHours,
     DateTime? groupingDeadline,
+    DateTime? projectSubmissionDeadline,
+    String? instructionFileName,
     DateTime? studentModificationDeadline,
     String? status,
     int? studentsCount,
@@ -136,6 +148,9 @@ class GroupingActivity {
       minProficiencyLevel: minProficiencyLevel ?? this.minProficiencyLevel,
       minCommonHours: minCommonHours ?? this.minCommonHours,
       groupingDeadline: groupingDeadline ?? this.groupingDeadline,
+      projectSubmissionDeadline:
+          projectSubmissionDeadline ?? this.projectSubmissionDeadline,
+      instructionFileName: instructionFileName ?? this.instructionFileName,
       studentModificationDeadline:
           studentModificationDeadline ?? this.studentModificationDeadline,
       status: status ?? this.status,

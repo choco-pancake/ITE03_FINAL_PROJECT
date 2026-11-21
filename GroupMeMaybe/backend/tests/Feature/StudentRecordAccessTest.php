@@ -68,7 +68,7 @@ class StudentRecordAccessTest extends TestCase
         $this->deleteJson('/api/classes/'.$class['id'])->assertForbidden();
     }
 
-    public function test_professor_update_is_authorized_audited_and_students_cannot_change_completed_identity(): void
+    public function test_professor_record_edit_is_unavailable_and_students_cannot_change_completed_identity(): void
     {
         $professor = User::factory()->create(['role' => 'professor']);
         $otherProfessor = User::factory()->create(['role' => 'professor']);
@@ -97,7 +97,7 @@ class StudentRecordAccessTest extends TestCase
         ];
 
         Sanctum::actingAs($student);
-        $this->patchJson('/api/professor/students/'.$student->id.'/record', $payload)->assertForbidden();
+        $this->patchJson('/api/professor/students/'.$student->id.'/record', $payload)->assertNotFound();
         $this->putJson('/api/profile', [
             'name' => 'Maria Reyes',
             'first_name' => 'Maria',
@@ -106,28 +106,24 @@ class StudentRecordAccessTest extends TestCase
         ])->assertForbidden();
 
         Sanctum::actingAs($otherProfessor);
-        $this->patchJson('/api/professor/students/'.$student->id.'/record', $payload)->assertForbidden();
+        $this->patchJson('/api/professor/students/'.$student->id.'/record', $payload)->assertNotFound();
 
         Sanctum::actingAs($professor);
-        $this->patchJson('/api/professor/students/'.$student->id.'/record', $payload)
-            ->assertOk()->assertJsonPath('after.last_name', 'Reyes');
-        $this->assertDatabaseHas('users', ['id' => $student->id, 'name' => 'Maria A Reyes', 'department_or_section' => 'BSIT 3A']);
-        $this->assertDatabaseHas('profiles', ['email' => $student->email, 'name' => 'Maria A Reyes']);
-        $this->assertDatabaseHas('student_record_changes', ['student_id' => $student->id, 'professor_id' => $professor->id]);
-        $this->assertDatabaseHas('app_notifications', ['user_id' => $student->id, 'kind' => 'record']);
+        $this->patchJson('/api/professor/students/'.$student->id.'/record', $payload)->assertNotFound();
+        $this->assertDatabaseHas('users', ['id' => $student->id, 'name' => 'Maria Santos']);
+        $this->assertDatabaseCount('student_record_changes', 0);
 
         Sanctum::actingAs($student);
         $this->putJson('/api/profile', [
-            'name' => 'Maria A Reyes',
+            'name' => 'Maria Santos',
             'first_name' => 'Maria',
-            'middle_name' => 'A',
-            'last_name' => 'Reyes',
+            'last_name' => 'Santos',
             'skills' => ['Flutter', 'Laravel'],
-            'details' => ['student_id' => '2026-002', 'year_level' => '3rd Year', 'block' => 'BSIT 3A', 'is_complete' => true],
+            'details' => ['student_id' => '2026-001', 'year_level' => '2nd Year', 'block' => 'BSIT 2A', 'is_complete' => true],
         ])->assertOk();
         $this->putJson('/api/profile', [
-            'name' => 'Maria A Reyes',
-            'details' => ['student_id' => '2026-002', 'year_level' => '3rd Year', 'block' => 'BSIT 3A', 'is_complete' => false],
+            'name' => 'Maria Santos',
+            'details' => ['student_id' => '2026-001', 'year_level' => '2nd Year', 'block' => 'BSIT 2A', 'is_complete' => false],
         ])->assertForbidden();
     }
 }

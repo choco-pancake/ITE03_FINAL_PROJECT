@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 
 import 'widgets/bottom_right_notification.dart';
 import 'widgets/portal_top_actions.dart';
+import 'widgets/student_profile_dialog.dart';
 
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/academic_class.dart';
 import '../models/grouping_activity.dart';
-import '../models/profile.dart';
 import '../services/activity_service.dart';
 import '../services/auth_service.dart';
 import '../services/profile_service.dart';
@@ -36,10 +36,13 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
   String get _studentName => (AuthService.currentUser?.name.isNotEmpty == true)
       ? AuthService.currentUser!.name
       : 'Student User';
-  String get _studentBlock =>
-      (AuthService.currentUser?.departmentOrSection?.isNotEmpty == true)
-      ? AuthService.currentUser!.departmentOrSection!
-      : 'BSIT 2A';
+  String _myProfileBlock = '';
+  String get _studentBlock {
+    if (_myProfileBlock.isNotEmpty) return _myProfileBlock;
+    return (AuthService.currentUser?.departmentOrSection?.isNotEmpty == true)
+        ? AuthService.currentUser!.departmentOrSection!
+        : 'BSIT 2A';
+  }
   String _primaryRole = 'Frontend Developer';
   String _skillLevel = 'Intermediate';
 
@@ -49,6 +52,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
     final studentName = _studentName.toLowerCase();
 
     for (final act in _activities) {
+      if (act.groupingMethod != 'student_formed') continue;
       bool inTeam = false;
       if (act.formedTeams != null) {
         for (final team in act.formedTeams!) {
@@ -106,48 +110,128 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
 
   Future<void> _loadDashboardData() async {
     setState(() => _isLoading = true);
+    _checkProfileCompletion();
     try {
       final activitiesFuture = _activityService.getActivities();
       final classesFuture = _activityService.getClasses();
-      final profilesFuture = ProfileService().getProfiles();
-
-      final results = await Future.wait([
-        activitiesFuture,
-        classesFuture,
-        profilesFuture,
-      ]);
+      final results = await Future.wait([activitiesFuture, classesFuture]);
       if (mounted) {
-        final profiles = results[2] as List<Profile>;
-        final currentEmail = AuthService.currentUser?.email ?? '';
-        final myProfile = profiles.cast<Profile?>().firstWhere(
-          (p) =>
-              p != null && p.email.toLowerCase() == currentEmail.toLowerCase(),
-          orElse: () => null,
-        );
+        final rawActivities = results[0] as List<GroupingActivity>;
+        final enrolledClasses = results[1] as List<AcademicClass>;
+        final enrolledClassIds = enrolledClasses.map((c) => c.id).whereType<int>().toSet();
+        final filteredActivities = rawActivities
+            .where((a) => a.academicClassId != null && enrolledClassIds.contains(a.academicClassId))
+            .toList();
 
         setState(() {
-          _activities = results[0] as List<GroupingActivity>;
-          _classes = results[1] as List<AcademicClass>;
-          if (myProfile != null) {
-            ProfileService.isProfileComplete =
-                myProfile.details['is_complete'] == true;
-            if (myProfile.preferredRole.isNotEmpty) {
-              _primaryRole = myProfile.preferredRole;
-            }
-            if (myProfile.skills.isNotEmpty) {
-              _skillLevel = myProfile.skills.length >= 4
-                  ? 'Advanced'
-                  : (myProfile.skills.length >= 2
-                        ? 'Intermediate'
-                        : 'Beginner');
-            }
-          }
+          _activities = filteredActivities;
+          _classes = enrolledClasses;
           _isLoading = false;
         });
       }
     } catch (_) {
       if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  Future<void> _checkProfileCompletion() async {
+    final account = AuthService.currentUser?.email.toLowerCase();
+    if (account == null) return;
+    try {
+      final myProfile = await ProfileService().getMyProfile();
+      if (!mounted || AuthService.currentUser?.email.toLowerCase() != account) return;
+      final isComplete = myProfile?.details['is_complete'] == true;
+      setState(() {
+        ProfileService.isProfileComplete = isComplete;
+        if (myProfile != null) {
+          final blk = (myProfile.details['block'] ?? '').toString().trim();
+          if (blk.isNotEmpty) {
+            _myProfileBlock = blk;
+            if (AuthService.currentUser != null && AuthService.currentUser!.departmentOrSection != blk) {
+              AuthService.currentUser = AuthUser(
+                id: AuthService.currentUser!.id,
+                firstName: AuthService.currentUser!.firstName,
+                middleName: AuthService.currentUser!.middleName,
+                lastName: AuthService.currentUser!.lastName,
+                name: AuthService.currentUser!.name,
+                email: AuthService.currentUser!.email,
+                role: AuthService.currentUser!.role,
+                departmentOrSection: blk,
+              );
+            }
+          }
+          if (myProfile.preferredRole.isNotEmpty) _primaryRole = myProfile.preferredRole;
+          _skillLevel = myProfile.skills.length >= 4
+              ? 'Advanced'
+              : (myProfile.skills.length >= 2 ? 'Intermediate' : 'Beginner');
+        }
+      });
+      if (!isComplete && AuthService.promptedCompleteProfileAccounts.add(account)) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted && AuthService.currentUser?.email.toLowerCase() == account) {
+            _showCompleteProfilePrompt();
+          }
+        });
+      }
+    } catch (_) {
+      // A failed profile request should not mark an account complete.
+    }
+  }
+
+  void _showCompleteProfilePrompt() {
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: const [
+            Icon(Icons.assignment_ind_outlined, color: Color(0xFF1E40AF)),
+            SizedBox(width: 10),
+            Text('Complete Profile Required', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: const [
+            Text(
+              'Welcome! Your student profile is currently incomplete.',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF0F172A)),
+            ),
+            SizedBox(height: 8),
+            Text(
+              'Completing your profile publishes your technical skills, role preferences, and student ID so you appear in recommendations and can join or form project squads.',
+              style: TextStyle(fontSize: 13, color: Color(0xFF64748B), height: 1.4),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Later', style: TextStyle(color: Color(0xFF64748B))),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF1E40AF),
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            onPressed: () {
+              Navigator.pop(ctx);
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const StudentSettingsScreen(initialTab: 0),
+                ),
+              ).then((_) => _loadDashboardData());
+            },
+            child: const Text('Complete Profile Now', style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
   }
 
   void _showSwitchGroupDialog(GroupingActivity activity) {
@@ -863,7 +947,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
             ),
             child: const Center(
               child: Text(
-                'No active activities right now.',
+                'No active activities for your enrolled classes right now.',
                 style: TextStyle(color: Colors.grey),
               ),
             ),
@@ -1011,6 +1095,50 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
               height: 1.4,
             ),
           ),
+          if (activity.instructionFileName != null) ...[
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF1F5F9),
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(color: const Color(0xFFCBD5E1)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.picture_as_pdf_outlined, size: 16, color: Color(0xFF1E40AF)),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Instructions: ${activity.instructionFileName!}',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF1E40AF),
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  TextButton.icon(
+                    onPressed: () async {
+                      try {
+                        await _activityService.downloadInstructions(activity);
+                      } catch (e) {
+                        if (!mounted) return;
+                        AppNotification.showError(context, e.toString());
+                      }
+                    },
+                    icon: const Icon(Icons.download, size: 14),
+                    label: const Text('Download', style: TextStyle(fontSize: 11)),
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      minimumSize: Size.zero,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
           const SizedBox(height: 16),
 
           if (isTeamFormed) ...[
@@ -1026,7 +1154,9 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
             Wrap(
               spacing: 8,
               runSpacing: 8,
-              children: members.map((m) {
+              children: members
+                  .where((m) => m is Map && m['status'] != 'pending' && m['is_pending'] != true && m['status'] != 'requested')
+                  .map((m) {
                 final mMap = Map<String, dynamic>.from(m as Map);
                 final rawName = mMap['name']?.toString() ?? 'Teammate';
                 final cleanName = rawName.replaceAll(RegExp(r'\s*\(You\)', caseSensitive: false), '').trim();
@@ -1053,6 +1183,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                   mRole,
                   mAvatar,
                   isSelf ? const Color(0xFF1E40AF) : const Color(0xFF047857),
+                  memberData: mMap,
                 );
               }).toList(),
             ),
@@ -1140,49 +1271,56 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
     String name,
     String role,
     String initial,
-    Color color,
-  ) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFC),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          CircleAvatar(
-            radius: 12,
-            backgroundColor: color,
-            child: Text(
-              initial,
-              style: const TextStyle(
-                fontSize: 10,
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-          const SizedBox(width: 8),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                name,
+    Color color, {
+    Map<String, dynamic>? memberData,
+  }) {
+    return InkWell(
+      onTap: memberData != null
+          ? () => StudentProfileDialog.show(context, memberData: memberData)
+          : null,
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF8FAFC),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: const Color(0xFFE2E8F0)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CircleAvatar(
+              radius: 12,
+              backgroundColor: color,
+              child: Text(
+                initial,
                 style: const TextStyle(
-                  fontSize: 11,
+                  fontSize: 10,
+                  color: Colors.white,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFF0F172A),
                 ),
               ),
-              Text(
-                role,
-                style: const TextStyle(fontSize: 10, color: Color(0xFF64748B)),
-              ),
-            ],
-          ),
-        ],
+            ),
+            const SizedBox(width: 8),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  name,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF0F172A),
+                  ),
+                ),
+                Text(
+                  role,
+                  style: const TextStyle(fontSize: 10, color: Color(0xFF64748B)),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1222,7 +1360,13 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
         const SizedBox(height: 12),
 
         for (final c in _classes.take(3)) ...[
-          Container(
+          InkWell(
+            borderRadius: BorderRadius.circular(12),
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const StudentClassesScreen()),
+            ),
+            child: Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: Colors.white,
@@ -1293,6 +1437,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                   ],
                 ),
               ],
+            ),
             ),
           ),
           const SizedBox(height: 12),

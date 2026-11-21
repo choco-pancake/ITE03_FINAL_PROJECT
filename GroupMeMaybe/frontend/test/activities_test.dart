@@ -71,6 +71,7 @@ void main() {
       bool viewDetailsCalled = false;
       bool editCalled = false;
       bool deleteCalled = false;
+      bool gradingCalled = false;
 
       final testActivity = GroupingActivity(
         id: 42,
@@ -94,6 +95,7 @@ void main() {
               onViewDetails: () => viewDetailsCalled = true,
               onEdit: () => editCalled = true,
               onDelete: () => deleteCalled = true,
+              onGrade: () => gradingCalled = true,
             ),
           ),
         ),
@@ -104,6 +106,8 @@ void main() {
       expect(find.text('AUTO'), findsOneWidget);
       expect(find.text('OPEN'), findsOneWidget);
       expect(find.text('Mobile App Development'), findsOneWidget);
+      await tester.tap(find.text('Submissions & Grades'));
+      expect(gradingCalled, isTrue);
 
       // Tap View Details
       await tester.tap(find.text('View Details'));

@@ -44,6 +44,7 @@ class NotificationFlowTest extends TestCase
         $student = User::factory()->create(['role' => 'student', 'department_or_section' => '21-ITEM-03']);
         $professor = User::factory()->create(['role' => 'professor']);
         $matching = AcademicClass::create(['name' => 'Programming', 'section' => '21-ITEM-03', 'class_code' => 'PRG1', 'professor_id' => $professor->id]);
+        $matching->students()->attach($student->id);
         $other = AcademicClass::create(['name' => 'Networks', 'section' => '21-CSE-01', 'class_code' => 'NET1', 'professor_id' => $professor->id]);
         foreach ([$matching, $other] as $class) {
             GroupingActivity::create([

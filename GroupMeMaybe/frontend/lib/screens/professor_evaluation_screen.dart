@@ -1,73 +1,20 @@
+import 'widgets/student_profile_dialog.dart';
 import 'package:flutter/material.dart';
 
 import 'widgets/bottom_right_notification.dart';
 import '../models/student_record.dart';
 import '../services/student_record_service.dart';
+import '../services/activity_service.dart';
 import 'widgets/portal_top_actions.dart';
 import 'widgets/professor_sidebar.dart';
 
 // ───────────────────────── Models for Step 9 ─────────────────────────
 
-enum _Status { pending, underReview, approved, rejected }
-
-extension _StatusX on _Status {
-  String get label => switch (this) {
-    _Status.pending => 'Pending',
-    _Status.underReview => 'Under review',
-    _Status.approved => 'Approved',
-    _Status.rejected => 'Rejected',
-  };
-
-  Color get color => switch (this) {
-    _Status.pending => const Color(0xFFE0A800),
-    _Status.underReview => const Color(0xFF2563EB),
-    _Status.approved => const Color(0xFF16A34A),
-    _Status.rejected => const Color(0xFFDC2626),
-  };
-}
-
-class _HistoryEntry {
-  final DateTime date;
-  final String action;
-  _HistoryEntry(this.date, this.action);
-}
-
-class _Request {
-  final String studentName;
-  final String studentId;
-  final String program;
-  final String title;
-  final String field;
-  final String currentValue;
-  final String requestedValue;
-  final DateTime submitted;
-  _Status status;
-  final List<_HistoryEntry> history;
-
-  _Request({
-    required this.studentName,
-    required this.studentId,
-    required this.program,
-    required this.title,
-    required this.field,
-    required this.currentValue,
-    required this.requestedValue,
-    required this.submitted,
-    this.status = _Status.pending,
-  }) : history = [_HistoryEntry(submitted, 'Request submitted')];
-
-  String get initials {
-    final parts = studentName.trim().split(' ');
-    return parts.length == 1
-        ? parts.first[0]
-        : '${parts.first[0]}${parts.last[0]}';
-  }
-}
-
 class ProfessorEvaluationScreen extends StatefulWidget {
-  const ProfessorEvaluationScreen({super.key, this.service});
+  const ProfessorEvaluationScreen({super.key, this.service, this.activityService});
 
   final StudentRecordService? service;
+  final ActivityService? activityService;
 
   @override
   State<ProfessorEvaluationScreen> createState() =>
@@ -75,49 +22,12 @@ class ProfessorEvaluationScreen extends StatefulWidget {
 }
 
 class _ProfessorEvaluationScreenState extends State<ProfessorEvaluationScreen> {
+  String? _selectedBlock;
   late final StudentRecordService _service;
   final TextEditingController _searchController = TextEditingController();
   List<StudentRecord> _students = [];
   bool _loading = true;
   String? _error;
-
-  // Step 9 Modification Requests state
-  final List<_Request> _requests = [
-    _Request(
-      studentName: 'Alex Santos',
-      studentId: '2024-0012',
-      program: 'BSIT 2A',
-      title: 'Request to swap with Bea Cruz',
-      field: 'Teammate Swap',
-      currentValue: 'Group 3 (Olive Ramos)',
-      requestedValue: 'Group 1 (Bea Cruz)',
-      submitted: DateTime.now().subtract(const Duration(hours: 2)),
-      status: _Status.pending,
-    ),
-    _Request(
-      studentName: 'Mia Alberto',
-      studentId: '2024-0045',
-      program: 'BSIT 2A',
-      title: 'Schedule conflict',
-      field: 'Availability Overlap',
-      currentValue: 'Evening Sessions (Tue/Thu)',
-      requestedValue: 'Morning / Afternoon Sessions',
-      submitted: DateTime.now().subtract(const Duration(hours: 5)),
-      status: _Status.underReview,
-    ),
-    _Request(
-      studentName: 'Noah Sy',
-      studentId: '2024-0089',
-      program: 'BSIT 2A',
-      title: 'Request reconsideration',
-      field: 'Role Assignment',
-      currentValue: 'Documentation Specialist',
-      requestedValue: 'Database Specialist',
-      submitted: DateTime.now().subtract(const Duration(days: 1)),
-      status: _Status.pending,
-    ),
-  ];
-  final Set<_Status> _reqFilters = {};
 
   @override
   void initState() {
@@ -138,6 +48,9 @@ class _ProfessorEvaluationScreenState extends State<ProfessorEvaluationScreen> {
       if (!mounted) return;
       setState(() {
         _students = students;
+        if (_selectedBlock != null && !students.any((student) => student.block == _selectedBlock)) {
+          _selectedBlock = null;
+        }
         _error = null;
         _loading = false;
       });
@@ -150,494 +63,442 @@ class _ProfessorEvaluationScreenState extends State<ProfessorEvaluationScreen> {
     }
   }
 
-  Future<void> _editStudent(StudentRecord student) async {
-    final formKey = GlobalKey<FormState>();
-    final values = <String, String>{
-      'first_name': student.firstName,
-      'middle_name': student.middleName,
-      'last_name': student.lastName,
-      'student_id': student.studentId,
-      'year_level': student.yearLevel,
-      'block': student.block,
-    };
-    bool saving = false;
-    String? errorMessage;
-    final saved = await showDialog<bool>(
-      context: context,
-      barrierDismissible: false,
-      builder: (dialogContext) => StatefulBuilder(
-        builder: (context, refresh) => AlertDialog(
-          title: Text('Edit ${student.name}'),
-          content: SizedBox(
-            width: 470,
-            child: SingleChildScrollView(
-              child: Form(
-                key: formKey,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Text(
-                      'Changes are saved immediately and recorded with your account.',
-                      style: TextStyle(color: Color(0xFF64748B)),
-                    ),
-                    const SizedBox(height: 14),
-                    for (final field in const [
-                      ('first_name', 'First name'),
-                      ('middle_name', 'Middle name'),
-                      ('last_name', 'Last name'),
-                      ('student_id', 'Student ID'),
-                      ('year_level', 'Year level'),
-                      ('block', 'Section / block'),
-                    ]) ...[
-                      TextFormField(
-                        initialValue: values[field.$1],
-                        onChanged: (value) => values[field.$1] = value,
-                        decoration: InputDecoration(labelText: field.$2),
-                        validator: (value) {
-                          if (field.$1 != 'middle_name' &&
-                              (value == null || value.trim().isEmpty)) {
-                            return '${field.$2} is required';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 10),
-                    ],
-                    if (errorMessage != null)
-                      Text(
-                        errorMessage!,
-                        style: const TextStyle(color: Color(0xFFDC2626)),
-                      ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: saving
-                  ? null
-                  : () => Navigator.pop(dialogContext, false),
-              child: const Text('Cancel'),
-            ),
-            FilledButton(
-              onPressed: saving
-                  ? null
-                  : () async {
-                      if (formKey.currentState?.validate() != true) return;
-                      refresh(() {
-                        saving = true;
-                        errorMessage = null;
-                      });
-                      try {
-                        await _service.updateStudent(student.id, {
-                          for (final entry in values.entries)
-                            entry.key: entry.value.trim(),
-                        });
-                        if (dialogContext.mounted) {
-                          Navigator.pop(dialogContext, true);
-                        }
-                      } catch (error) {
-                        if (dialogContext.mounted) {
-                          refresh(() {
-                            saving = false;
-                            errorMessage = error.toString().replaceFirst(
-                              'Exception: ',
-                              '',
-                            );
-                          });
-                        }
-                      }
-                    },
-              child: const Text('Save record'),
-            ),
-          ],
+  Future<void> _unenrollStudent(StudentRecord student) async {
+    if (student.classEnrollments.isEmpty) return;
+    Map<String, dynamic>? selectedClass;
+    if (student.classEnrollments.length == 1) {
+      selectedClass = student.classEnrollments.first;
+    } else {
+      selectedClass = await showDialog<Map<String, dynamic>>(
+        context: context,
+        builder: (context) => SimpleDialog(
+          title: Text('Select a class for ${student.name}'),
+          children: student.classEnrollments.map((item) => SimpleDialogOption(
+            onPressed: () => Navigator.pop(context, item),
+            child: Text('${item['name']} • ${item['section'] ?? 'General'}'),
+          )).toList(),
         ),
+      );
+    }
+    if (selectedClass == null || !mounted) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Unenroll student?'),
+        content: Text('${student.name} will leave ${selectedClass!['name']} and its project teams.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Unenroll')),
+        ],
       ),
     );
-    if (saved == true && mounted) {
+    if (confirmed != true) return;
+    try {
+      await _service.unenrollStudent(selectedClass['id'] as int, student.id);
       await _loadStudents();
-      if (mounted) {
-        AppNotification.showSuccess(context, 'Student record updated.');
-      }
+      if (mounted) AppNotification.showSuccess(context, '${student.name} was unenrolled.');
+    } catch (error) {
+      if (mounted) AppNotification.showError(context, error.toString());
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final query = _searchController.text.trim().toLowerCase();
-    final visible = _students.where((student) {
+
+    // Group students by block
+    final Map<String, List<StudentRecord>> blockMap = {};
+    for (final s in _students) {
+      final blk = s.block.trim().isNotEmpty ? s.block.trim() : 'General';
+      blockMap.putIfAbsent(blk, () => []).add(s);
+    }
+
+    final sortedBlocks = blockMap.keys.toList()..sort();
+
+    return Scaffold(
+      backgroundColor: const Color(0xFFF8FAFC),
+      body: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const ProfessorSidebar(
+            currentDestination: ProfessorNavDestination.evaluation,
+          ),
+          Expanded(
+            child: Align(
+              alignment: Alignment.topCenter,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 1000),
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              _selectedBlock != null
+                                  ? 'Student Records • $_selectedBlock'
+                                  : 'Student Records',
+                              style: const TextStyle(
+                                fontSize: 26,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF0F172A),
+                              ),
+                            ),
+                          ),
+                          const PortalTopActions(),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        _selectedBlock != null
+                            ? 'Viewing enrolled students in block $_selectedBlock. Tap a student to view their profile.'
+                            : 'Browse enrolled student records categorized by academic block / section.',
+                        style: const TextStyle(color: Color(0xFF64748B)),
+                      ),
+                      const SizedBox(height: 16),
+
+                      if (_selectedBlock != null) ...[
+                        Row(
+                          children: [
+                            OutlinedButton.icon(
+                              onPressed: () => setState(() {
+                                _selectedBlock = null;
+                                _searchController.clear();
+                              }),
+                              icon: const Icon(Icons.arrow_back, size: 16),
+                              label: const Text('Back to Blocks'),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: const Color(0xFF1E40AF),
+                                side: const BorderSide(color: Color(0xFFBFDBFE)),
+                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFEFF6FF),
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(color: const Color(0xFFBFDBFE)),
+                              ),
+                              child: Text(
+                                'Block: $_selectedBlock',
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF1D4ED8),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                      ],
+
+                      // Search Bar
+                      TextField(
+                        controller: _searchController,
+                        onChanged: (_) => setState(() {}),
+                        decoration: InputDecoration(
+                          labelText: _selectedBlock != null
+                              ? 'Search students in $_selectedBlock'
+                              : 'Search blocks or student names',
+                          prefixIcon: const Icon(Icons.search),
+                          suffixIcon: _searchController.text.isNotEmpty
+                              ? IconButton(
+                                  icon: const Icon(Icons.clear, size: 18),
+                                  onPressed: () {
+                                    _searchController.clear();
+                                    setState(() {});
+                                  },
+                                )
+                              : null,
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      Expanded(
+                        child: _loading
+                            ? const Center(child: CircularProgressIndicator())
+                            : _error != null
+                            ? Center(
+                                child: TextButton(
+                                  onPressed: _loadStudents,
+                                  child: Text('$_error Tap to retry.'),
+                                ),
+                              )
+                            : _selectedBlock == null
+                            ? _buildBlockCardsView(sortedBlocks, blockMap, query)
+                            : _buildStudentsInBlockView(blockMap[_selectedBlock] ?? [], query),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBlockCardsView(
+    List<String> sortedBlocks,
+    Map<String, List<StudentRecord>> blockMap,
+    String query,
+  ) {
+    final filteredBlocks = sortedBlocks.where((blk) {
+      if (query.isEmpty) return true;
+      if (blk.toLowerCase().contains(query)) return true;
+      final students = blockMap[blk] ?? [];
+      return students.any((s) =>
+          s.name.toLowerCase().contains(query) ||
+          s.studentId.toLowerCase().contains(query));
+    }).toList();
+
+    if (filteredBlocks.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: const [
+            Icon(Icons.grid_view_outlined, size: 48, color: Color(0xFF94A3B8)),
+            SizedBox(height: 12),
+            Text(
+              'No blocks found matching your query.',
+              style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF334155)),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final crossAxisCount = constraints.maxWidth >= 720 ? 2 : 1;
+
+        return GridView.builder(
+          itemCount: filteredBlocks.length,
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: crossAxisCount,
+            mainAxisExtent: 112,
+            crossAxisSpacing: 16,
+            mainAxisSpacing: 16,
+          ),
+          itemBuilder: (context, idx) {
+            final blk = filteredBlocks[idx];
+            final students = blockMap[blk] ?? [];
+
+            String yearLevel = 'Year Pending';
+            for (final s in students) {
+              if (s.yearLevel.isNotEmpty) {
+                yearLevel = s.yearLevel;
+                break;
+              }
+            }
+            if (yearLevel == 'Year Pending') {
+              if (blk.startsWith('11-')) { yearLevel = '1st Year'; }
+              else if (blk.startsWith('21-')) { yearLevel = '2nd Year'; }
+              else if (blk.startsWith('31-')) { yearLevel = '3rd Year'; }
+              else if (blk.startsWith('41-')) { yearLevel = '4th Year'; }
+            }
+
+            return Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: () => setState(() => _selectedBlock = blk),
+                borderRadius: BorderRadius.circular(14),
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Color(0x06000000),
+                        blurRadius: 10,
+                        offset: Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(child: Text(blk,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 21,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black,
+                            ))),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF1F5F9),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              yearLevel,
+                              style: const TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF475569),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(Icons.people_alt_outlined, color: Color(0xFF1E40AF), size: 18),
+                              const SizedBox(width: 6),
+                              Text(
+                                '${students.length} Students Enrolled',
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF0F172A),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const Icon(Icons.arrow_forward_ios, size: 14, color: Color(0xFF94A3B8)),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildStudentsInBlockView(List<StudentRecord> students, String query) {
+    final visible = students.where((student) {
       return query.isEmpty ||
           student.name.toLowerCase().contains(query) ||
           student.studentId.toLowerCase().contains(query) ||
           student.classes.any((name) => name.toLowerCase().contains(query));
     }).toList();
 
-    return DefaultTabController(
-      length: 2,
-      child: Scaffold(
-        backgroundColor: const Color(0xFFF8FAFC),
-        body: Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const ProfessorSidebar(
-              currentDestination: ProfessorNavDestination.evaluation,
-            ),
-            Expanded(
-              child: Align(
-                alignment: Alignment.topCenter,
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 1000),
-                  child: Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            const Expanded(
-                              child: Text(
-                                'Student Records & Evaluations',
-                                style: TextStyle(
-                                  fontSize: 26,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                            const PortalTopActions(),
-                          ],
-                        ),
-                        const SizedBox(height: 6),
-                        const Text(
-                          'Manage enrolled student records and review Step 9 team modification requests.',
-                          style: TextStyle(color: Color(0xFF64748B)),
-                        ),
-                        const SizedBox(height: 16),
-                        const TabBar(
-                          labelColor: Color(0xFF1E40AF),
-                          unselectedLabelColor: Color(0xFF64748B),
-                          indicatorColor: Color(0xFF1E40AF),
-                          tabs: [
-                            Tab(icon: Icon(Icons.people_outline), text: 'Student Records'),
-                            Tab(icon: Icon(Icons.rate_review_outlined), text: 'Step 9: Modification Requests'),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                        Expanded(
-                          child: TabBarView(
-                            children: [
-                              // Tab 1: Student Records
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  TextField(
-                                    controller: _searchController,
-                                    onChanged: (_) => setState(() {}),
-                                    decoration: const InputDecoration(
-                                      labelText: 'Search students or classes',
-                                      prefixIcon: Icon(Icons.search),
-                                      border: OutlineInputBorder(),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 16),
-                                  Expanded(
-                                    child: _loading
-                                        ? const Center(child: CircularProgressIndicator())
-                                        : _error != null
-                                        ? Center(
-                                            child: TextButton(
-                                              onPressed: _loadStudents,
-                                              child: Text('$_error Tap to retry.'),
-                                            ),
-                                          )
-                                        : visible.isEmpty
-                                        ? const Center(
-                                            child: Text('No enrolled students found.'),
-                                          )
-                                        : ListView.separated(
-                                            itemCount: visible.length,
-                                            separatorBuilder: (_, _) =>
-                                                const SizedBox(height: 10),
-                                            itemBuilder: (context, index) {
-                                              final student = visible[index];
-                                              final idText = student.studentId.isNotEmpty
-                                                  ? student.studentId
-                                                  : 'ID Pending';
-                                              final academicInfo = [
-                                                if (student.yearLevel.isNotEmpty)
-                                                  student.yearLevel,
-                                                if (student.block.isNotEmpty)
-                                                  student.block,
-                                              ].join(' • ');
-                                              final classInfo = student.classes.isNotEmpty
-                                                  ? student.classes.join(', ')
-                                                  : 'No classes enrolled';
-
-                                              return Card(
-                                                elevation: 0,
-                                                shape: RoundedRectangleBorder(
-                                                  borderRadius: BorderRadius.circular(12),
-                                                  side: const BorderSide(
-                                                    color: Color(0xFFE2E8F0),
-                                                  ),
-                                                ),
-                                                child: ListTile(
-                                                  contentPadding:
-                                                      const EdgeInsets.symmetric(
-                                                    horizontal: 16,
-                                                    vertical: 8,
-                                                  ),
-                                                  leading: CircleAvatar(
-                                                    radius: 20,
-                                                    backgroundColor:
-                                                        const Color(0xFF1E40AF),
-                                                    child: Text(
-                                                      student.name.isNotEmpty
-                                                          ? student.name[0].toUpperCase()
-                                                          : 'S',
-                                                      style: const TextStyle(
-                                                        color: Colors.white,
-                                                        fontWeight: FontWeight.bold,
-                                                      ),
-                                                    ),
-                                                  ),
-                                                  title: Row(
-                                                    children: [
-                                                      Expanded(
-                                                        child: Text(
-                                                          student.name,
-                                                          style: const TextStyle(
-                                                            fontWeight: FontWeight.bold,
-                                                            fontSize: 16,
-                                                          ),
-                                                        ),
-                                                      ),
-                                                      Container(
-                                                        padding: const EdgeInsets.symmetric(
-                                                          horizontal: 8,
-                                                          vertical: 2,
-                                                        ),
-                                                        decoration: BoxDecoration(
-                                                          color: const Color(0xFFEFF6FF),
-                                                          borderRadius:
-                                                              BorderRadius.circular(6),
-                                                        ),
-                                                        child: Text(
-                                                          idText,
-                                                          style: const TextStyle(
-                                                            fontSize: 12,
-                                                            fontWeight: FontWeight.w600,
-                                                            color: Color(0xFF1D4ED8),
-                                                          ),
-                                                        ),
-                                                      ),
-                                                    ],
-                                                  ),
-                                                  subtitle: Padding(
-                                                    padding: const EdgeInsets.only(top: 4),
-                                                    child: Text(
-                                                      academicInfo.isNotEmpty
-                                                          ? '$academicInfo | $classInfo'
-                                                          : classInfo,
-                                                      style: const TextStyle(
-                                                        fontSize: 13,
-                                                        color: Color(0xFF64748B),
-                                                      ),
-                                                    ),
-                                                  ),
-                                                  trailing: const Icon(
-                                                    Icons.edit_outlined,
-                                                    color: Color(0xFF1E40AF),
-                                                  ),
-                                                  onTap: () => _editStudent(student),
-                                                ),
-                                              );
-                                            },
-                                          ),
-                                  ),
-                                ],
-                              ),
-                              // Tab 2: Step 9 Modification Requests
-                              _buildModificationRequestsTab(),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ],
+    if (visible.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.all(32),
+        width: double.infinity,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFFE2E8F0)),
         ),
-      ),
-    );
-  }
-
-  Widget _buildModificationRequestsTab() {
-    final filtered = _requests.where((r) {
-      if (_reqFilters.isNotEmpty && !_reqFilters.contains(r.status)) return false;
-      return true;
-    }).toList();
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Status filter pills
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
-            children: [
-              for (final st in _Status.values)
-                Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: FilterChip(
-                    label: Text('${st.label} (${_requests.where((r) => r.status == st).length})'),
-                    selected: _reqFilters.contains(st),
-                    onSelected: (selected) {
-                      setState(() {
-                        if (selected) {
-                          _reqFilters.add(st);
-                        } else {
-                          _reqFilters.remove(st);
-                        }
-                      });
-                    },
-                    selectedColor: st.color.withValues(alpha: 0.2),
-                  ),
-                ),
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: const [
+              Icon(Icons.search_off, size: 40, color: Color(0xFF94A3B8)),
+              SizedBox(height: 8),
+              Text(
+                'No students found in this block matching your search.',
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF334155)),
+              ),
             ],
           ),
         ),
-        const SizedBox(height: 16),
-        Expanded(
-          child: filtered.isEmpty
-              ? const Center(child: Text('No modification requests found.'))
-              : ListView.separated(
-                  itemCount: filtered.length,
-                  separatorBuilder: (_, _) => const SizedBox(height: 12),
-                  itemBuilder: (context, index) {
-                    final req = filtered[index];
-                    final canDecide = req.status == _Status.pending || req.status == _Status.underReview;
-                    return Card(
-                      elevation: 1,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        side: BorderSide(color: Colors.grey.shade200),
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                CircleAvatar(
-                                  radius: 18,
-                                  backgroundColor: const Color(0xFF1E40AF).withValues(alpha: 0.1),
-                                  child: Text(
-                                    req.initials,
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      color: Color(0xFF1E40AF),
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        req.studentName,
-                                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-                                      ),
-                                      Text(
-                                        '${req.studentId} • ${req.program}',
-                                        style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                  decoration: BoxDecoration(
-                                    color: req.status.color.withValues(alpha: 0.12),
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: Text(
-                                    req.status.label,
-                                    style: TextStyle(
-                                      color: req.status.color,
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 12),
-                            Text(
-                              req.title,
-                              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              '${req.field}: ${req.currentValue} → ${req.requestedValue}',
-                              style: TextStyle(color: Colors.grey.shade700, fontSize: 13),
-                            ),
-                            if (canDecide) ...[
-                              const Divider(height: 24),
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.end,
-                                children: [
-                                  OutlinedButton(
-                                    style: OutlinedButton.styleFrom(
-                                      foregroundColor: const Color(0xFFDC2626),
-                                      side: const BorderSide(color: Color(0xFFDC2626)),
-                                    ),
-                                    onPressed: () {
-                                      setState(() {
-                                        req.status = _Status.rejected;
-                                        req.history.add(_HistoryEntry(DateTime.now(), 'Rejected by professor'));
-                                      });
-                                      AppNotification.showError(
-                                        context,
-                                        'Rejected ${req.studentName}\'s request.',
-                                      );
-                                    },
-                                    child: const Text('Reject'),
-                                  ),
-                                  const SizedBox(width: 10),
-                                  ElevatedButton(
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: const Color(0xFF16A34A),
-                                      foregroundColor: Colors.white,
-                                    ),
-                                    onPressed: () {
-                                      setState(() {
-                                        req.status = _Status.approved;
-                                        req.history.add(_HistoryEntry(DateTime.now(), 'Approved by professor'));
-                                      });
-                                      AppNotification.showSuccess(
-                                        context,
-                                        'Approved ${req.studentName}\'s request.',
-                                      );
-                                    },
-                                    child: const Text('Approve'),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ],
-                        ),
-                      ),
-                    );
-                  },
+      );
+    }
+
+    return ListView.separated(
+      itemCount: visible.length,
+      separatorBuilder: (_, _) => const SizedBox(height: 10),
+      itemBuilder: (context, index) {
+        final student = visible[index];
+        final idText = student.studentId.isNotEmpty ? student.studentId : 'ID Pending';
+        final academicInfo = [
+          if (student.yearLevel.isNotEmpty) student.yearLevel,
+          if (student.block.isNotEmpty) student.block,
+        ].join(' • ');
+        final classInfo = student.classes.isNotEmpty
+            ? student.classes.join(', ')
+            : 'No classes enrolled';
+
+        return Card(
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: const BorderSide(color: Color(0xFFE2E8F0)),
+          ),
+          child: ListTile(
+            onTap: () => StudentProfileDialog.show(context, studentRecord: student),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            leading: CircleAvatar(
+              radius: 20,
+              backgroundColor: const Color(0xFF1E40AF),
+              child: Text(
+                student.name.isNotEmpty ? student.name[0].toUpperCase() : 'S',
+                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+              ),
+            ),
+            title: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    student.name,
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  ),
                 ),
-        ),
-      ],
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEFF6FF),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    idText,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF1D4ED8),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            subtitle: Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(
+                academicInfo.isNotEmpty ? '$academicInfo | $classInfo' : classInfo,
+                style: const TextStyle(fontSize: 13, color: Color(0xFF64748B)),
+              ),
+            ),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.person_remove_outlined, color: Colors.red),
+                  tooltip: 'Unenroll from class',
+                  onPressed: student.classEnrollments.isEmpty
+                      ? null
+                      : () => _unenrollStudent(student),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }

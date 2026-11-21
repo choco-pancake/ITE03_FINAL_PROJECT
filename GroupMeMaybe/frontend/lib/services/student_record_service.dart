@@ -31,18 +31,13 @@ class StudentRecordService {
         .toList();
   }
 
-  Future<void> updateStudent(int studentId, Map<String, String> values) async {
-    final response = await http.patch(
-      Uri.parse('${AuthService.baseUrl}/professor/students/$studentId/record'),
+  Future<void> unenrollStudent(int classId, int studentId) async {
+    final response = await http.delete(
+      Uri.parse('${AuthService.baseUrl}/classes/$classId/students/$studentId'),
       headers: _headers,
-      body: jsonEncode(values),
     );
-    if (response.statusCode == 401) {
-      AuthService.authToken = null;
-      throw Exception('Session expired or unauthenticated. Please log in again.');
-    }
     if (response.statusCode != 200) {
-      throw Exception(_message(response, 'Could not update student record.'));
+      throw Exception(_message(response, 'Could not unenroll student.'));
     }
   }
 

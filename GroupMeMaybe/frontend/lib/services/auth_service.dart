@@ -91,6 +91,7 @@ class AuthService {
   static const String baseUrl = 'http://127.0.0.1:8000/api';
   static AuthUser? currentUser;
   static String? authToken;
+  static final Set<String> promptedCompleteProfileAccounts = {};
 
   static const String _prefKeyRememberMe = 'gmm_remember_me';
   static const String _prefKeySavedEmail = 'gmm_saved_email';
@@ -147,10 +148,21 @@ class AuthService {
   }
 
   /// Switch active session to another previously stored account
-  static Future<void> switchToAccount(StoredAccount account) async {
-    currentUser = account.user;
+  static Future<bool> switchToAccount(StoredAccount account) async {
+    AuthUser? user;
+    try {
+      user = await _userForToken(account.token);
+    } catch (_) {
+      return false;
+    }
+    if (user == null) {
+      await removeKnownAccount(account.user.email);
+      return false;
+    }
+    currentUser = user;
     authToken = account.token;
-    await saveActiveSession(account.user, account.token);
+    await saveActiveSession(user, account.token);
+    return true;
   }
 
   /// Remove an account from known accounts list
@@ -199,13 +211,34 @@ class AuthService {
           prefs.getString(_prefKeyActiveUser) ??
           prefs.getString(_prefKeySavedUser);
       if (token != null && userJson != null) {
-        final user = AuthUser.fromJson(jsonDecode(userJson));
-        currentUser = user;
-        authToken = token;
-        return user;
+        final user = await _userForToken(token);
+        if (user != null) {
+          currentUser = user;
+          authToken = token;
+          await saveActiveSession(user, token);
+          return user;
+        }
+        await prefs.remove(_prefKeyActiveToken);
+        await prefs.remove(_prefKeyActiveUser);
+        await prefs.remove(_prefKeySavedToken);
+        await prefs.remove(_prefKeySavedUser);
+        await removeKnownAccount(AuthUser.fromJson(jsonDecode(userJson)).email);
       }
     } catch (_) {}
+    currentUser = null;
+    authToken = null;
     return null;
+  }
+
+  static Future<AuthUser?> _userForToken(String token) async {
+    final response = await http.get(
+      Uri.parse('$baseUrl/me'),
+      headers: {..._headers, 'Authorization': 'Bearer $token'},
+    );
+    if (response.statusCode == 401) return null;
+    if (response.statusCode != 200) throw Exception('Could not verify the saved session.');
+    final body = jsonDecode(response.body) as Map<String, dynamic>;
+    return AuthUser.fromJson(body['user'] as Map<String, dynamic>);
   }
 
   /// Retrieve the active authentication token, checking memory first and storage fallback
@@ -424,6 +457,7 @@ class AuthService {
     } catch (_) {}
     currentUser = null;
     authToken = null;
+    promptedCompleteProfileAccounts.clear();
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove(_prefKeyActiveToken);

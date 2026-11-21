@@ -7,7 +7,7 @@ Flutter web client for the GroupMeMaybe Laravel API.
 1. Start the Laravel backend from `../backend`:
 
    ```powershell
-   php artisan serve --host=127.0.0.1 --port=8000
+   php -d upload_max_filesize=12M -d post_max_size=13M artisan serve --host=127.0.0.1 --port=8000
    ```
 
 2. Confirm the API responds at <http://127.0.0.1:8000/api/profiles>.

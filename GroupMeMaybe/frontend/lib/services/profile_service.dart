@@ -39,11 +39,6 @@ class ProfileService {
       final userKey = AuthService.currentUser?.id?.toString() ??
           AuthService.currentUser?.email ??
           'active';
-      final cachedComplete = prefs.getBool('gmm_profile_complete_$userKey');
-      if (cachedComplete == true) {
-        isProfileComplete = true;
-      }
-
       final profile = await getMyProfile();
       if (profile == null) {
         isProfileComplete = false;
@@ -54,7 +49,8 @@ class ProfileService {
       await prefs.setBool('gmm_profile_complete_$userKey', isProfileComplete);
       return isProfileComplete;
     } catch (_) {
-      return isProfileComplete;
+      isProfileComplete = false;
+      return false;
     }
   }
 

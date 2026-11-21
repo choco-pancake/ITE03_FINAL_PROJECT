@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Http\Controllers\GroupingActivityController;
 use App\Models\AcademicClass;
 use App\Models\GroupingActivity;
 use App\Models\Profile;
@@ -18,6 +19,10 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
+        if (! env('GMM_SEED_DEMO_DATA', false)) {
+            return;
+        }
+
         // Clear previous volatile records for clean seeding (preserve real user accounts & custom classes)
         Schema::disableForeignKeyConstraints();
         DB::table('student_record_changes')->truncate();
@@ -392,7 +397,7 @@ class DatabaseSeeder extends Seeder
             $firstName = $parts[0];
             $lastName = count($parts) > 1 ? end($parts) : 'Student';
             $middleName = count($parts) > 2 ? $parts[1] : 'M.';
-            $studentId = '2023-' . sprintf('%04d', $i + 1) . '-TG-0';
+            $studentId = '2023-'.sprintf('%04d', $i + 1).'-TG-0';
             $block = '21-ITEW-01';
             $yearLevel = '2nd Year';
 
@@ -555,7 +560,7 @@ class DatabaseSeeder extends Seeder
             ]
         );
 
-        $groupingController = app(\App\Http\Controllers\GroupingActivityController::class);
+        $groupingController = app(GroupingActivityController::class);
         if ($act1->wasRecentlyCreated || empty($act1->formed_teams)) {
             $groupingController->generateBalancedTeams($act1);
         }

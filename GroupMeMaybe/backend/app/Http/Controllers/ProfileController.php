@@ -78,7 +78,7 @@ class ProfileController extends Controller
                     'middle_name' => [$data['middle_name'] ?? $existingProfile->middle_name, $existingProfile->middle_name],
                     'last_name' => [$data['last_name'] ?? $existingProfile->last_name, $existingProfile->last_name],
                 ];
-                foreach (['student_id', 'year_level', 'block'] as $key) {
+                foreach (['student_id', 'year_level'] as $key) {
                     $protected[$key] = [
                         array_key_exists($key, $data['details']) ? $data['details'][$key] : ($existingDetails[$key] ?? null),
                         $existingDetails[$key] ?? null,

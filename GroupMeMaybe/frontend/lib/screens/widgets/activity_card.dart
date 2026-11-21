@@ -9,6 +9,7 @@ class ActivityCard extends StatelessWidget {
   final VoidCallback onDelete;
   final VoidCallback? onScarcityReport;
   final VoidCallback? onFinalize;
+  final VoidCallback? onGrade;
 
   const ActivityCard({
     super.key,
@@ -18,6 +19,7 @@ class ActivityCard extends StatelessWidget {
     required this.onDelete,
     this.onScarcityReport,
     this.onFinalize,
+    this.onGrade,
   });
 
   String _formatDate(DateTime dt) {
@@ -284,8 +286,11 @@ class ActivityCard extends StatelessWidget {
             const SizedBox(height: 10),
 
             // Card Action Buttons (Skill Distribution, Finalize, View Details, Edit, Delete)
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
+            Wrap(
+              alignment: WrapAlignment.end,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 4,
+              runSpacing: 4,
               children: [
                 if (onScarcityReport != null) ...[
                   TextButton.icon(
@@ -319,6 +324,12 @@ class ActivityCard extends StatelessWidget {
                   ),
                   const SizedBox(width: 6),
                 ],
+                if (onGrade != null)
+                  TextButton.icon(
+                    onPressed: onGrade,
+                    icon: const Icon(Icons.grade_outlined, size: 16),
+                    label: const Text('Submissions & Grades', style: TextStyle(fontSize: 12)),
+                  ),
                 TextButton.icon(
                   onPressed: onViewDetails,
                   icon: const Icon(Icons.visibility_outlined, size: 16),

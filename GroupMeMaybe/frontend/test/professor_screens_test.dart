@@ -6,11 +6,13 @@ import 'package:frontend/screens/professor_dashboard_screen.dart';
 import 'package:frontend/screens/professor_evaluation_screen.dart';
 import 'package:frontend/screens/professor_settings_screen.dart';
 import 'package:frontend/screens/widgets/professor_sidebar.dart';
+import 'package:frontend/screens/widgets/activity_form_dialog.dart';
+import 'package:frontend/screens/widgets/student_profile_dialog.dart';
 import 'package:frontend/models/student_record.dart';
 import 'package:frontend/services/student_record_service.dart';
 
 class _FakeStudentRecordService extends StudentRecordService {
-  Map<String, String>? savedValues;
+  int? unenrolledId;
 
   @override
   Future<List<StudentRecord>> getStudents() async => const [
@@ -25,16 +27,59 @@ class _FakeStudentRecordService extends StudentRecordService {
       yearLevel: '2nd Year',
       block: 'BSIT 2A',
       classes: ['Web Development'],
+      classEnrollments: [{'id': 1, 'name': 'Web Development', 'section': 'BSIT 2A'}],
     ),
   ];
 
   @override
-  Future<void> updateStudent(int studentId, Map<String, String> values) async {
-    savedValues = values;
+  Future<void> unenrollStudent(int classId, int studentId) async {
+    unenrolledId = studentId;
   }
 }
 
 void main() {
+  testWidgets('activity form shares skill options and validates MM-DD-YYYY', (tester) async {
+    tester.view.physicalSize = const Size(1280, 1000);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(
+        body: ActivityFormDialog(onSaved: () {}),
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    expect(find.widgetWithText(FilterChip, 'Frontend Development'), findsNWidgets(2));
+    final frontendChip = find.widgetWithText(FilterChip, 'Frontend Development').first;
+    await tester.ensureVisible(frontendChip);
+    await tester.tap(frontendChip);
+    await tester.pumpAndSettle();
+    expect(find.widgetWithText(FilterChip, 'Frontend Development'), findsOneWidget);
+
+    final deadlineField = find.byType(TextFormField).last;
+    expect(find.text('MM-DD-YYYY'), findsOneWidget);
+    final deadlineDecoration = tester.widget<InputDecorator>(
+      find.ancestor(of: find.text('MM-DD-YYYY'), matching: find.byType(InputDecorator)).first,
+    );
+    expect(deadlineDecoration.decoration.hintStyle?.color, const Color(0xFF94A3B8));
+    await tester.ensureVisible(deadlineField);
+    await tester.enterText(deadlineField, '02-30-2027');
+    expect(tester.state<FormState>(find.byType(Form)).validate(), isFalse);
+    await tester.pump();
+    expect(find.text('Enter a date as MM-DD-YYYY'), findsOneWidget);
+
+    await tester.ensureVisible(find.text('Student-Made'));
+    await tester.tap(find.text('Student-Made'));
+    await tester.pumpAndSettle();
+    expect(find.text('Group Submission Deadline'), findsOneWidget);
+    expect(find.text('Project Submission Deadline'), findsOneWidget);
+    expect(find.text('MM-DD-YYYY'), findsNWidgets(2));
+  });
+
   testWidgets('ProfessorSidebar renders all 4 navigation destinations', (
     tester,
   ) async {
@@ -156,7 +201,7 @@ void main() {
   );
 
   testWidgets(
-    'ProfessorEvaluationScreen edits an enrolled student record',
+    'ProfessorEvaluationScreen can only unenroll an enrolled student',
     (tester) async {
       tester.view.physicalSize = const Size(1280, 800);
       tester.view.devicePixelRatio = 1.0;
@@ -172,15 +217,28 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Student Records'), findsWidgets);
+      expect(find.text('BSIT 2A'), findsOneWidget);
+      // Tapping the block card opens the students in that block
+      await tester.tap(find.text('BSIT 2A'));
+      await tester.pumpAndSettle();
+
       expect(find.text('Maria Santos'), findsOneWidget);
       expect(find.text('New Request'), findsNothing);
+      // Tapping the student opens their profile dialog
       await tester.tap(find.text('Maria Santos'));
       await tester.pumpAndSettle();
-      expect(find.text('Edit Maria Santos'), findsOneWidget);
-      await tester.enterText(find.widgetWithText(TextFormField, 'Last name'), 'Reyes');
-      await tester.tap(find.text('Save record'));
+      expect(find.byType(StudentProfileDialog), findsOneWidget);
+      // Close the profile dialog
+      await tester.tap(find.byIcon(Icons.close));
       await tester.pumpAndSettle();
-      expect(service.savedValues?['last_name'], 'Reyes');
+
+      expect(find.byTooltip('Edit Student Record'), findsNothing);
+      await tester.tap(find.byTooltip('Unenroll from class'));
+      await tester.pumpAndSettle();
+      expect(find.text('Unenroll student?'), findsOneWidget);
+      await tester.tap(find.text('Unenroll'));
+      await tester.pumpAndSettle();
+      expect(service.unenrolledId, 7);
     },
   );
 

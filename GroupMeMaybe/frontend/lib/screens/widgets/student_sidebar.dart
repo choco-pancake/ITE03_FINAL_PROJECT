@@ -4,7 +4,6 @@ import 'bottom_right_notification.dart';
 import '../../services/profile_service.dart';
 import '../student_classes_screen.dart';
 import '../student_dashboard_screen.dart';
-import '../student_groups_screen.dart';
 import '../student_settings_screen.dart';
 
 enum StudentNavDestination { dashboard, classes, groups, settings }
@@ -112,7 +111,7 @@ class StudentSidebar extends StatelessWidget {
             context: context,
             icon: Icons.school_outlined,
             title: 'Classes',
-            isSelected: currentDestination == StudentNavDestination.classes,
+            isSelected: currentDestination == StudentNavDestination.classes || currentDestination == StudentNavDestination.groups,
             isLocked: !ProfileService.isProfileComplete,
             onTap: () async {
               if (!ProfileService.isProfileComplete) {
@@ -137,40 +136,6 @@ class StudentSidebar extends StatelessWidget {
                   context,
                   MaterialPageRoute(
                     builder: (_) => const StudentClassesScreen(),
-                  ),
-                );
-              }
-            },
-          ),
-          _buildItem(
-            context: context,
-            icon: Icons.assignment_outlined,
-            title: 'Projects',
-            isSelected: currentDestination == StudentNavDestination.groups,
-            isLocked: !ProfileService.isProfileComplete,
-            onTap: () async {
-              if (!ProfileService.isProfileComplete) {
-                final isComplete = await ProfileService().checkProfileComplete();
-                if (!isComplete) {
-                  if (context.mounted) {
-                    AppNotification.showWarning(
-                      context,
-                      'Please complete your profile in Settings before accessing projects.',
-                    );
-                  }
-                  return;
-                }
-              }
-              if (currentDestination != StudentNavDestination.groups) {
-                if (onBeforeNavigate != null) {
-                  final canProceed = await onBeforeNavigate!();
-                  if (!canProceed) return;
-                }
-                if (!context.mounted) return;
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const StudentGroupsScreen(),
                   ),
                 );
               }

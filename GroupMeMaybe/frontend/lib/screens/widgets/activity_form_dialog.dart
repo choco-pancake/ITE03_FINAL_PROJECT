@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'bottom_right_notification.dart';
 import '../../models/academic_class.dart';
 import '../../models/grouping_activity.dart';
+import '../../models/instruction_file.dart';
 import '../../services/activity_service.dart';
+import '../../services/instruction_file_picker.dart';
 
 /// Simplified Project Making Dialog based on Workflow Step 4:
 /// "Grouping Activity Configuration"
@@ -30,6 +33,8 @@ class _ActivityFormDialogState extends State<ActivityFormDialog> {
   late TextEditingController _titleController;
   late TextEditingController _descriptionController;
   late TextEditingController _groupCapacityController;
+  late TextEditingController _deadlineController;
+  late TextEditingController _projectDeadlineController;
   String _groupingMethod = 'auto'; // 'auto' or 'student_formed'
   final _customSkillController = TextEditingController();
 
@@ -38,14 +43,16 @@ class _ActivityFormDialogState extends State<ActivityFormDialog> {
   List<AcademicClass> _availableClasses = [];
   bool _loadingClasses = true;
 
-  late DateTime _groupingDeadline;
+  DateTime? _groupingDeadline;
+  InstructionFile? _instructionFile;
+  bool _removeInstructionFile = false;
 
   final List<String> _requiredSkills = [];
   final List<String> _preferredSkills = [];
   bool _isSaving = false;
 
   // Streamlined skill pools from Step 4 infographic
-  static const List<String> _commonRequiredSkills = [
+  static const List<String> _skillOptions = [
     'Frontend Development',
     'Backend Development',
     'Database Management',
@@ -54,17 +61,48 @@ class _ActivityFormDialogState extends State<ActivityFormDialog> {
     'API Development and Integration',
     'Software Testing and Quality Assurance',
     'Cybersecurity',
-    'Full-Stack Development',
-  ];
-
-  static const List<String> _commonPreferredSkills = [
-    'UI/UX Design',
     'Technical Documentation',
     'Project Management',
     'Research and Problem Solving',
     'Presentation and Communication',
     'Data Analysis',
   ];
+
+  List<String> get _allSkillOptions => {
+    ..._skillOptions,
+    ..._requiredSkills,
+    ..._preferredSkills,
+  }.toList();
+
+  Future<void> _chooseInstructionFile() async {
+    try {
+      final file = await pickInstructionFile();
+      if (file == null || !mounted) return;
+      if (file.bytes.length > 10 * 1024 * 1024) {
+        AppNotification.showError(context, 'File must be 10 MB or smaller.');
+        return;
+      }
+      setState(() {
+        _instructionFile = file;
+        _removeInstructionFile = false;
+      });
+    } catch (error) {
+      if (mounted) AppNotification.showError(context, 'Could not open the selected file.', error.toString());
+    }
+  }
+
+  String _formatDeadline(DateTime date) =>
+      '${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}-${date.year}';
+
+  DateTime? _parseDeadline(String value) {
+    if (!RegExp(r'^\d{2}-\d{2}-\d{4}$').hasMatch(value)) return null;
+    final month = int.parse(value.substring(0, 2));
+    final day = int.parse(value.substring(3, 5));
+    final year = int.parse(value.substring(6, 10));
+    final date = DateTime(year, month, day);
+    if (date.year != year || date.month != month || date.day != day) return null;
+    return date;
+  }
 
   @override
   void initState() {
@@ -81,20 +119,17 @@ class _ActivityFormDialogState extends State<ActivityFormDialog> {
     _selectedClassDisplay = widget.initialClass?.displayName ?? a?.className;
     _selectedClassId = widget.initialClass?.id ?? a?.academicClassId;
 
-    _groupingDeadline =
-        a?.groupingDeadline ?? DateTime.now().add(const Duration(days: 21));
+    _groupingDeadline = a?.groupingDeadline;
+    _deadlineController = TextEditingController(
+      text: a == null || a.groupingMethod == 'auto' ? '' : _formatDeadline(a.groupingDeadline),
+    );
+    _projectDeadlineController = TextEditingController(
+      text: a == null ? '' : _formatDeadline(a.projectSubmissionDeadline ?? a.groupingDeadline),
+    );
 
     if (a != null) {
       _requiredSkills.addAll(a.requiredSkills);
-      _preferredSkills.addAll(a.preferredSkills);
-    } else {
-      // Default common skills as shown in Step 4 infographic
-      _requiredSkills.addAll([
-        'Frontend Development',
-        'Backend Development',
-        'Database Management',
-      ]);
-      _preferredSkills.addAll(['UI/UX Design', 'Technical Documentation']);
+      _preferredSkills.addAll(a.preferredSkills.where((skill) => !_requiredSkills.contains(skill)));
     }
 
     _loadClasses();
@@ -105,6 +140,8 @@ class _ActivityFormDialogState extends State<ActivityFormDialog> {
     _titleController.dispose();
     _descriptionController.dispose();
     _groupCapacityController.dispose();
+    _deadlineController.dispose();
+    _projectDeadlineController.dispose();
     _customSkillController.dispose();
     super.dispose();
   }
@@ -132,20 +169,69 @@ class _ActivityFormDialogState extends State<ActivityFormDialog> {
     }
   }
 
-  Future<void> _pickDeadline() async {
+  Future<void> _pickDeadline(TextEditingController controller) async {
+    final today = DateTime.now();
+    final firstDate = DateTime(today.year, today.month, today.day);
+    final lastDate = firstDate.add(const Duration(days: 365));
+    final typedDate = _parseDeadline(controller.text.trim());
+    final initialDate = typedDate ?? _groupingDeadline ?? firstDate.add(const Duration(days: 21));
     final picked = await showDatePicker(
       context: context,
-      initialDate: _groupingDeadline,
-      firstDate: DateTime.now(),
-      lastDate: DateTime.now().add(const Duration(days: 365)),
+      initialDate: initialDate.isBefore(firstDate)
+          ? firstDate
+          : (initialDate.isAfter(lastDate) ? lastDate : initialDate),
+      firstDate: firstDate,
+      lastDate: lastDate,
     );
     if (picked != null) {
-      setState(() => _groupingDeadline = picked);
+      setState(() {
+        _groupingDeadline = picked;
+        controller.text = _formatDeadline(picked);
+      });
     }
   }
 
+  Widget _deadlineField(TextEditingController controller) => TextFormField(
+    controller: controller,
+    keyboardType: TextInputType.datetime,
+    inputFormatters: [
+      FilteringTextInputFormatter.allow(RegExp(r'[0-9-]')),
+      LengthLimitingTextInputFormatter(10),
+    ],
+    decoration: InputDecoration(
+      hintText: 'MM-DD-YYYY',
+      hintStyle: const TextStyle(color: Color(0xFF94A3B8)),
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+      suffixIcon: IconButton(
+        tooltip: 'Choose deadline from calendar',
+        icon: const Icon(Icons.calendar_month_outlined),
+        onPressed: () => _pickDeadline(controller),
+      ),
+    ),
+    validator: (value) {
+      final date = _parseDeadline(value?.trim() ?? '');
+      if (date == null) return 'Enter a date as MM-DD-YYYY';
+      final today = DateTime.now();
+      if (date.isBefore(DateTime(today.year, today.month, today.day))) {
+        return 'Deadline cannot be in the past';
+      }
+      return null;
+    },
+  );
+
   Future<void> _saveActivity() async {
     if (!_formKey.currentState!.validate()) return;
+    final projectDate = _parseDeadline(_projectDeadlineController.text.trim())!;
+    final groupDate = _groupingMethod == 'student_formed'
+        ? _parseDeadline(_deadlineController.text.trim())!
+        : projectDate;
+    final projectDeadline = DateTime(projectDate.year, projectDate.month, projectDate.day, 23, 59, 59);
+    final deadline = DateTime(groupDate.year, groupDate.month, groupDate.day, 23, 59, 59);
+    if (deadline.isAfter(projectDeadline)) {
+      AppNotification.showError(context, 'Group deadline must be on or before the project deadline.');
+      return;
+    }
+    _groupingDeadline = deadline;
 
     if (_requiredSkills.isEmpty) {
       AppNotification.showError(
@@ -164,13 +250,14 @@ class _ActivityFormDialogState extends State<ActivityFormDialog> {
                 c.id == _selectedClassId ||
                 c.displayName == _selectedClassDisplay)
             .firstOrNull;
+    final targetClassId = _selectedClassId ?? currentClass?.id;
     final studentCount = currentClass?.studentCount ?? 30;
     final groups = studentCount > 0 ? (studentCount / capacity).ceil() : 6;
 
     final activity = GroupingActivity(
       id: widget.activity?.id,
-      academicClassId: _selectedClassId,
-      className: _selectedClassDisplay ?? 'Web Development - BSIT 2A',
+      academicClassId: targetClassId,
+      className: _selectedClassDisplay ?? currentClass?.displayName ?? 'Web Development - BSIT 2A',
       title: _titleController.text.trim(),
       description: _descriptionController.text.trim().isNotEmpty
           ? _descriptionController.text.trim()
@@ -182,16 +269,22 @@ class _ActivityFormDialogState extends State<ActivityFormDialog> {
       preferredSkills: _preferredSkills,
       minProficiencyLevel: 'Intermediate',
       minCommonHours: 5,
-      groupingDeadline: _groupingDeadline,
+      groupingDeadline: deadline,
+      projectSubmissionDeadline: projectDeadline,
       status: 'open',
       studentsCount: studentCount > 0 ? studentCount : capacity * groups,
     );
 
     try {
       if (widget.activity == null) {
-        await _activityService.createActivity(activity);
+        await _activityService.createActivity(activity, instructionFile: _instructionFile);
       } else {
-        await _activityService.updateActivity(widget.activity!.id!, activity);
+        await _activityService.updateActivity(
+          widget.activity!.id!,
+          activity,
+          instructionFile: _instructionFile,
+          removeInstructionFile: _removeInstructionFile,
+        );
       }
 
       if (mounted) {
@@ -600,7 +693,7 @@ class _ActivityFormDialogState extends State<ActivityFormDialog> {
                         Wrap(
                           spacing: 8,
                           runSpacing: 8,
-                          children: _commonRequiredSkills.map((skill) {
+                          children: _allSkillOptions.map((skill) {
                             final isSelected = _requiredSkills.contains(skill);
                             return FilterChip(
                               label: Text(skill, style: TextStyle(fontSize: 12, color: isSelected ? Colors.white : const Color(0xFF334155))),
@@ -612,6 +705,7 @@ class _ActivityFormDialogState extends State<ActivityFormDialog> {
                                 setState(() {
                                   if (selected) {
                                     _requiredSkills.add(skill);
+                                    _preferredSkills.remove(skill);
                                   } else {
                                     _requiredSkills.remove(skill);
                                   }
@@ -640,7 +734,7 @@ class _ActivityFormDialogState extends State<ActivityFormDialog> {
                         Wrap(
                           spacing: 8,
                           runSpacing: 8,
-                          children: _commonPreferredSkills.map((skill) {
+                          children: _allSkillOptions.where((skill) => !_requiredSkills.contains(skill)).map((skill) {
                             final isSelected = _preferredSkills.contains(skill);
                             return FilterChip(
                               label: Text(skill, style: TextStyle(fontSize: 12, color: isSelected ? Colors.white : const Color(0xFF334155))),
@@ -662,35 +756,66 @@ class _ActivityFormDialogState extends State<ActivityFormDialog> {
                         ),
                         const SizedBox(height: 18),
 
-                        // Grouping Deadline
-                        const Text(
-                          'Deadline',
-                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF334155)),
-                        ),
+                        if (_groupingMethod == 'student_formed') ...[
+                          const Text('Group Submission Deadline',
+                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF334155))),
+                          const SizedBox(height: 6),
+                          _deadlineField(_deadlineController),
+                          const SizedBox(height: 16),
+                        ],
+                        const Text('Project Submission Deadline',
+                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF334155))),
                         const SizedBox(height: 6),
-                        InkWell(
-                          onTap: _pickDeadline,
-                          borderRadius: BorderRadius.circular(8),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        _deadlineField(_projectDeadlineController),
+                        const SizedBox(height: 18),
+                        const Text('Project Instructions (optional)',
+                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF334155))),
+                        const SizedBox(height: 6),
+                        if (_instructionFile != null || (widget.activity?.instructionFileName != null && !_removeInstructionFile))
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                             decoration: BoxDecoration(
+                              color: const Color(0xFFF1F5F9),
                               borderRadius: BorderRadius.circular(8),
                               border: Border.all(color: const Color(0xFFCBD5E1)),
                             ),
                             child: Row(
                               children: [
-                                const Icon(Icons.calendar_month_outlined, size: 18, color: Color(0xFF059669)),
-                                const SizedBox(width: 10),
-                                Text(
-                                  '${_groupingDeadline.year}-${_groupingDeadline.month.toString().padLeft(2, '0')}-${_groupingDeadline.day.toString().padLeft(2, '0')}',
-                                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+                                const Icon(Icons.description, size: 20, color: Color(0xFF1E40AF)),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    _instructionFile?.name ?? widget.activity!.instructionFileName!,
+                                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF0F172A)),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
                                 ),
-                                const Spacer(),
-                                const Text('Change', style: TextStyle(fontSize: 12, color: Color(0xFF2563EB), fontWeight: FontWeight.bold)),
+                                TextButton.icon(
+                                  onPressed: _chooseInstructionFile,
+                                  icon: const Icon(Icons.sync, size: 14),
+                                  label: const Text('Change', style: TextStyle(fontSize: 12)),
+                                  style: TextButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                                    minimumSize: Size.zero,
+                                  ),
+                                ),
+                                IconButton(
+                                  tooltip: 'Remove instructions',
+                                  icon: const Icon(Icons.close, size: 18, color: Color(0xFF64748B)),
+                                  onPressed: () => setState(() {
+                                    _instructionFile = null;
+                                    _removeInstructionFile = true;
+                                  }),
+                                ),
                               ],
                             ),
+                          )
+                        else
+                          OutlinedButton.icon(
+                            onPressed: _chooseInstructionFile,
+                            icon: const Icon(Icons.attach_file),
+                            label: const Text('Choose PDF, DOCX, or TXT file'),
                           ),
-                        ),
                       ],
                     ),
                   ),

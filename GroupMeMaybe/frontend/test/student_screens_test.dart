@@ -211,6 +211,49 @@ void main() {
     },
   );
 
+  testWidgets('new student profile shows academic placeholders without skill search', (tester) async {
+    tester.view.physicalSize = const Size(1280, 900);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
+    await tester.pumpWidget(const MaterialApp(home: StudentSettingsScreen()));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Edit Profile'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Select year level'), findsOneWidget);
+    expect(find.text('Select block'), findsOneWidget);
+    expect(find.text('Search technical skills...'), findsNothing);
+  });
+
+  testWidgets('project role choices follow selected technical skills', (tester) async {
+    tester.view.physicalSize = const Size(1280, 900);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
+    await tester.pumpWidget(const MaterialApp(home: StudentSettingsScreen()));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Edit Profile'));
+    await tester.pumpAndSettle();
+    final skill = find.text('Frontend Development').last;
+    await tester.ensureVisible(skill);
+    await tester.tap(skill);
+    await tester.pumpAndSettle();
+
+    final firstRole = find.byKey(const ValueKey('1st Priority (Primary Role):null'));
+    await tester.ensureVisible(firstRole);
+    await tester.tap(firstRole);
+    await tester.pumpAndSettle();
+    expect(find.text('Frontend developer'), findsOneWidget);
+    expect(find.text('Backend developer'), findsNothing);
+  });
+
   testWidgets('Student welcome uses the registered first name', (tester) async {
     AuthService.currentUser = const AuthUser(
       name: 'Maria Santos',

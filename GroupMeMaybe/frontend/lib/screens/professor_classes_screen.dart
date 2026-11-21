@@ -13,6 +13,7 @@ import '../models/class_sections.dart';
 import '../services/activity_service.dart';
 import 'widgets/activity_form_dialog.dart';
 import 'widgets/professor_sidebar.dart';
+import 'professor_class_detail_screen.dart';
 
 class ProfessorClassesScreen extends StatefulWidget {
   const ProfessorClassesScreen({super.key});
@@ -256,9 +257,12 @@ class _ProfessorClassesScreenState extends State<ProfessorClassesScreen> {
                                   final blocks =
                                       ClassSections.byYear[val] ?? [];
                                   if (!blocks.contains(selectedBlock)) {
-                                    selectedBlock = blocks.isNotEmpty
-                                        ? blocks.first
-                                        : 'BSIT 2A';
+                                    final suffix = RegExp(r'-\d+$').firstMatch(selectedBlock)?.group(0);
+                                    final matching = suffix != null ? blocks.where((b) => b.endsWith(suffix)).firstOrNull : null;
+                                    selectedBlock = matching ??
+                                        (blocks.isNotEmpty
+                                            ? blocks.first
+                                            : 'BSIT 2A');
                                   }
                                 });
                               }
@@ -752,7 +756,14 @@ class _ProfessorClassesScreenState extends State<ProfessorClassesScreen> {
 
   Widget _buildClassCard(AcademicClass c) {
     return InkWell(
-      onTap: () => _openCreateProjectModal(c),
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => ProfessorClassDetailScreen(academicClass: c),
+          ),
+        );
+      },
       borderRadius: BorderRadius.circular(14),
       child: Container(
         padding: const EdgeInsets.all(20),

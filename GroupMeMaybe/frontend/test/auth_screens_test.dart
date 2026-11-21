@@ -114,7 +114,7 @@ void main() {
       expect(find.text('STUDENT PORTAL'), findsOneWidget);
       expect(find.text('Dashboard'), findsOneWidget);
       expect(find.text('Classes'), findsOneWidget);
-      expect(find.text('Projects'), findsOneWidget);
+      expect(find.text('Projects'), findsNothing);
       expect(find.text('Settings'), findsOneWidget);
     },
   );

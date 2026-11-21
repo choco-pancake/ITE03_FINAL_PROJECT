@@ -273,7 +273,7 @@ class AuthController extends Controller
                 'name' => $user->name,
                 'email' => $user->email,
                 'role' => $user->role,
-                'department_or_section' => $user->department_or_section,
+                'department_or_section' => $this->resolveEffectiveBlock($user),
             ],
             'token' => $token,
         ], $created ? 201 : 200);
@@ -311,7 +311,7 @@ class AuthController extends Controller
                 'name' => $user->name,
                 'email' => $user->email,
                 'role' => $user->role ?? 'student',
-                'department_or_section' => $user->department_or_section,
+                'department_or_section' => $this->resolveEffectiveBlock($user),
             ],
             'token' => $token,
         ]);
@@ -341,9 +341,25 @@ class AuthController extends Controller
                 'name' => $user->name,
                 'email' => $user->email,
                 'role' => $user->role ?? 'student',
-                'department_or_section' => $user->department_or_section,
+                'department_or_section' => $this->resolveEffectiveBlock($user),
             ],
         ]);
+    }
+
+    private function resolveEffectiveBlock(User $user): ?string
+    {
+        $profile = $user->profile;
+        $details = is_array($profile?->details) ? $profile->details : [];
+        $block = trim((string) ($details['block'] ?? ''));
+        if ($block !== '') {
+            if ($user->department_or_section !== $block) {
+                $user->update(['department_or_section' => $block]);
+            }
+
+            return $block;
+        }
+
+        return $user->department_or_section;
     }
 
     /**
